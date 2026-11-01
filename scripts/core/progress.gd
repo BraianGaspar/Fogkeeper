@@ -178,15 +178,16 @@ static func check_goals(run: Dictionary) -> Array[String]:
 		if unlocked.has(id):
 			continue
 		var met := false
+		var dawn: bool = run["victory"] and run.get("mode", "normal") != "boss_rush"
 		match u["goal"]:
 			"midnight":
 				met = float(run["duration"]) >= Balance.RUN_DURATION / 2.0
 			"boss":
 				met = int(run["bosses"]) > 0
 			"dawn":
-				met = bool(run["victory"])
+				met = dawn
 			"dawn_medium":
-				met = bool(run["victory"]) and run["difficulty"] in ["medium", "hard", "impossible"]
+				met = dawn and run["difficulty"] in ["medium", "hard", "impossible"]
 		if met:
 			unlocked.append(id)
 			out.append(id)
@@ -216,4 +217,8 @@ static func unlock_name(id: String) -> String:
 			return TranslationServer.translate(Keepers.get_keeper(id)["name"])
 		"upgrade":
 			return TranslationServer.translate(Upgrades.find(id)["name"])
+		"hero":
+			return TranslationServer.translate(Balance.HEROES[id]["name"])
+		"ability":
+			return TranslationServer.translate(Abilities.find(id)["name"])
 	return id

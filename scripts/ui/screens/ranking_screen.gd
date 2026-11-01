@@ -9,6 +9,7 @@ const SHOWN := 50
 
 var filter := ""
 var map_filter := ""
+var mode := "normal" ## "normal", "daily" (o de hoje) ou "boss_rush".
 var highlight_id := "" ## Partida recém-terminada, destacada na tabela.
 
 var _table: VBoxContainer
@@ -19,6 +20,9 @@ func _build() -> void:
 	var box := centered_panel(1040, 22)
 	box.add_theme_constant_override("separation", 10)
 	title(box, tr("Ranking"), 34)
+	var modes := ["normal", "daily", "boss_rush"]
+	var mode_names := {"normal": tr("Partidas"), "daily": tr("Diário de hoje"), "boss_rush": tr("Modo Chefões")}
+	box.add_child(_filter_row(modes, mode, _set_mode, func(f: String) -> String: return mode_names[f]))
 
 	var diffs := [""]
 	diffs.append_array(Balance.DIFFICULTY_ORDER)
@@ -63,6 +67,11 @@ func _filter_row(values: Array, current: String, on_pick: Callable, label_of: Ca
 	return row
 
 
+func _set_mode(f: String) -> void:
+	mode = f
+	_refresh()
+
+
 func _set_filter(f: String) -> void:
 	filter = f
 	_refresh()
@@ -76,7 +85,8 @@ func _set_map_filter(f: String) -> void:
 func _refresh() -> void:
 	for c in _table.get_children():
 		c.queue_free()
-	var list := Records.ranking(filter, map_filter)
+	var today := Records.daily_rules(Time.get_date_dict_from_system())["date"] as String
+	var list := Records.ranking(filter, map_filter, mode, today)
 	var me := Settings.display_name()
 	if list.is_empty():
 		var empty := UiTheme.label(tr("Nenhuma partida nesta categoria ainda."), 17, UiTheme.TEXT_DIM)
@@ -97,7 +107,7 @@ func _refresh() -> void:
 			Records.format_time(r["duration"]), tr(Maps.get_map(r["map"])["name"]), difficulty_name(r["difficulty"]),
 			Records.format_date(r["date"]),
 		], color, bg))
-	var pos := Records.best_position_of(me, filter, map_filter)
+	var pos := Records.best_position_of(me, filter, map_filter, mode, today)
 	if pos > 0:
 		_footer.text = tr("Sua melhor posição (%s): %s, entre %d partidas") % [me, Records.ordinal(pos), list.size()]
 	else:

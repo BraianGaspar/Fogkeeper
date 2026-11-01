@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 keys=$(grep -oE '^\s*"([^"\]|\.)*": \[' scripts/core/i18n.gd | sed -E 's/^\s*"(.*)": \[$/\1/' | sort -u)
 used=$( { grep -rhoE --exclude=i18n.gd '(tr|translate)\("([^"\]|\.)*"\)' scripts | sed -E 's/^(tr|translate)\("(.*)"\)$/\2/'
           grep -hoE '"[a-z_0-9]+": "[^"]+"' scripts/core/balance.gd scripts/core/maps.gd scripts/core/keepers.gd scripts/core/day_cycle.gd \
-              scripts/core/upgrades.gd scripts/core/game_input.gd scripts/core/achievements.gd scripts/audio/sfx.gd \
+              scripts/core/upgrades.gd scripts/core/game_input.gd scripts/core/achievements.gd scripts/core/bestiary.gd scripts/core/damage_stats.gd scripts/audio/sfx.gd \
             | sed -E 's/^"[a-z_0-9]+": "(.*)"$/\1/' | grep -E '[A-ZÀ-Ý ]'
           grep -hoE '^const [A-Z_]+_NAMES := \[.*\]|^const TABS := \[.*\]' scripts/ui/screens/settings_screen.gd | grep -oE '"[^"]+"' | tr -d '"'
           printf '%s\n' "Ligado" "Desligado" "Principal" "Alternativa"; } | sort -u)

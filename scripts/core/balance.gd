@@ -119,6 +119,13 @@ const ABILITIES := [
 		"cooldown": 20.0, "duration": 5.0, "dps": 2.5, "range": 1.3, "angle": 0.6},
 	{"id": "bell", "name": "Sino da Névoa", "desc": "Puxa todas as brasas para o farol e recupera um pouco de vida.",
 		"cooldown": 30.0, "heal": 10.0},
+	# Liberadas na oficina; o jogador escolhe três (Settings.loadout).
+	{"id": "mirror", "name": "Espelho", "desc": "Um segundo feixe aponta para o lado oposto por alguns segundos.",
+		"cooldown": 22.0, "duration": 6.0},
+	{"id": "tide", "name": "Maré", "desc": "Uma onda empurra para longe as criaturas perto do farol.",
+		"cooldown": 24.0, "radius": 320.0, "push": 150.0, "stun": 0.6},
+	{"id": "beacon", "name": "Sinalizador", "desc": "Dois feixes giram sozinhos em volta do farol por alguns segundos.",
+		"cooldown": 26.0, "duration": 8.0, "spin": 3.0, "dps": 0.6},
 ]
 
 # --- Dificuldade ---
@@ -213,6 +220,13 @@ const UNLOCKS := [
 	{"id": "crystal", "kind": "keeper", "cost": 240, "goal": "dawn"},
 	{"id": "combustion", "kind": "upgrade", "cost": 200, "goal": ""},
 	{"id": "vital_embers", "kind": "upgrade", "cost": 200, "goal": ""},
+	{"id": "monk", "kind": "hero", "cost": 150, "goal": ""},
+	{"id": "pirate", "kind": "hero", "cost": 200, "goal": ""},
+	{"id": "astronomer", "kind": "hero", "cost": 250, "goal": ""},
+	{"id": "fisher", "kind": "hero", "cost": 150, "goal": ""},
+	{"id": "mirror", "kind": "ability", "cost": 180, "goal": ""},
+	{"id": "tide", "kind": "ability", "cost": 180, "goal": ""},
+	{"id": "beacon", "kind": "ability", "cost": 180, "goal": ""},
 ]
 
 
@@ -224,15 +238,19 @@ static func xp_for_level(level: int, difficulty: String = "normal") -> int:
 ## Pontuação em partes fáceis de ler: criaturas, tempo e bônus, depois a
 ## dificuldade multiplica o subtotal. O tempo depois do amanhecer (modo sem
 ## fim) entra em "endless", com noites extras valendo bônus.
-static func score_breakdown(kill_points: int, bosses: int, seconds: float, victory: bool, hp_fraction: float, difficulty: String) -> Dictionary:
+## No Modo Chefões o tempo conta ao contrário: terminar rápido vale mais.
+## Cada maré soma TIDE_SCORE ao multiplicador.
+static func score_breakdown(kill_points: int, bosses: int, seconds: float, victory: bool, hp_fraction: float, difficulty: String, tide_level: int = 0, rush: bool = false) -> Dictionary:
 	var survival := int(minf(seconds, RUN_DURATION)) * SCORE_PER_SECOND
+	if rush:
+		survival = int(maxf(0.0, BOSS_RUSH_PAR - seconds)) * SCORE_RUSH_PER_SECOND if victory else 0
 	var extra := maxf(0.0, seconds - RUN_DURATION)
-	var endless := int(extra) * SCORE_ENDLESS_PER_SECOND + int(extra / RUN_DURATION) * SCORE_PER_NIGHT
+	var endless := 0 if rush else int(extra) * SCORE_ENDLESS_PER_SECOND + int(extra / RUN_DURATION) * SCORE_PER_NIGHT
 	var boss_bonus := bosses * SCORE_PER_BOSS
 	var win := SCORE_VICTORY if victory else 0
 	var health := roundi(SCORE_HEALTH_BONUS * clampf(hp_fraction, 0.0, 1.0)) if victory else 0
 	var subtotal := kill_points + survival + endless + boss_bonus + win + health
-	var mult: float = DIFFICULTIES[difficulty]["score"]
+	var mult: float = float(DIFFICULTIES[difficulty]["score"]) * (1.0 + TIDE_SCORE * tide_level)
 	return {
 		"kills": kill_points, "survival": survival, "endless": endless, "bosses": boss_bonus, "victory": win, "health": health,
 		"subtotal": subtotal, "multiplier": mult, "total": roundi(subtotal * mult),
@@ -269,3 +287,58 @@ static func spawn_weights(t: float) -> Dictionary:
 
 static func pulse_cooldown(level: int) -> float:
 	return maxf(2.0, 6.0 - level * 0.8)
+
+
+# --- Faroleiros jogáveis ---
+## Cada faroleiro muda as regras do farol (a aparência continua em Keepers).
+## Chaves: lens (lentes extras), dps, range, width (largura do feixe), hp
+## (vida somada), pulse (nível inicial do Pulso), magnet, xp (XP por nível).
+const HEROES := {
+	"keeper": {"name": "Faroleira", "desc": "Equilibrada: nenhuma vantagem, nenhuma desvantagem."},
+	"monk": {"name": "Monge", "desc": "Começa com duas lentes extras, mas a luz causa 30% menos dano.", "lens": 2, "dps": 0.7},
+	"pirate": {"name": "Pirata", "desc": "Feixe curto e forte: 30% menos alcance, 50% mais dano e 30 de vida a mais.", "range": 0.7, "dps": 1.5, "hp": 30.0},
+	"astronomer": {"name": "Astrônoma", "desc": "Começa com Pulso de luz nível 2, mas o feixe é 30% mais estreito.", "pulse": 2, "width": 0.7},
+	"fisher": {"name": "Pescador", "desc": "Puxa brasas de muito mais longe e sobe de nível 15% mais rápido, com 20 de vida a menos.", "magnet": 1.8, "xp": 0.85, "hp": -20.0},
+}
+const HERO_ORDER := ["keeper", "monk", "pirate", "astronomer", "fisher"]
+
+# --- Marés (níveis de desafio depois de ver o amanhecer) ---
+## Cumulativas: a Maré N soma as regras de 1 até N.
+const TIDES := [
+	{"desc": "Criaturas 10% mais rápidas.", "speed": 1.1},
+	{"desc": "Brasas duram 25% menos.", "ember": 0.75},
+	{"desc": "Chefes chegam 1 minuto antes.", "boss_early": 60.0},
+	{"desc": "Mais criaturas de elite.", "elite": 0.05},
+	{"desc": "Farol com 15% menos vida.", "lighthouse": 0.85},
+	{"desc": "Uma troca de cartas a menos.", "reroll": -1},
+	{"desc": "Criaturas com 15% mais vida.", "hp": 1.15},
+	{"desc": "Névoa mais densa.", "fog": 0.25},
+	{"desc": "Chefes enfurecem com 75% da vida.", "enrage": 0.75},
+	{"desc": "Chefes derrotados não curam o farol.", "no_heal": 1.0},
+]
+const TIDE_SCORE := 0.15 ## Pontuação extra por nível de maré.
+
+
+## Efeito somado das marés até `level`. Multiplicadores começam em 1, somas em 0.
+static func tide(level: int, key: String) -> float:
+	var multiply := key in ["speed", "ember", "lighthouse", "hp"]
+	var v := 1.0 if multiply else 0.0
+	if key == "enrage":
+		v = ENRAGE_AT
+	for i in mini(level, TIDES.size()):
+		var t: Dictionary = TIDES[i]
+		if not t.has(key):
+			continue
+		if multiply:
+			v *= float(t[key])
+		elif key == "enrage":
+			v = maxf(v, float(t[key]))
+		else:
+			v += float(t[key])
+	return v
+
+# --- Modo Chefões ---
+const BOSS_RUSH_PAUSE := 6.0 ## Segundos entre um chefe e o próximo.
+const BOSS_RUSH_START_PICKS := 6 ## Melhorias escolhidas antes do primeiro chefe.
+const BOSS_RUSH_PAR := 900.0 ## Abaixo disto, cada segundo poupado vale pontos.
+const SCORE_RUSH_PER_SECOND := 10

@@ -77,6 +77,25 @@ Em cada escolha dá para **trocar** a mão (T; 1 por partida + oficina) e **bani
 | Difícil | Elites (8%), brasas duram 9 s, chefes enfurecem, XP +15% |
 | Impossível | Elites (15%), brasas duram 6 s, chefes enfurecem, chefe extra às 7:00, farol −25%, névoa densa, XP +35% |
 
+## Faroleiros jogáveis
+A aparência do farol (Keepers) é só visual; o faroleiro (Balance.HEROES) muda as regras: Faroleira (equilibrada), Monge (+2 lentes, -30% de dano), Pirata (feixe curto e forte, +30 de vida), Astrônoma (começa com Pulso 2, feixe estreito) e Pescador (atrai brasas de longe, sobe de nível mais rápido, menos vida). Os quatro últimos se compram na oficina.
+
+## Marés (níveis de desafio)
+Ver o amanhecer no Normal ou acima libera a próxima maré (até 10). As regras são cumulativas: criaturas mais rápidas, brasas mais curtas, chefes 1 min antes, mais elites, farol mais frágil, uma troca a menos, criaturas mais resistentes, névoa densa, fúria com 75% da vida e chefes sem cura. Cada maré soma +15% ao multiplicador de pontos.
+
+## Habilidades equipadas
+O jogador leva três habilidades, escolhidas na oficina entre seis: Clarão, Sobrecarga, Sino da Névoa e as compráveis Espelho (feixe oposto por 6 s), Maré (empurra as criaturas) e Sinalizador (dois feixes giratórios por 8 s).
+
+## Desafio diário e Modo Chefões
+- **Desafio diário:** a data vira a semente; mapa, faroleiro e maré (1 a 3) são sorteados por ela e iguais para todos. Ranking próprio do dia (e leaderboard da Steam quando integrada).
+- **Modo Chefões:** os 11 chefes, mapa por mapa, com 6 melhorias escolhidas no começo; as criaturas comuns ficam mais fortes a cada chefe. Pontua mais quem termina mais rápido.
+
+## Bestiário e resumo
+54 fichas com a lenda real de cada criatura e chefe, abertas na primeira vez que são queimados. O fim de partida mostra de onde veio o dano (feixe, lentes, farolete, pulso, habilidades, combustão) e quantas brasas foram recolhidas e perdidas.
+
+## Acessibilidade
+Filtro para daltonismo (protanopia, deuteranopia, tritanopia), tamanho do texto (100/112/125%) e "Reduzir efeitos piscantes".
+
 ## Modo sem fim
 Depois do amanhecer, "Continuar noite adentro": a névoa volta, a noite recomeça às 18:00, um chefe do mapa a cada 2:30 em rodízio (incluindo o extra) e as criaturas continuam ficando mais fortes. Cada segundo depois do amanhecer vale 10 pontos e cada noite extra completa, 4.000. A partida do amanhecer é atualizada no histórico quando a luz se apaga (ou ao sair pelo menu).
 

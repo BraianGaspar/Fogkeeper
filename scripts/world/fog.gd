@@ -50,7 +50,7 @@ func _process(delta: float) -> void:
 		_next_flash -= delta
 		if _next_flash <= 0.0:
 			_next_flash = _rng.randf_range(3.0, 8.0)
-			_flash = 1.0 if Settings.lightning_flash else 0.0
+			_flash = 1.0 if Settings.lightning_flash and not Settings.reduce_flashes else 0.0
 			var pitch := _rng.randf_range(0.85, 1.1)
 			get_tree().create_timer(_rng.randf_range(0.2, 0.7), true).timeout.connect(
 				func() -> void: Sfx.play(&"thunder", pitch))

@@ -76,6 +76,24 @@ static func draw(ci: CanvasItem, id: String, c: Vector2, s: float, col: Color) -
 		"overcharge":
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(s * 0.15, -s), c + Vector2(-s * 0.45, s * 0.1), c + Vector2(-s * 0.02, s * 0.1),
 				c + Vector2(-s * 0.15, s), c + Vector2(s * 0.45, -s * 0.15), c + Vector2(s * 0.02, -s * 0.15)]), col)
+		"mirror":
+			_cone(ci, c, 0.0, 0.3, s * 0.95, col)
+			_cone(ci, c, PI, 0.3, s * 0.95, Color(0.75, 0.9, 1.0))
+			ci.draw_rect(Rect2(c.x - s * 0.08, c.y - s * 0.6, s * 0.16, s * 1.2), light)
+		"tide":
+			for i in 3:
+				var y := c.y - s * 0.45 + i * s * 0.45
+				var pts := PackedVector2Array()
+				for k in 9:
+					var x := c.x - s * 0.8 + k * s * 0.2
+					pts.append(Vector2(x, y + sin(k * 1.2 + i) * s * 0.15))
+				ci.draw_polyline(pts, Color(0.45, 0.75, 1.0) if i == 1 else col, 3.0)
+		"beacon":
+			_cone(ci, c, -PI / 4.0, 0.25, s * 0.95, col)
+			_cone(ci, c, PI * 0.75, 0.25, s * 0.95, col)
+			ci.draw_arc(c, s * 0.75, -PI * 0.1, PI * 0.4, 12, light, 2.5)
+			ci.draw_arc(c, s * 0.75, PI * 0.9, PI * 1.4, 12, light, 2.5)
+			ci.draw_circle(c, s * 0.18, light)
 		"bell":
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.65, s * 0.45), c + Vector2(-s * 0.45, -s * 0.35), c + Vector2(0, -s * 0.7),
 				c + Vector2(s * 0.45, -s * 0.35), c + Vector2(s * 0.65, s * 0.45)]), col)

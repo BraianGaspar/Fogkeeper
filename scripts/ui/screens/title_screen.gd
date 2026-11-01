@@ -3,6 +3,9 @@ extends MenuScreen
 ## Tela inicial: logotipo sobre o cenário vivo e o menu principal.
 
 signal play_pressed
+signal daily_pressed
+signal boss_rush_pressed
+signal bestiary_pressed
 signal tutorial_pressed
 signal workshop_pressed
 signal achievements_pressed
@@ -52,23 +55,25 @@ func _build() -> void:
 	center.add_child(panel)
 	var menu := VBoxContainer.new()
 	menu.custom_minimum_size.x = 440
-	menu.add_theme_constant_override("separation", 10)
+	menu.add_theme_constant_override("separation", 8)
 	panel.add_child(menu)
 	default_focus = add_button(menu, tr("Jogar"), func() -> void: play_pressed.emit())
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
+	grid.add_theme_constant_override("v_separation", 8)
 	menu.add_child(grid)
 	for entry: Array in [
-		[tr("Tutorial"), tutorial_pressed], [tr("Oficina"), workshop_pressed],
-		[tr("Conquistas"), achievements_pressed], [tr("Histórico"), history_pressed],
-		[tr("Ranking"), ranking_pressed], [tr("Configurações"), settings_pressed],
+		[tr("Desafio diário"), daily_pressed], [tr("Modo Chefões"), boss_rush_pressed],
+		[tr("Oficina"), workshop_pressed], [tr("Bestiário"), bestiary_pressed],
+		[tr("Conquistas"), achievements_pressed], [tr("Ranking"), ranking_pressed],
+		[tr("Histórico"), history_pressed], [tr("Tutorial"), tutorial_pressed],
+		[tr("Configurações"), settings_pressed], [tr("Sair"), quit_pressed],
 	]:
 		var sig: Signal = entry[1]
-		var b := add_button(grid, entry[0], func() -> void: sig.emit())
+		var b := add_button(grid, entry[0], func() -> void: sig.emit(), &"back" if sig == quit_pressed else &"confirm")
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	add_button(menu, tr("Sair"), func() -> void: quit_pressed.emit(), &"back")
+		b.custom_minimum_size.y = 42
 	var oil := UiTheme.label(tr("Óleo do farol: %s") % Records.format_number(Progress.oil), 16, UiTheme.GOLD)
 	oil.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	menu.add_child(oil)

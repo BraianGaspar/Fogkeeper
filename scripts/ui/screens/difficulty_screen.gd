@@ -5,13 +5,15 @@ extends MenuScreen
 
 signal start(difficulty: String)
 
-const CARD := Vector2(212, 356)
+const CARD := Vector2(212, 340)
 const ACCENTS := {
 	"easy": Color(0.55, 0.9, 0.6), "normal": UiTheme.GOLD, "medium": Color(1.0, 0.65, 0.3),
 	"hard": Color(1.0, 0.42, 0.32), "impossible": Color(0.75, 0.3, 1.0),
 }
 
 var _rules: Label
+var _tide_label: Label
+var _tide_rules: Label
 
 
 func _build() -> void:
@@ -51,7 +53,47 @@ func _build() -> void:
 	picker.setup(cards, start_index)
 	picker.chosen.connect(func(i: int) -> void: start.emit(Balance.DIFFICULTY_ORDER[i]))
 
+	# Marés: liberadas uma a uma vendo o amanhecer na maré mais alta.
+	var max_tide := mini(Progress.stat("tide_max"), Balance.TIDES.size())
+	if max_tide > 0 or not Progress.enabled:
+		if not Progress.enabled:
+			max_tide = Balance.TIDES.size()
+		Settings.tide = clampi(Settings.tide, 0, max_tide)
+		var row := HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 10)
+		box.add_child(row)
+		var minus := UiTheme.small_button("<", func() -> void: _set_tide(Settings.tide - 1, max_tide))
+		var plus := UiTheme.small_button(">", func() -> void: _set_tide(Settings.tide + 1, max_tide))
+		for b in [minus, plus]:
+			b.focus_mode = Control.FOCUS_NONE
+			b.custom_minimum_size.x = 40
+		_tide_label = UiTheme.label("", 18, Color(0.5, 0.85, 1.0), true)
+		_tide_label.custom_minimum_size.x = 260
+		_tide_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row.add_child(minus)
+		row.add_child(_tide_label)
+		row.add_child(plus)
+		_tide_rules = text(box, "", 14, Color(0.5, 0.85, 1.0))
+		_set_tide(Settings.tide, max_tide)
+
 	back_button(box)
+
+
+func _set_tide(level: int, max_tide: int) -> void:
+	Settings.tide = clampi(level, 0, max_tide)
+	_tide_label.text = tr("Sem maré") if Settings.tide == 0 else tr("Maré %d") % Settings.tide + "   (+%d%%)" % roundi(Balance.TIDE_SCORE * Settings.tide * 100.0)
+	_tide_rules.text = tide_text(Settings.tide)
+
+
+## Regras somadas das marés até `level`.
+static func tide_text(level: int) -> String:
+	if level == 0:
+		return TranslationServer.translate("Vença na maré mais alta para liberar a próxima.")
+	var parts: Array[String] = []
+	for i in mini(level, Balance.TIDES.size()):
+		parts.append(TranslationServer.translate(Balance.TIDES[i]["desc"]))
+	return " ".join(parts)
 
 
 ## Resumo das regras de um modo, comparado ao Normal.

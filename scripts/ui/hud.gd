@@ -16,6 +16,8 @@ signal story_finished
 signal endless_pressed
 signal tutorial_requested
 signal pause_requested
+signal daily_requested
+signal boss_rush_requested
 
 const DIM_TITLE := 0.15
 const DIM_MENU := 0.6
@@ -240,7 +242,7 @@ func _draw_vignette() -> void:
 
 ## O farol levou dano: as bordas da tela pulsam em vermelho.
 func hurt(fraction: float) -> void:
-	if Settings.screen_shake or Settings.particles:
+	if not Settings.reduce_flashes and (Settings.screen_shake or Settings.particles):
 		_hurt = minf(1.0, _hurt + 0.35 + fraction * 4.0)
 
 
@@ -428,7 +430,11 @@ func _on_back(screen: MenuScreen) -> void:
 	if screen is SettingsScreen and _settings_from_pause:
 		_show_pause_again()
 	elif screen is DifficultyScreen:
+		show_hero_select()
+	elif screen is HeroScreen:
 		show_keeper_select()
+	elif screen is CreditsScreen:
+		show_settings(false)
 	elif screen is KeeperScreen:
 		show_map_select()
 	elif screen is StoryScreen:
@@ -458,6 +464,9 @@ func show_title() -> void:
 	s.tutorial_pressed.connect(func() -> void: tutorial_requested.emit())
 	s.workshop_pressed.connect(show_workshop)
 	s.achievements_pressed.connect(show_achievements)
+	s.daily_pressed.connect(show_daily)
+	s.boss_rush_pressed.connect(func() -> void: boss_rush_requested.emit())
+	s.bestiary_pressed.connect(show_bestiary)
 	s.history_pressed.connect(show_history)
 	s.ranking_pressed.connect(show_ranking)
 	s.settings_pressed.connect(show_settings.bind(false))
@@ -527,8 +536,45 @@ func show_keeper_select() -> void:
 	s.chosen.connect(func(id: String) -> void:
 		_pending_keeper = id
 		Settings.keeper = id
+		show_hero_select()
+	)
+	_set_screen(s, DIM_MENU, false)
+
+
+func show_hero_select() -> void:
+	var s := HeroScreen.new()
+	s.chosen.connect(func(id: String) -> void:
+		Settings.hero = id
 		show_difficulty()
 	)
+	_set_screen(s, DIM_MENU, false)
+
+
+func show_bestiary() -> void:
+	var s := BestiaryScreen.new()
+	s.map_id = Settings.map
+	_set_screen(s, DIM_MENU, false)
+
+
+func show_credits() -> void:
+	_set_screen(CreditsScreen.new(), DIM_MENU, false)
+
+
+## Desafio diário: as regras de hoje e o melhor resultado antes de começar.
+func show_daily() -> void:
+	var rules := Records.daily_rules(Time.get_date_dict_from_system())
+	var best := Records.ranking("", "", "daily", rules["date"])
+	var s := ConfirmScreen.new()
+	s.heading = tr("Desafio diário")
+	s.body = tr("Hoje (%s): %s, com %s, na Maré %d. Todo mundo joga a mesma noite, com a mesma semente.") % [
+		rules["date"], tr(Maps.get_map(rules["map"])["name"]), tr(Balance.HEROES[rules["hero"]]["name"]), rules["tide"]]
+	s.body += "\n\n" + DifficultyScreen.tide_text(rules["tide"])
+	if not best.is_empty():
+		s.body += "\n\n" + tr("Seu melhor hoje: %s pontos.") % Records.format_number(best[0]["score"])
+	s.options = [
+		[tr("Começar"), func() -> void: daily_requested.emit()],
+		[tr("Voltar"), func() -> void: menu_pressed.emit()],
+	]
 	_set_screen(s, DIM_MENU, false)
 
 
@@ -543,6 +589,7 @@ func show_settings(from_pause: bool, tab: int = 0) -> void:
 	var s := SettingsScreen.new()
 	s.tab = tab
 	s.language_changed.connect(func(t: int) -> void: show_settings(from_pause, t))
+	s.credits_requested.connect(show_credits)
 	_set_screen(s, DIM_MENU, from_pause)
 
 
@@ -550,8 +597,9 @@ func show_history() -> void:
 	_set_screen(HistoryScreen.new(), DIM_MENU, false)
 
 
-func show_ranking(difficulty: String = "", map_id: String = "") -> void:
+func show_ranking(difficulty: String = "", map_id: String = "", mode: String = "normal") -> void:
 	var s := RankingScreen.new()
+	s.mode = mode
 	s.filter = difficulty
 	s.map_filter = map_id
 	s.highlight_id = _last_run_id
@@ -600,7 +648,7 @@ func show_end(run: Dictionary, context: Dictionary) -> void:
 	s.run = run
 	s.context = context
 	s.restart_pressed.connect(func() -> void: restart_pressed.emit())
-	s.ranking_pressed.connect(func() -> void: show_ranking(run["difficulty"], run["map"]))
+	s.ranking_pressed.connect(func() -> void: show_ranking(run["difficulty"], "" if run["mode"] != "normal" else run["map"], run["mode"]))
 	s.menu_pressed.connect(func() -> void: menu_pressed.emit())
 	s.endless_pressed.connect(func() -> void: endless_pressed.emit())
 	_set_screen(s, 0.35 if context.get("can_continue", false) else 0.6, false)

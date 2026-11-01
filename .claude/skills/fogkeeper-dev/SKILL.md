@@ -20,6 +20,9 @@ scripts/core/
   main.gd                 Estados, XP, níveis, chefes, relíquias, pontuação, fim de jogo, modo sem fim, autoplay
   progress.gd             Progressão entre partidas (user://progress.json): óleo, oficina, desbloqueios
   achievements.gd         Conquistas locais (unlock() é o ponto único para a Steam)
+  bestiary.gd             Fichas do bestiário (lendas) e quais já foram vistas
+  damage_stats.gd         Dano por fonte e brasas da partida (resumo do fim)
+  steam_service.gd        Ponte com a Steam (GodotSteam); sem o plugin, não faz nada
   tutorial.gd             Tutorial guiado em passos (as dicas de teclas só aparecem aqui)
   trailer.gd              Trailer roteirizado (--trailer=en|pt com --write-movie)
   balance.gd              TODOS os números: criaturas, chefes, habilidades, dificuldades, pontuação
@@ -30,6 +33,7 @@ scripts/core/
   settings.gd             Preferências (user://settings.cfg): idioma, gráficos, áudio, teclas
   records.gd              Histórico e ranking local (user://records.json) + formatação ("1º lugar")
   day_cycle.gd            Paleta de luz por mapa (entardecer → amanhecer) e relógio 18:00–06:00
+  (Balance também tem HEROES, TIDES, as habilidades novas e os números do Modo Chefões)
   i18n.gd                 Traduções PT/EN/ES (chave = texto em português) e carga dos outros idiomas
 scripts/i18n/             FR, DE, RU, zh_CN, JA, KO: um arquivo por idioma (const T, mesmas chaves)
 scripts/audio/sfx.gd      Sons, trilha dinâmica (calma por mapa, tensão, batalha), grupos de som
@@ -74,6 +78,9 @@ tools/store_art.gd         Gera a arte da loja da Steam em docs/store/ (precisa 
 - **Progressão é leve e opcional para o balanceamento.** `Progress.enabled` é falso no autoplay (sem bônus da oficina, tudo liberado) e `read_only` nas capturas `--ui`. Bônus permanentes entram em `Upgrades.apply_meta()` e em `Progress.level()`; desbloqueios em `Balance.UNLOCKS`.
 - **Dicas de teclas só no tutorial.** As telas normais não mostram "A/D ou ←/→..."; o tutorial (`Tutorial._refresh`) e a escolha de melhoria com `show_hints` mostram, com as teclas reais de `Settings.controls`.
 - **Golpes fortes têm peso.** Use `Main._ring_fx()`, `_hit_stop()` (respeita `Settings.hit_stop`) e `_shake`; nada disso roda no autoplay.
+
+- **Modos da partida:** `Main.mode` é "normal", "daily" ou "boss_rush"; o registro guarda `mode`, `hero`, `tide` e o ranking separa por modo (`Records.ranking(dif, mapa, modo, dia)`). Regras fixas do diário vêm de `Records.daily_rules()`.
+- **Legal:** nada de nomes, visuais ou bordões de obras protegidas (por isso a Cuca é grisalha). Fontes e bibliotecas novas precisam de licença compatível e entrada em `THIRD_PARTY_NOTICES.md` e na tela de créditos. Ver `docs/LEGAL.md`.
 
 ## Receitas
 

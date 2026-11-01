@@ -18,9 +18,9 @@ const REBINDABLE := {
 const ACTION_NAMES := {
 	"rotate_left": "Girar o feixe para a esquerda",
 	"rotate_right": "Girar o feixe para a direita",
-	"ability_1": "Habilidade: Clarão",
-	"ability_2": "Habilidade: Sobrecarga",
-	"ability_3": "Habilidade: Sino da Névoa",
+	"ability_1": "Habilidade 1",
+	"ability_2": "Habilidade 2",
+	"ability_3": "Habilidade 3",
 }
 
 ## Teclas que não podem ser usadas em ações configuráveis.

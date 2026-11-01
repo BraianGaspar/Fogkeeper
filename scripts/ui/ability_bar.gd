@@ -45,7 +45,7 @@ func _draw() -> void:
 	if abilities == null or abilities.cooldowns.size() < 3:
 		return
 	for i in 3:
-		var a: Dictionary = Balance.ABILITIES[i]
+		var a: Dictionary = abilities.data(i)
 		var r := Rect2(i * (SLOT + GAP), 0, SLOT, SLOT)
 		var c := r.get_center()
 		var ready := abilities.is_ready(i)

@@ -129,5 +129,5 @@ func _draw() -> void:
 		draw_line(Vector2(m, m), card_size - Vector2(m, m), Color(UiTheme.DANGER, k), 6.0)
 		draw_line(Vector2(card_size.x - m, m), Vector2(m, card_size.y - m), Color(UiTheme.DANGER, k), 6.0)
 
-	if _flash > 0.0:
+	if _flash > 0.0 and not Settings.reduce_flashes:
 		draw_rect(r, Color(1.0, 0.95, 0.8, 0.5 * _flash))

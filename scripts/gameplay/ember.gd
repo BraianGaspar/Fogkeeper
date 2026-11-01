@@ -54,6 +54,7 @@ func _process(delta: float) -> void:
 		_vel = _vel.lerp(dir * Balance.EMBER_PULL_SPEED, minf(1.0, delta * 6.0))
 		position += _vel * delta
 		if position.length() < Balance.LIGHTHOUSE_RADIUS:
+			DamageStats.embers_collected += value
 			collected.emit(value)
 			queue_free()
 			return
@@ -62,6 +63,7 @@ func _process(delta: float) -> void:
 		position += _vel * delta
 		_life -= delta
 		if _life <= 0.0:
+			DamageStats.embers_lost += value
 			queue_free()
 			return
 	queue_redraw()

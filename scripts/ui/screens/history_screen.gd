@@ -76,6 +76,11 @@ func _show(run: Dictionary) -> void:
 	stat_row(_detail, tr("Resultado"), tr("Vitória — amanheceu") if run["victory"] else tr("Derrota — a luz se apagou"),
 		UiTheme.GOOD if run["victory"] else UiTheme.DANGER)
 	stat_row(_detail, tr("Mapa"), tr(Maps.get_map(run["map"])["name"]))
+	stat_row(_detail, tr("Faroleiro"), tr(Balance.HEROES.get(run["hero"], Balance.HEROES["keeper"])["name"]))
+	if run["mode"] != "normal":
+		stat_row(_detail, tr("Modo"), tr("Desafio diário") if run["mode"] == "daily" else tr("Modo Chefões"))
+	if int(run["tide"]) > 0:
+		stat_row(_detail, tr("Maré"), str(run["tide"]))
 	stat_row(_detail, tr("Farol"), tr(Keepers.get_keeper(run["keeper"])["name"]))
 	stat_row(_detail, tr("Dificuldade"), difficulty_name(run["difficulty"]))
 	stat_row(_detail, tr("Duração"), Records.format_time(run["duration"]))

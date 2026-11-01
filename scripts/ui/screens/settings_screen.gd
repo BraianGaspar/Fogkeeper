@@ -5,8 +5,11 @@ extends MenuScreen
 ## pausa, no meio da partida, e ouvir o resultado).
 
 signal language_changed(tab: int)
+signal credits_requested
 
-const TABS := ["Geral", "Controles", "Gráficos", "Áudio"]
+const TABS := ["Geral", "Controles", "Gráficos", "Áudio", "Acessibilidade"]
+const COLORBLIND_NAMES := ["Desligado", "Protanopia", "Deuteranopia", "Tritanopia"]
+const TEXT_SCALE_LABELS := ["100%", "112%", "125%"]
 const QUALITY_NAMES := ["Baixa", "Média", "Alta"]
 const WINDOW_NAMES := ["Janela", "Tela cheia", "Tela cheia exclusiva"]
 const FOG_NAMES := ["Leve", "Normal", "Densa"]
@@ -33,7 +36,7 @@ func _build() -> void:
 	for i in TABS.size():
 		var b := UiTheme.small_button(tr(TABS[i]), _show_tab.bind(i), true)
 		b.button_group = group
-		b.custom_minimum_size.x = 150
+		b.custom_minimum_size.x = 132
 		tabs.add_child(b)
 		_tab_buttons.append(b)
 
@@ -77,6 +80,10 @@ func _show_tab(i: int) -> void:
 			_row(tr("Idioma"), _selector(I18n.LANGUAGE_NAMES.values(), locales.find(Settings.locale), _set_locale, false))
 			_row(tr("Nome do faroleiro"), name_edit())
 			_row(tr("Mostrar a história ao começar"), _toggle(Settings.show_story, _set_story))
+			var credits := UiTheme.small_button(tr("Créditos e licenças"), func() -> void: credits_requested.emit())
+			credits.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			credits.custom_minimum_size.x = 260
+			_content.add_child(credits)
 		1:
 			_build_controls()
 		2:
@@ -104,6 +111,11 @@ func _show_tab(i: int) -> void:
 			for g: String in Sfx.GROUPS:
 				_row(tr(Sfx.GROUP_NAMES[g]), _toggle(Settings.sound_enabled(g), _set_sound.bind(g)))
 			_note(tr("Arraste até 0% para desativar um canal."))
+		4:
+			_row(tr("Filtro para daltonismo"), _selector(COLORBLIND_NAMES, Settings.colorblind, _set_colorblind))
+			_row(tr("Tamanho do texto"), _selector(TEXT_SCALE_LABELS, Settings.text_scale, _set_text_scale, false))
+			_row(tr("Reduzir efeitos piscantes"), _toggle(Settings.reduce_flashes, _set_reduce_flashes))
+			_note(tr("Reduzir efeitos piscantes desliga relâmpagos, clarões e bordas vermelhas de dano. O tamanho do texto vale ao abrir a próxima tela."))
 
 
 # --- Controles --------------------------------------------------------------
@@ -128,7 +140,7 @@ func _build_controls() -> void:
 		for slot in 2:
 			var keys: Array = Settings.controls.get(action, GameInput.REBINDABLE[action])
 			var b := UiTheme.small_button(GameInput.key_name(int(keys[slot])), func() -> void: pass)
-			b.custom_minimum_size.x = 150
+			b.custom_minimum_size.x = 132
 			b.pressed.connect(_begin_capture.bind(action, slot, b))
 			row.add_child(b)
 		_content.add_child(row)
@@ -220,6 +232,21 @@ func _set_vsync(on: bool) -> void:
 
 func _set_shake(on: bool) -> void:
 	Settings.screen_shake = on
+	_changed()
+
+
+func _set_colorblind(k: int) -> void:
+	Settings.colorblind = k
+	_changed()
+
+
+func _set_text_scale(k: int) -> void:
+	Settings.text_scale = k
+	_changed()
+
+
+func _set_reduce_flashes(on: bool) -> void:
+	Settings.reduce_flashes = on
 	_changed()
 
 

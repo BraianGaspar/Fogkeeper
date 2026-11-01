@@ -19,12 +19,19 @@ static var _heading: Font
 static var _silent := false
 
 
-## Fonte serifada para títulos; cai para a padrão se nenhuma existir.
+## Fonte dos títulos: Cinzel (SIL OFL, em assets/fonts/), que vai junto com o
+## jogo. Letras que ela não tem (cirílico, chinês, japonês, coreano) caem nas
+## fontes do sistema.
 static func heading_font() -> Font:
 	if _heading == null:
-		var f := SystemFont.new()
-		f.font_names = PackedStringArray(["Cinzel", "Trajan Pro", "Georgia", "Palatino Linotype", "Book Antiqua", "DejaVu Serif", "serif"])
-		f.font_weight = 700
+		var fallback := SystemFont.new()
+		fallback.font_names = PackedStringArray(["Georgia", "Noto Serif", "DejaVu Serif", "serif"])
+		fallback.font_weight = 700
+		var file: FontFile = load("res://assets/fonts/Cinzel.ttf")
+		var f := FontVariation.new()
+		f.base_font = file
+		f.variation_opentype = {"weight": 700}
+		f.fallbacks = [fallback]
 		_heading = f
 	return _heading
 
@@ -34,7 +41,7 @@ static func label(text: String, size: int, color: Color = TEXT, heading: bool = 
 	l.text = text
 	l.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_font_size_override("font_size", Settings.font(size))
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 	l.add_theme_constant_override("outline_size", 5 if heading else 4)
@@ -75,7 +82,7 @@ static func button(text: String, on_press: Callable, sound: StringName = &"confi
 	b.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	b.custom_minimum_size = Vector2(0, 46)
 	b.add_theme_font_override("font", heading_font())
-	b.add_theme_font_size_override("font_size", 19)
+	b.add_theme_font_size_override("font_size", Settings.font(19))
 	b.add_theme_color_override("font_color", TEXT)
 	for state in ["font_hover_color", "font_focus_color", "font_hover_pressed_color"]:
 		b.add_theme_color_override(state, GOLD)
@@ -111,7 +118,7 @@ static func button(text: String, on_press: Callable, sound: StringName = &"confi
 static func small_button(text: String, on_press: Callable, toggle: bool = false) -> Button:
 	var b := button(text, on_press, &"hover")
 	b.custom_minimum_size = Vector2(0, 36)
-	b.add_theme_font_size_override("font_size", 16)
+	b.add_theme_font_size_override("font_size", Settings.font(16))
 	b.toggle_mode = toggle
 	if toggle:
 		var on := flat(Color(0.26, 0.19, 0.08), GOLD, 2, 12.0)
@@ -176,6 +183,7 @@ static func diamond(ci: CanvasItem, c: Vector2, r: float, col: Color) -> void:
 
 ## Texto centralizado com contorno, para controles desenhados à mão.
 static func draw_text(ci: CanvasItem, text: String, center: Vector2, size: int, col: Color, font: Font = null, width: float = -1.0) -> void:
+	size = Settings.font(size)
 	var f := font if font else ThemeDB.fallback_font
 	var w := width if width > 0.0 else f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 4.0
 	var pos := Vector2(center.x - w / 2.0, center.y + (f.get_ascent(size) - f.get_descent(size)) / 2.0)

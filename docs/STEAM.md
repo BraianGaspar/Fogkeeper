@@ -60,9 +60,10 @@ Capturas (1920×1080): `godot --path . --resolution 1920x1080 -- --ui=boss --map
 - **Android:** pronto para teste. `tools/export_android.sh` gera `build/android/Fogkeeper.apk` (~28 MB, arm64, assinado com a chave de debug). Requer JDK 17 (Temurin) e o Android SDK (build-tools 34, platform 34), configurados nas Configurações do Editor. Para a Google Play: criar uma chave de release (keytool), exportar em AAB e pagar a taxa única de US$ 25 da conta de desenvolvedor. iOS e macOS ficam de fora (exigem Mac e conta Apple paga).
 
 ## Integração técnica
-- Use **GodotSteam** (addon GDExtension, ou a build pré-compilada do editor). Crie um autoload `SteamService` que inicializa a Steam e falha de forma silenciosa quando o jogo roda fora da Steam (dev, autoplay, CI). Nunca deixe o jogo depender da Steam para iniciar.
+- O código já está pronto em `scripts/core/steam_service.gd`: inicializa a Steam, desbloqueia conquistas (chamado por `Achievements.unlock()`) e envia pontuações (`fogkeeper_<mapa>_<dificuldade>`, `fogkeeper_boss_rush`, `fogkeeper_daily_AAAAMMDD`). Sem o plugin, tudo é ignorado e o jogo abre normalmente.
+- **Para ligar:** baixe o **GodotSteam GDExtension** para Godot 4.4 (godotsteam.com ou a Asset Library do editor), copie a pasta `addons/godotsteam` para o projeto, troque `SteamService.APP_ID` pelo id do seu app e cadastre no Steamworks as conquistas com os mesmos ids de `Achievements.LIST`. Para testar fora da Steam, crie `steam_appid.txt` com o id ao lado do .exe.
 - Durante o desenvolvimento, use o app id de teste 480 (Spacewar); troque pelo seu app id antes de enviar builds.
-- Conquistas: as 24 já existem localmente (`Achievements.LIST`). Cadastre os mesmos ids no Steamworks e chame `Steam.setAchievement(id)` + `storeStats()` dentro de `Achievements.unlock()`, o ponto único de desbloqueio.
+- Conquistas: as 28 já existem localmente (`Achievements.LIST`). Cadastre os mesmos ids no Steamworks e chame `Steam.setAchievement(id)` + `storeStats()` dentro de `Achievements.unlock()`, o ponto único de desbloqueio.
 - Steam Cloud para `user://settings.cfg`, `user://records.json` e `user://progress.json` (óleo, oficina, desbloqueios e conquistas).
 - Leaderboards: uma por mapa e dificuldade (`fogkeeper_<mapa>_<dificuldade>`, ex. `fogkeeper_bay_hard`), enviando `score` ao fim de cada partida em `Main._end_run()`. A pontuação já é calculada só em `Balance.score_breakdown()`, então basta enviar o total; o ranking local continua para jogo offline.
 

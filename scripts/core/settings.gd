@@ -12,6 +12,7 @@ const BORDERLESS := 1 ## Tela cheia em janela sem borda.
 const EXCLUSIVE := 2 ## Tela cheia exclusiva.
 const RESOLUTIONS := ["1280x720", "1600x900", "1920x1080", "2560x1440"]
 const FOG_LEVELS := [0.7, 1.0, 1.3] ## Leve, normal, densa.
+const TEXT_SCALES := [1.0, 1.12, 1.25]
 const DEFAULT_NAME := "Faroleiro"
 
 static var locale := "pt_BR"
@@ -19,6 +20,12 @@ static var player_name := ""
 static var difficulty := "normal"
 static var map := "bay"
 static var keeper := "classic"
+static var hero := "keeper" ## Faroleiro jogável (Balance.HEROES).
+static var loadout: Array = ["flash", "overcharge", "bell"] ## As três habilidades equipadas.
+static var tide := 0 ## Maré escolhida (0 = sem maré).
+static var colorblind := 0 ## 0 desligado, 1 protanopia, 2 deuteranopia, 3 tritanopia.
+static var text_scale := 0 ## Índice de TEXT_SCALES.
+static var reduce_flashes := false ## Menos clarões e piscadas (fotossensibilidade).
 static var quality := QUALITY_HIGH
 static var window_mode := WINDOWED
 static var resolution := "1280x720"
@@ -41,6 +48,10 @@ static var controls: Dictionary = {} ## ação -> [tecla principal, alternativa]
 
 static func load_settings() -> void:
 	locale = _system_locale()
+	if OS.has_feature("mobile"):
+		# Celular: texto maior e efeitos mais leves por padrão.
+		text_scale = 1
+		quality = QUALITY_MEDIUM
 	controls = GameInput.default_controls()
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) != OK:
@@ -50,7 +61,13 @@ static func load_settings() -> void:
 	difficulty = cfg.get_value("general", "difficulty", "normal")
 	map = cfg.get_value("general", "map", "bay")
 	keeper = cfg.get_value("general", "keeper", "classic")
-	quality = cfg.get_value("graphics", "quality", QUALITY_HIGH)
+	hero = cfg.get_value("general", "hero", "keeper")
+	loadout = cfg.get_value("general", "loadout", loadout)
+	tide = cfg.get_value("general", "tide", 0)
+	colorblind = cfg.get_value("accessibility", "colorblind", 0)
+	text_scale = cfg.get_value("accessibility", "text_scale", text_scale)
+	reduce_flashes = cfg.get_value("accessibility", "reduce_flashes", false)
+	quality = cfg.get_value("graphics", "quality", quality)
 	window_mode = cfg.get_value("graphics", "window_mode", WINDOWED)
 	resolution = cfg.get_value("graphics", "resolution", "1280x720")
 	vsync = cfg.get_value("graphics", "vsync", true)
@@ -79,6 +96,10 @@ static func load_settings() -> void:
 		map = "bay"
 	if not Keepers.LIST.has(keeper):
 		keeper = "classic"
+	if not Balance.HEROES.has(hero):
+		hero = "keeper"
+	if loadout.size() != 3:
+		loadout = ["flash", "overcharge", "bell"]
 
 
 static func save() -> void:
@@ -88,6 +109,12 @@ static func save() -> void:
 	cfg.set_value("general", "difficulty", difficulty)
 	cfg.set_value("general", "map", map)
 	cfg.set_value("general", "keeper", keeper)
+	cfg.set_value("general", "hero", hero)
+	cfg.set_value("general", "loadout", loadout)
+	cfg.set_value("general", "tide", tide)
+	cfg.set_value("accessibility", "colorblind", colorblind)
+	cfg.set_value("accessibility", "text_scale", text_scale)
+	cfg.set_value("accessibility", "reduce_flashes", reduce_flashes)
 	cfg.set_value("graphics", "quality", quality)
 	cfg.set_value("graphics", "window_mode", window_mode)
 	cfg.set_value("graphics", "resolution", resolution)
@@ -159,3 +186,8 @@ static func _system_locale() -> String:
 			return OS.get_locale_language()
 		_:
 			return "en"
+
+
+## Tamanho de fonte ajustado pela opção de acessibilidade "Tamanho do texto".
+static func font(size: int) -> int:
+	return roundi(size * float(TEXT_SCALES[clampi(text_scale, 0, TEXT_SCALES.size() - 1)]))

@@ -52,6 +52,12 @@ var _charm_angle := 0.0
 var _charm_pull := 0.0
 var _sleep_t := 0.0
 var _sleep_power := 1.0
+var _mirror_t := 0.0
+var _mirror_beam: Beam = null
+var _beacon_t := 0.0
+var _beacon: Dictionary = {}
+var _beacon_angle := 0.0
+var _beacon_beams: Array[Beam] = []
 
 
 func _ready() -> void:
@@ -85,6 +91,14 @@ func reset() -> void:
 	_overcharge_t = 0.0
 	_charm_t = 0.0
 	_sleep_t = 0.0
+	_mirror_t = 0.0
+	_beacon_t = 0.0
+	if _mirror_beam:
+		_mirror_beam.queue_free()
+		_mirror_beam = null
+	for b in _beacon_beams:
+		b.queue_free()
+	_beacon_beams.clear()
 	_dead = false
 	for s in _sweepers:
 		s.queue_free()
@@ -102,6 +116,7 @@ func rebuild_beams() -> void:
 		b.offset = TAU * i / lens_count
 		b.intensity = 1.0 if i == 0 or crown else 0.75
 		b.color = beam_color
+		b.source = "beam" if i == 0 else "lens"
 		add_child(b)
 		_beams.append(b)
 	var arms := 0 if sweeper_level == 0 else (2 if crown else 1)
@@ -109,6 +124,7 @@ func rebuild_beams() -> void:
 		var s := Beam.new()
 		s.color = Color(0.65, 0.88, 1.0)
 		s.intensity = 0.7
+		s.source = "sweeper"
 		add_child(s)
 		_sweepers.append(s)
 
@@ -153,6 +169,30 @@ func charm(seconds: float, toward: float, pull: float) -> void:
 func sleep(seconds: float, power: float) -> void:
 	_sleep_t = seconds
 	_sleep_power = power
+
+
+## Habilidade Espelho: um feixe extra aponta para o lado oposto ao principal.
+func start_mirror(seconds: float) -> void:
+	_mirror_t = seconds
+	if _mirror_beam == null:
+		_mirror_beam = _extra_beam(Color(0.75, 0.9, 1.0))
+
+
+## Habilidade Sinalizador: dois feixes girando sozinhos por alguns segundos.
+func start_beacon(ability: Dictionary) -> void:
+	_beacon = ability
+	_beacon_t = ability["duration"]
+	while _beacon_beams.size() < 2:
+		_beacon_beams.append(_extra_beam(Color(1.0, 0.85, 0.5)))
+
+
+func _extra_beam(col: Color) -> Beam:
+	var b := Beam.new()
+	b.color = col
+	b.intensity = 0.8
+	b.source = "ability"
+	add_child(b)
+	return b
 
 
 ## Habilidade Sobrecarga: feixe principal concentrado e mais forte.
@@ -219,6 +259,8 @@ func _process(delta: float) -> void:
 			s.dim = asleep()
 			s.apply(delta, enemies, embers)
 
+	_process_ability_beams(delta, range_mult, power, enemies, embers)
+
 	if regen > 0.0 and not _dead:
 		heal(regen * delta)
 
@@ -267,5 +309,48 @@ func _draw() -> void:
 		for i in 3:
 			var f := fmod(_time * 0.6 + i / 3.0, 1.0)
 			UiTheme.draw_text(self, "z", Vector2(18.0 + f * 22.0, -26.0 - f * 30.0), 14 + i * 3, Color(0.8, 0.65, 1.0, k * (1.0 - f)))
-	if _hurt_flash > 0.0:
+	if _hurt_flash > 0.0 and not Settings.reduce_flashes:
 		draw_circle(Vector2.ZERO, 30.0, Color(1.0, 0.2, 0.1, _hurt_flash * 1.6))
+
+
+func _process_ability_beams(delta: float, range_mult: float, power: float, enemies: Array[Node], embers: Array[Node]) -> void:
+	_mirror_t = maxf(0.0, _mirror_t - delta)
+	if _mirror_beam:
+		if _mirror_t > 0.0:
+			_mirror_beam.angle = aim_angle + PI
+			_mirror_beam.range_px = beam_range * range_mult
+			_mirror_beam.half_angle = beam_half_angle
+			_mirror_beam.dps = beam_dps * power
+			_mirror_beam.apply(delta, enemies, embers)
+		else:
+			_mirror_beam.queue_free()
+			_mirror_beam = null
+	_beacon_t = maxf(0.0, _beacon_t - delta)
+	if not _beacon_beams.is_empty():
+		if _beacon_t > 0.0:
+			_beacon_angle = wrapf(_beacon_angle + float(_beacon["spin"]) * delta, -PI, PI)
+			for i in _beacon_beams.size():
+				var b := _beacon_beams[i]
+				b.angle = _beacon_angle + PI * i
+				b.range_px = beam_range * 0.85 * range_mult
+				b.half_angle = beam_half_angle * 0.8
+				b.dps = beam_dps * float(_beacon["dps"]) * power
+				b.apply(delta, enemies, embers)
+		else:
+			for b in _beacon_beams:
+				b.queue_free()
+			_beacon_beams.clear()
+
+
+## Regras do faroleiro jogável (Balance.HEROES), aplicadas no começo da partida.
+func apply_hero(id: String) -> void:
+	var h: Dictionary = Balance.HEROES.get(id, {})
+	lens_count += int(h.get("lens", 0))
+	beam_dps *= float(h.get("dps", 1.0))
+	beam_range *= float(h.get("range", 1.0))
+	beam_half_angle *= float(h.get("width", 1.0))
+	pulse_level += int(h.get("pulse", 0))
+	magnet_radius *= float(h.get("magnet", 1.0))
+	max_hp = maxf(30.0, max_hp + float(h.get("hp", 0.0)))
+	hp = max_hp
+	rebuild_beams()

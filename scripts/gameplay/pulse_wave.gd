@@ -31,6 +31,7 @@ func _process(delta: float) -> void:
 		if e.position.length() - e.radius <= r:
 			_hit[id] = true
 			e.take_light(damage)
+			DamageStats.add("pulse", damage)
 	if _t >= duration:
 		queue_free()
 		return

@@ -30,7 +30,9 @@ Teclas do teclado podem ser trocadas em **Configurações → Controles**.
 - Criaturas especiais que mexem na mira: ladras de brasas, espelhos que refletem a luz, mariposas que crescem na luz e névoas que apagam as brasas.
 - Evoluções de melhorias, troca e banimento de cartas.
 - Oficina do faroleiro: óleo ganho em toda partida compra melhorias permanentes e libera mapas, faróis e cartas.
-- Modo sem fim depois do amanhecer, 24 conquistas e um tutorial guiado.
+- Modo sem fim, marés (10 níveis de desafio), desafio diário, Modo Chefões, 28 conquistas e um tutorial guiado.
+- Cinco faroleiros jogáveis com regras próprias, seis habilidades ativas (três equipadas) e um bestiário com as lendas reais.
+- Acessibilidade: filtro para daltonismo, tamanho do texto e redução de efeitos piscantes.
 - Nove idiomas: português, inglês, espanhol, francês, alemão, russo, chinês simplificado, japonês e coreano.
 - Toque na tela: tocar nas habilidades e botão de pausa (base para a versão de celular).
 - Quatro faróis para escolher (só aparência; três se liberam na oficina).
@@ -60,4 +62,4 @@ O bot mira no inimigo mais próximo e escolhe melhorias ao acaso; serve como ter
 - `.claude/skills/fogkeeper-dev/`: skill com as orientações do projeto para o Claude (Claude Code carrega automaticamente).
 
 ## Licença
-Defina uma licença antes de tornar o repositório público. Para um jogo comercial, o mais comum é manter o código fechado ("todos os direitos reservados").
+Todos os direitos reservados (ver `LICENSE`). Componentes de terceiros em `THIRD_PARTY_NOTICES.md`; direitos, lojas e privacidade em `docs/LEGAL.md` e `docs/PRIVACY.md`.

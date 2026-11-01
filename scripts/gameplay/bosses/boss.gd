@@ -10,6 +10,7 @@ signal enraged_now(boss: Boss)
 var data: Dictionary = {}
 var enraged := false
 var can_enrage := false
+var enrage_at := Balance.ENRAGE_AT ## Fração da vida em que enfurece (as marés sobem).
 
 
 func setup_boss(id: String, hp_mult: float, damage_mult: float, speed_mult: float, enrage_allowed: bool) -> void:
@@ -49,7 +50,7 @@ func lit_factor() -> float:
 
 func take_light(amount: float, reflect: bool = false) -> void:
 	super.take_light(amount, reflect)
-	if can_enrage and not enraged and not dying and hp < max_hp * Balance.ENRAGE_AT:
+	if can_enrage and not enraged and not dying and hp < max_hp * enrage_at:
 		enraged = true
 		enraged_now.emit(self)
 

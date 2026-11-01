@@ -28,6 +28,10 @@ const LIST := [
 	{"id": "boss_kyubi", "name": "A verdadeira raposa", "desc": "Derrote a Kyūbi."},
 	{"id": "boss_sphinx", "name": "Enigma resolvido", "desc": "Derrote a Esfinge."},
 	{"id": "boss_apep", "name": "O sol nasce de novo", "desc": "Derrote Apep."},
+	{"id": "tide_10", "name": "Maré cheia", "desc": "Veja o amanhecer na Maré 10."},
+	{"id": "daily", "name": "Desafio do dia", "desc": "Complete um desafio diário."},
+	{"id": "boss_rush", "name": "Todos os chefes", "desc": "Vença o Modo Chefões."},
+	{"id": "bestiary", "name": "Bestiário completo", "desc": "Abra todas as fichas do bestiário."},
 ]
 
 ## Quem mostra o aviso na tela: func(entry: Dictionary). Main define.
@@ -50,6 +54,7 @@ static func unlock(id: String, announce: bool = true) -> bool:
 	if not Progress.enabled or has(id) or find(id).is_empty():
 		return false
 	Progress.achievements[id] = int(Time.get_unix_time_from_system())
+	SteamService.achievement(id)
 	Progress.save()
 	if announce and listener.is_valid():
 		listener.call(find(id))
@@ -61,7 +66,10 @@ static func unlock(id: String, announce: bool = true) -> bool:
 static func check_run(run: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var candidates: Array[String] = ["first_light"]
-	if run["victory"]:
+	var c := Bestiary.count()
+	if c.x >= c.y:
+		candidates.append("bestiary")
+	if run["victory"] and run.get("mode", "normal") != "boss_rush":
 		candidates.append("dawn")
 		if run["difficulty"] in ["hard", "impossible"]:
 			candidates.append("hard_dawn")

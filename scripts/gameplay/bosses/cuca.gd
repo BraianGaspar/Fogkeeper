@@ -1,6 +1,7 @@
 class_name Cuca
 extends Boss
-## A bruxa da mata, de cabeça de jacaré e cabelo amarelo. Para longe da ilha
+## A velha bruxa da mata, de cabeça de jacaré e cabelo grisalho (folclore,
+## não o visual da TV, que tem dono). Para longe da ilha
 ## e conjura um feitiço de sono, marcado por um círculo de runas: se levar
 ## dano suficiente enquanto conjura, é interrompida; senão, a luz do farol
 ## adormece e enfraquece por alguns segundos. Depois some na névoa e
@@ -107,7 +108,7 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, facing().angle())
 	var cloak := CreatureArt.c(Color(0.32, 0.15, 0.4), lit, alpha)
 	var scale_col := CreatureArt.c(Color(0.25, 0.45, 0.2), lit, alpha)
-	var hair := CreatureArt.c(Color(0.95, 0.8, 0.25), lit, alpha)
+	var hair := CreatureArt.c(Color(0.72, 0.72, 0.7), lit, alpha)
 	var pts := PackedVector2Array()
 	for i in 20:
 		var a := TAU * i / 20.0
@@ -121,7 +122,7 @@ func _draw() -> void:
 		draw_circle(hand, r * 0.14, scale_col)
 		if casting():
 			draw_circle(hand, r * 0.3, Color(0.85, 0.5, 1.0, 0.4 * alpha))
-	# Cabelo amarelo e focinho comprido de jacaré.
+	# Cabelo grisalho desgrenhado e focinho comprido de jacaré.
 	for i in 7:
 		var a := PI + (i - 3) * 0.35
 		draw_circle(Vector2(-r * 0.05, 0) + Vector2.from_angle(a) * r * 0.42, r * 0.2, hair)

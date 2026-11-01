@@ -39,10 +39,13 @@ static func update(run: Dictionary) -> void:
 	add(run)
 
 
-## Partidas da melhor para a pior. Filtros vazios = todas.
-static func ranking(difficulty: String = "", map: String = "") -> Array[Dictionary]:
+## Partidas da melhor para a pior. Filtros vazios = todas. `mode` separa as
+## partidas normais, o desafio diário (só o de `daily`) e o Modo Chefões.
+static func ranking(difficulty: String = "", map: String = "", mode: String = "normal", daily: String = "") -> Array[Dictionary]:
 	var list: Array[Dictionary] = []
 	for r in runs():
+		if r.get("mode", "normal") != mode or (mode == "daily" and r.get("daily", "") != daily):
+			continue
 		if (difficulty == "" or r["difficulty"] == difficulty) and (map == "" or r["map"] == map):
 			list.append(r)
 	list.sort_custom(_better)
@@ -50,8 +53,8 @@ static func ranking(difficulty: String = "", map: String = "") -> Array[Dictiona
 
 
 ## Posição (1 = primeiro) de uma partida no ranking; 0 se não estiver nele.
-static func position_of(id: String, difficulty: String = "", map: String = "") -> int:
-	var list := ranking(difficulty, map)
+static func position_of(id: String, difficulty: String = "", map: String = "", mode: String = "normal", daily: String = "") -> int:
+	var list := ranking(difficulty, map, mode, daily)
 	for i in list.size():
 		if list[i]["id"] == id:
 			return i + 1
@@ -59,8 +62,8 @@ static func position_of(id: String, difficulty: String = "", map: String = "") -
 
 
 ## Melhor posição de um jogador no ranking; 0 se ele não tiver partidas.
-static func best_position_of(player: String, difficulty: String = "", map: String = "") -> int:
-	var list := ranking(difficulty, map)
+static func best_position_of(player: String, difficulty: String = "", map: String = "", mode: String = "normal", daily: String = "") -> int:
+	var list := ranking(difficulty, map, mode, daily)
 	for i in list.size():
 		if list[i]["name"] == player:
 			return i + 1
@@ -127,6 +130,12 @@ static func _normalize(r: Dictionary) -> Dictionary:
 		},
 		"upgrades": upgrades,
 		"relics": relics,
+		"hero": str(r.get("hero", "keeper")),
+		"tide": int(r.get("tide", 0)),
+		"mode": str(r.get("mode", "normal")),
+		"daily": str(r.get("daily", "")),
+		"damage": r.get("damage", []),
+		"embers": r.get("embers", [0, 0]),
 	}
 
 
@@ -198,3 +207,19 @@ static func format_number(n: int) -> String:
 static func format_time(seconds: float) -> String:
 	var s := int(seconds)
 	return "%02d:%02d" % [s / 60, s % 60]
+
+
+# --- Desafio diário --------------------------------------------------------------
+
+## Regras do desafio diário: iguais para todo mundo no mesmo dia (a semente
+## vem da data), com mapa, faroleiro e maré sorteados por ela.
+static func daily_rules(date: Dictionary) -> Dictionary:
+	var seed_value: int = int(date["year"]) * 10000 + int(date["month"]) * 100 + int(date["day"])
+	var h := absi(hash(str(seed_value)))
+	return {
+		"date": "%04d-%02d-%02d" % [date["year"], date["month"], date["day"]],
+		"seed": seed_value,
+		"map": Maps.ORDER[h % Maps.ORDER.size()],
+		"hero": Balance.HERO_ORDER[(h / 7) % Balance.HERO_ORDER.size()],
+		"tide": 1 + (h / 49) % 3,
+	}

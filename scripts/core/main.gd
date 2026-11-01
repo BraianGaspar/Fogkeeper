@@ -12,13 +12,15 @@ extends Node2D
 ##                    (tempo de partida no autoplay; tempo real fora dele)
 ##   --ui=TELA        abre direto uma tela para inspecionar o visual:
 ##                    map, keeper, difficulty, settings, controls, graphics,
-##                    audio, history, ranking, workshop, achievements, story,
+##                    audio, accessibility, history, ranking, workshop, achievements,
+##                    story, hero, bestiary, credits, daily,
 ##                    pause, levelup, end, victory, boss, endless, tutorial
 ##   --cycle=T        fixa a hora do dia (segundos de partida) no cenário
 ##   --no-save        não grava progresso (testes que abrem o jogo normalmente)
 ##   --locale=L       idioma só nesta execução (pt_BR, en, es, fr, de, ru, zh_CN, ja, ko)
 ##   --trailer=L      grava o trailer (en ou pt); use com --write-movie (ver Trailer)
 ##   --tutorial       com --autoplay: o bot faz o tutorial inteiro (teste dos passos)
+##   --mode=M         com --autoplay: daily (desafio diário) ou boss_rush (Modo Chefões)
 
 enum State { TITLE, STORY, PLAYING, LEVEL_UP, PAUSED, GAME_OVER, VICTORY }
 
@@ -46,6 +48,10 @@ var nights := 0 ## Noites extras completas no modo sem fim.
 var rerolls := 0
 var banishes := 0
 var banished: Array[String] = []
+var hero := "keeper" ## Faroleiro jogável (Balance.HEROES).
+var tide := 0 ## Maré escolhida (níveis de desafio).
+var mode := "normal" ## "normal", "daily" (desafio diário) ou "boss_rush" (Modo Chefões).
+var daily_date := "" ## Data do desafio diário, "AAAA-MM-DD".
 var autoplay := false
 var tutorial: Tutorial = null
 var rng := RandomNumberGenerator.new()
@@ -87,7 +93,11 @@ var _arg_difficulty := ""
 var _no_save := false
 var _arg_tutorial := false
 var _arg_locale := ""
+var _arg_mode := ""
 var _trailer := ""
+var _rush_queue: Array = [] ## Modo Chefões: [mapa, chefe] ainda por vir.
+var _rush_wait := 0.0
+var _force := {} ## Regras fixas da próxima partida (desafio diário): hero, tide, seed.
 
 
 func _ready() -> void:
@@ -101,6 +111,8 @@ func _ready() -> void:
 	Progress.enabled = not autoplay
 	Progress.read_only = _ui_arg != "" or _cycle_arg >= 0.0 or _no_save
 	Progress.load_progress()
+	if not autoplay:
+		SteamService.init()
 	difficulty = _arg_difficulty if _arg_difficulty != "" else (Settings.difficulty if not autoplay else "normal")
 	map_id = _arg_map if _arg_map != "" else (Settings.map if not autoplay else "bay")
 	keeper = _arg_keeper if _arg_keeper != "" else Settings.keeper
@@ -112,6 +124,7 @@ func _ready() -> void:
 		Settings.locale = _arg_locale
 	Sfx.synchronous = _trailer != ""
 	add_child(Sfx.new())
+	add_child(ColorFilter.new())
 	Settings.apply()
 	_build_world()
 	_build_hud()
@@ -127,6 +140,10 @@ func _ready() -> void:
 		trailer_title()
 	elif autoplay and _arg_tutorial:
 		start_tutorial()
+	elif autoplay and _arg_mode == "boss_rush":
+		start_boss_rush()
+	elif autoplay and _arg_mode == "daily":
+		start_daily()
 	elif autoplay:
 		start_run(map_id, keeper, difficulty)
 	else:
@@ -155,6 +172,8 @@ func _parse_args() -> void:
 		elif arg.begins_with("--trailer="):
 			_trailer = arg.get_slice("=", 1)
 			autoplay = true
+		elif arg.begins_with("--mode="):
+			_arg_mode = arg.get_slice("=", 1)
 		elif arg.begins_with("--locale="):
 			_arg_locale = arg.get_slice("=", 1)
 		elif arg == "--tutorial":
@@ -240,6 +259,8 @@ func _build_hud() -> void:
 	hud.story_finished.connect(_begin_night)
 	hud.endless_pressed.connect(continue_endless)
 	hud.tutorial_requested.connect(start_tutorial)
+	hud.daily_requested.connect(start_daily)
+	hud.boss_rush_requested.connect(start_boss_rush)
 	hud.pause_requested.connect(func() -> void:
 		if state == State.PLAYING:
 			_set_paused(true)
@@ -271,7 +292,17 @@ func _clear_world() -> void:
 	Engine.time_scale = 1.0
 	lighthouse.keeper = keeper
 	lighthouse.reset()
-	abilities.reset()
+	abilities.reset(_loadout())
+
+
+## As três habilidades equipadas (as liberadas; o bot e o tutorial usam as básicas).
+func _loadout() -> Array:
+	if autoplay or _force.get("default_loadout", false) or state == State.TITLE:
+		return Abilities.DEFAULT_LOADOUT
+	for id: String in Settings.loadout:
+		if not Progress.is_unlocked(id):
+			return Abilities.DEFAULT_LOADOUT
+	return Settings.loadout
 
 
 ## Menu principal: o cenário do último mapa fica vivo ao fundo, com o farol
@@ -292,6 +323,10 @@ func _restart() -> void:
 	_save_endless_progress()
 	if tutorial:
 		start_tutorial()
+	elif mode == "daily":
+		start_daily()
+	elif mode == "boss_rush":
+		start_boss_rush()
 	else:
 		start_run(map_id, keeper, difficulty)
 
@@ -303,6 +338,8 @@ func _quit() -> void:
 
 ## Começa uma partida. Vindo do menu, mostra antes a história do mapa.
 func start_run(new_map: String, new_keeper: String, diff: String, from_menu: bool = false) -> void:
+	if from_menu:
+		mode = "normal"
 	_setup_run(new_map, new_keeper, diff)
 	if from_menu and Settings.show_story and not autoplay and _ui_arg == "":
 		state = State.STORY
@@ -320,22 +357,33 @@ func _drop_tutorial() -> void:
 	hud.clear_tutorial()
 
 
-## Zera tudo para uma partida nova (sem começá-la).
+## Zera tudo para uma partida nova (sem começá-la). O modo ("normal",
+## "daily", "boss_rush") e as regras fixas do diário vêm de `mode` e `_force`.
 func _setup_run(new_map: String, new_keeper: String, diff: String) -> void:
 	difficulty = diff
 	keeper = new_keeper
 	_set_map(new_map)
-	if not autoplay and _ui_arg == "": # Capturas de teste não mexem nas preferências.
+	if not autoplay and _ui_arg == "" and mode == "normal": # Capturas e modos especiais não mexem nas preferências.
 		Settings.difficulty = diff
 		Settings.map = new_map
 		Settings.keeper = new_keeper
 		Settings.save()
+	hero = _force.get("hero", Settings.hero if Progress.is_unlocked(Settings.hero) else "keeper")
+	tide = _force.get("tide", Settings.tide)
+	if autoplay or tutorial:
+		hero = "keeper"
+		tide = 0
+	if _force.has("seed"):
+		rng.seed = _force["seed"]
 	var d: Dictionary = Balance.DIFFICULTIES[difficulty]
-	lighthouse.hp_scale = d["lighthouse_hp"]
-	fog.density = float(d["fog"]) * Settings.FOG_LEVELS[clampi(Settings.fog_level, 0, 2)]
+	lighthouse.hp_scale = float(d["lighthouse_hp"]) * Balance.tide(tide, "lighthouse")
+	fog.density = float(d["fog"]) * Settings.FOG_LEVELS[clampi(Settings.fog_level, 0, 2)] + Balance.tide(tide, "fog")
 	_drop_tutorial()
 	_clear_world()
 	Upgrades.apply_meta(lighthouse)
+	lighthouse.apply_hero(hero)
+	DamageStats.reset()
+	_rush_queue = []
 	elapsed = 0.0
 	kills = 0
 	kill_points = 0
@@ -343,13 +391,13 @@ func _setup_run(new_map: String, new_keeper: String, diff: String) -> void:
 	relics = []
 	level = 1
 	xp = 0
-	xp_needed = Balance.xp_for_level(level, difficulty)
+	xp_needed = _xp_for(level)
 	upgrade_levels = {}
 	upgrade_order = []
 	pending_level_ups = 0
 	endless = false
 	nights = 0
-	rerolls = Balance.BASE_REROLLS + Progress.level("reroll")
+	rerolls = maxi(0, Balance.BASE_REROLLS + Progress.level("reroll") + int(Balance.tide(tide, "reroll")))
 	banishes = Balance.BASE_BANISHES + Progress.level("banish")
 	banished = []
 	_run = {}
@@ -361,11 +409,13 @@ func _setup_run(new_map: String, new_keeper: String, diff: String) -> void:
 	_sunrise = 0.0
 	spawner.difficulty = difficulty
 	spawner.map_id = map_id
+	spawner.tide = tide
 	spawner.reset()
 	DayCycle.update(0.0)
 	hud.reset_level(level)
 	hud.set_endless(false)
 	_update_hud()
+	_force = {}
 
 
 ## A noite começa de fato: criaturas, música e o primeiro aviso.
@@ -386,6 +436,8 @@ func _begin_night() -> void:
 
 ## Tutorial: partida de treino guiada na Baía, sem relógio nem chefes marcados.
 func start_tutorial() -> void:
+	mode = "normal"
+	_force = {"hero": "keeper", "tide": 0, "default_loadout": true}
 	_setup_run("bay", Settings.keeper, "easy")
 	lighthouse.regen = 4.0
 	tutorial = Tutorial.new()
@@ -430,17 +482,76 @@ func continue_endless() -> void:
 	Sfx.play(&"warning")
 
 
+## XP para subir do nível dado (o Pescador sobe mais rápido).
+func _xp_for(lv: int) -> int:
+	return maxi(1, roundi(Balance.xp_for_level(lv, difficulty) * float(Balance.HEROES[hero].get("xp", 1.0))))
+
+
+## Desafio diário: mapa, faroleiro, maré e semente do dia; ranking próprio.
+func start_daily() -> void:
+	var rules := Records.daily_rules(Time.get_date_dict_from_system())
+	mode = "daily"
+	daily_date = rules["date"]
+	_force = {"hero": rules["hero"], "tide": rules["tide"], "seed": rules["seed"]}
+	start_run(rules["map"], Settings.keeper, "normal")
+	hud.announce(tr("Desafio diário de %s") % daily_date, Color(0.5, 0.85, 1.0), true)
+
+
+## Modo Chefões: todos os chefes, mapa por mapa, um depois do outro.
+func start_boss_rush() -> void:
+	mode = "boss_rush"
+	_setup_run("bay", Settings.keeper, "normal")
+	for m: String in Maps.ORDER:
+		for b: String in Maps.get_map(m)["bosses"]:
+			_rush_queue.append([m, b])
+	spawner.clear_schedule()
+	_rush_wait = 3.0
+	_begin_night()
+	hud.announce(tr("Modo Chefões: %d chefes até o fim") % _rush_queue.size(), UiTheme.DANGER, true)
+	# Monta a build antes do primeiro chefe.
+	level = 1 + Balance.BOSS_RUSH_START_PICKS
+	xp_needed = _xp_for(level)
+	pending_level_ups = Balance.BOSS_RUSH_START_PICKS
+	_open_level_up()
+
+
+## Chama o próximo chefe quando o anterior cai; vitória quando acabam.
+func _process_rush(delta: float) -> void:
+	# As criaturas comuns ficam mais fortes a cada chefe derrotado.
+	spawner.elapsed = minf(90.0 + 35.0 * bosses_killed, 480.0)
+	if _bosses_alive > 0:
+		return
+	if _rush_queue.is_empty():
+		if bosses_killed > 0:
+			_end_run(true)
+		return
+	_rush_wait -= delta
+	if _rush_wait > 0.0:
+		return
+	var next: Array = _rush_queue.pop_front()
+	if next[0] != map_id:
+		_set_map(next[0])
+		spawner.map_id = map_id
+		hud.announce(tr(Maps.get_map(map_id)["name"]))
+	_on_boss_warning(next[1])
+	spawner.spawn_boss(next[1])
+	_rush_wait = Balance.BOSS_RUSH_PAUSE
+
+
 ## Hora do ciclo do dia: no modo sem fim, cada noite recomeça às 18:00.
 func _cycle_time() -> float:
 	if endless:
 		return fposmod(elapsed - Balance.RUN_DURATION, Balance.RUN_DURATION)
 	if tutorial:
 		return TUTORIAL_CLOCK
+	if mode == "boss_rush":
+		return 260.0
 	return elapsed
 
 
 func _process(delta: float) -> void:
 	_clock += delta
+	SteamService.tick()
 	if _shake > 0.0 and Settings.screen_shake:
 		_shake = maxf(0.0, _shake - delta * 30.0)
 		camera.offset = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * _shake
@@ -482,6 +593,13 @@ func _process_run(delta: float) -> void:
 		_bot_abilities()
 	if tutorial:
 		tutorial.tick(delta)
+		_update_hud()
+		return
+	if mode == "boss_rush":
+		_process_rush(delta)
+		if _levelup_waiting and not hud.alert_blocking():
+			_levelup_waiting = false
+			_open_level_up()
 		_update_hud()
 		return
 	var events := DayCycle.events()
@@ -671,6 +789,7 @@ func _on_enemy_killed(enemy: Enemy) -> void:
 	if state != State.PLAYING and state != State.LEVEL_UP:
 		return
 	kills += 1
+	Progress.add_stat("seen_" + enemy.art)
 	if enemy.is_boss():
 		_on_boss_killed(enemy as Boss)
 	else:
@@ -685,7 +804,7 @@ func _on_enemy_killed(enemy: Enemy) -> void:
 			ember.value = maxi(1, enemy.xp_value / pieces) if enemy.is_boss() else (enemy.xp_value if i == 0 else 1)
 			ember.position = enemy.position + (Vector2.from_angle(TAU * i / pieces) * 30.0 if pieces > 1 else Vector2.ZERO)
 			ember.lighthouse = lighthouse
-			ember.lifetime = float(Balance.DIFFICULTIES[difficulty]["ember_life"]) + 1.5 * Progress.level("long_wick")
+			ember.lifetime = (float(Balance.DIFFICULTIES[difficulty]["ember_life"]) + 1.5 * Progress.level("long_wick")) * Balance.tide(tide, "ember")
 			ember.collected.connect(_on_ember_collected)
 			embers_root.add_child(ember)
 	var big := enemy.is_boss() or enemy.elite or enemy.radius >= 18.0
@@ -726,7 +845,8 @@ func _on_boss_killed(boss: Boss) -> void:
 	_bosses_alive = maxi(0, _bosses_alive - 1)
 	relics.append(boss.kind)
 	Upgrades.apply_relic(boss.kind, lighthouse)
-	lighthouse.heal(Balance.BOSS_HEAL)
+	if Balance.tide(tide, "no_heal") <= 0.0:
+		lighthouse.heal(Balance.BOSS_HEAL)
 	var relic: Dictionary = Balance.RELICS[boss.kind]
 	hud.announce(tr("%s derrotado! Relíquia: %s — %s") % [_boss_name(boss.kind), tr(relic["name"]), tr(relic["desc"])], Color(0.7, 0.9, 1.0))
 	Sfx.play(&"relic")
@@ -754,7 +874,7 @@ func _on_ember_collected(value: int) -> void:
 	while xp >= xp_needed:
 		xp -= xp_needed
 		level += 1
-		xp_needed = Balance.xp_for_level(level, difficulty)
+		xp_needed = _xp_for(level)
 		pending_level_ups += 1
 	if pending_level_ups > 0 and state == State.PLAYING and not _levelup_waiting:
 		# Um aviso de chefe acabou de aparecer: deixe o jogador lê-lo primeiro.
@@ -768,7 +888,7 @@ func _on_ember_collected(value: int) -> void:
 func force_level_up() -> void:
 	level += 1
 	xp = 0
-	xp_needed = Balance.xp_for_level(level, difficulty)
+	xp_needed = _xp_for(level)
 	pending_level_ups += 1
 	_open_level_up()
 
@@ -838,7 +958,7 @@ func _on_ability_used(i: int) -> void:
 # --- Efeitos ------------------------------------------------------------------
 
 func _ring_fx(at: Vector2, radius: float, color: Color, duration: float, width: float) -> void:
-	if not Settings.particles or (autoplay and _trailer == ""):
+	if not Settings.particles or Settings.reduce_flashes or (autoplay and _trailer == ""):
 		return
 	var fx := RingFx.new()
 	fx.position = at
@@ -875,13 +995,13 @@ func _on_lighthouse_died() -> void:
 
 
 func _current_score() -> int:
-	return Balance.score_breakdown(kill_points, bosses_killed, elapsed, endless, 0.0, difficulty)["total"]
+	return Balance.score_breakdown(kill_points, bosses_killed, elapsed, endless, 0.0, difficulty, tide, mode == "boss_rush")["total"]
 
 
 func _build_run(victory: bool) -> Dictionary:
 	var hp_fraction: float = lighthouse.hp / lighthouse.max_hp if victory else float(_run.get("hp_fraction", 0.0))
 	var won := victory or endless
-	var breakdown := Balance.score_breakdown(kill_points, bosses_killed, elapsed, won, hp_fraction, difficulty)
+	var breakdown := Balance.score_breakdown(kill_points, bosses_killed, elapsed, won, hp_fraction, difficulty, tide, mode == "boss_rush")
 	return {
 		"id": _run.get("id", "%d-%d" % [Time.get_unix_time_from_system(), rng.randi()]),
 		"date": _run.get("date", int(Time.get_unix_time_from_system())),
@@ -899,6 +1019,12 @@ func _build_run(victory: bool) -> Dictionary:
 		"upgrades": upgrade_order.duplicate(),
 		"relics": relics.duplicate(),
 		"hp_fraction": hp_fraction,
+		"hero": hero,
+		"tide": tide,
+		"mode": mode,
+		"daily": daily_date if mode == "daily" else "",
+		"damage": DamageStats.ranked(),
+		"embers": [DamageStats.embers_collected, DamageStats.embers_lost],
 	}
 
 
@@ -922,6 +1048,22 @@ func _record_run(run: Dictionary) -> Dictionary:
 	_oil_paid += oil
 	Progress.add_oil(oil, false)
 	out["oil"] = oil
+	# Ver o amanhecer na maré mais alta libera a próxima (Normal ou acima).
+	if run["victory"] and mode != "boss_rush" and difficulty != "easy" and tide >= Progress.stat("tide_max"):
+		Progress.stats["tide_max"] = mini(tide + 1, Balance.TIDES.size())
+		if tide + 1 <= Balance.TIDES.size():
+			out["unlocks"].append(tr("Maré %d") % (tide + 1))
+	var special: Array[String] = []
+	if run["victory"] and tide >= Balance.TIDES.size():
+		special.append("tide_10")
+	if mode == "daily":
+		special.append("daily")
+	if mode == "boss_rush" and run["victory"]:
+		special.append("boss_rush")
+	for id in special:
+		if Achievements.unlock(id, false):
+			out["achievements"].append(tr(Achievements.find(id)["name"]))
+	SteamService.upload_score(run)
 	for id in Progress.check_goals(run):
 		out["unlocks"].append(Progress.unlock_name(id))
 	for id in Achievements.check_run(run):
@@ -957,7 +1099,8 @@ func _end_run(victory: bool) -> void:
 		"next": "",
 		"endless": was_endless,
 		"nights": nights + 2,
-		"can_continue": victory and not was_endless,
+		"can_continue": victory and not was_endless and mode != "boss_rush",
+		"rush_total": bosses_killed + _rush_queue.size() + _bosses_alive,
 	}
 	context.merge(rewards)
 	var nb := spawner.next_boss()
@@ -1017,6 +1160,16 @@ func _open_debug_ui(screen: String) -> void:
 			hud.show_ranking()
 		"workshop":
 			hud.show_workshop()
+		"hero":
+			hud.show_hero_select()
+		"bestiary":
+			hud.show_bestiary()
+		"credits":
+			hud.show_credits()
+		"daily":
+			hud.show_daily()
+		"accessibility":
+			hud.show_settings(false, 4)
 		"achievements":
 			hud.show_achievements()
 		"story":
@@ -1034,7 +1187,7 @@ func _open_debug_ui(screen: String) -> void:
 			kill_points = 4980
 			level = 14
 			xp = 30
-			xp_needed = Balance.xp_for_level(level, difficulty)
+			xp_needed = _xp_for(level)
 			for id: String in ["wide_lens", "wide_lens", "wide_lens", "wide_lens", "wide_lens", "gears", "gears", "gears", "gears", "pulse", "twin_lens"]:
 				_apply_upgrade_silently(id)
 			var roles := ["basic", "fast", "brute", "thief", "mirror", "moth"]

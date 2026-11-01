@@ -37,6 +37,9 @@ func _refresh() -> void:
 	_oil.text = tr("Óleo do farol: %s") % Records.format_number(Progress.oil)
 	for c in _list.get_children():
 		c.queue_free()
+	_list.add_child(UiTheme.label(tr("Habilidades equipadas"), 18, UiTheme.GOLD, true))
+	for slot in 3:
+		_loadout_row(slot)
 	_list.add_child(UiTheme.label(tr("Melhorias permanentes"), 18, UiTheme.GOLD, true))
 	var first: Button = null
 	for m: Dictionary in Balance.META:
@@ -49,7 +52,7 @@ func _refresh() -> void:
 	_list.add_child(UiTheme.label(tr("Desbloqueios"), 18, UiTheme.GOLD, true))
 	for u: Dictionary in Balance.UNLOCKS:
 		var id: String = u["id"]
-		var kind := {"map": tr("Mapa"), "keeper": tr("Farol"), "upgrade": tr("Carta de melhoria")}.get(u["kind"], "") as String
+		var kind := {"map": tr("Mapa"), "keeper": tr("Farol"), "upgrade": tr("Carta de melhoria"), "hero": tr("Faroleiro"), "ability": tr("Habilidade")}.get(u["kind"], "") as String
 		var desc := kind
 		var goal := Progress.goal_text(id)
 		if goal != "":
@@ -122,3 +125,43 @@ func _after_buy(ok: bool, what: String) -> void:
 	else:
 		Sfx.play(&"denied")
 		_status.text = tr("Óleo insuficiente. Jogue mais noites para juntar óleo.")
+
+
+## Um espaço de habilidade: "< Clarão >" entre as habilidades liberadas que
+## ainda não estão em outro espaço.
+func _loadout_row(slot: int) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var l := UiTheme.label(tr("Habilidade %d") % (slot + 1), 17)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(l)
+	var current := Abilities.find(Settings.loadout[slot])
+	var desc := UiTheme.label(tr(current["desc"]), 13, UiTheme.TEXT_DIM)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.custom_minimum_size.x = 300
+	row.add_child(desc)
+	for d: int in [-1, 1]:
+		var b := UiTheme.small_button("<" if d < 0 else ">", _cycle_ability.bind(slot, d))
+		b.custom_minimum_size.x = 40
+		if d < 0:
+			row.add_child(b)
+			var name_label := UiTheme.label(tr(current["name"]), 17, UiTheme.GOLD)
+			name_label.custom_minimum_size.x = 150
+			name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			row.add_child(name_label)
+		else:
+			row.add_child(b)
+	_list.add_child(row)
+
+
+func _cycle_ability(slot: int, step: int) -> void:
+	var options: Array[String] = []
+	for a: Dictionary in Balance.ABILITIES:
+		var id: String = a["id"]
+		if Progress.is_unlocked(id) and (id == Settings.loadout[slot] or not Settings.loadout.has(id)):
+			options.append(id)
+	var i := options.find(Settings.loadout[slot])
+	Settings.loadout[slot] = options[posmod(i + step, options.size())]
+	Settings.save()
+	Sfx.play(&"hover")
+	_refresh()

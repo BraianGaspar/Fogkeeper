@@ -20,15 +20,20 @@ func _build() -> void:
 	var map := Maps.get_map(run["map"])
 	var box := centered_panel(920, 22)
 	box.add_theme_constant_override("separation", 8)
+	var rush: bool = run.get("mode", "normal") == "boss_rush"
 	var heading := tr("A luz se apagou")
-	if dawn:
+	if rush:
+		heading = tr("Todos os chefes caíram!") if run["victory"] else tr("Chefes derrotados: %d de %d") % [run["bosses"], int(context.get("rush_total", 0))]
+	elif dawn:
 		heading = tr("Amanheceu!")
 	elif endless:
 		heading = tr("A luz se apagou na noite %d") % int(context["nights"])
 	var head := title(box, heading, 42)
-	if not dawn:
+	if not dawn and not (rush and run["victory"]):
 		head.add_theme_color_override("font_color", UiTheme.DANGER)
-	if dawn:
+	if rush:
+		text(box, tr("Modo Chefões em %s.") % Records.format_time(run["duration"]), 17, UiTheme.TEXT)
+	elif dawn:
 		text(box, tr("O sol nasceu às 06:00 sobre %s. O farol resistiu à noite inteira.") % tr(map["name"]), 17, UiTheme.TEXT)
 	elif endless:
 		text(box, tr("Depois do amanhecer, o farol ainda resistiu até as %s da noite %d.") % [context["clock"], int(context["nights"])], 17, UiTheme.TEXT)
@@ -43,6 +48,9 @@ func _build() -> void:
 	var stats := _column(cols, tr("Partida"))
 	stat_row(stats, tr("Mapa"), tr(map["name"]))
 	stat_row(stats, tr("Farol"), tr(Keepers.get_keeper(run["keeper"])["name"]))
+	stat_row(stats, tr("Faroleiro"), tr(Balance.HEROES.get(run["hero"], Balance.HEROES["keeper"])["name"]))
+	if int(run["tide"]) > 0:
+		stat_row(stats, tr("Maré"), str(run["tide"]), Color(0.5, 0.85, 1.0))
 	stat_row(stats, tr("Dificuldade"), difficulty_name(run["difficulty"]))
 	stat_row(stats, tr("Tempo sobrevivido"), Records.format_time(run["duration"]))
 	stat_row(stats, tr("Horário do amanhecer") if dawn else tr("Horário da derrota"), context["clock"])
@@ -85,6 +93,14 @@ func _build() -> void:
 		for r: String in run["relics"]:
 			relics.append(tr(Balance.RELICS[r]["name"]))
 		chips.add_child(UiTheme.label(tr("Relíquias: %s") % ", ".join(relics), 14, Color(0.7, 0.9, 1.0)))
+	# Resumo: de onde veio o dano e quantas brasas se perderam.
+	var parts := []
+	for d: Array in run.get("damage", []):
+		parts.append("%s %d%%" % [tr(DamageStats.NAMES.get(d[0], d[0])), roundi(float(d[1]) * 100.0)])
+	var embers: Array = run.get("embers", [0, 0])
+	if not parts.is_empty():
+		chips.add_child(UiTheme.label(tr("Dano: %s") % "  ·  ".join(parts), 14, UiTheme.TEXT))
+		chips.add_child(UiTheme.label(tr("Brasas: %d recolhidas, %d apagadas") % [int(embers[0]), int(embers[1])], 14, UiTheme.TEXT_DIM))
 	box.add_child(chips)
 
 	# Recompensas que ficam: óleo, desbloqueios e conquistas.
@@ -101,8 +117,9 @@ func _build() -> void:
 		r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		box.add_child(r)
 
-	var pos := Records.position_of(run["id"], run["difficulty"], run["map"])
-	var count := Records.ranking(run["difficulty"], run["map"]).size()
+	var rank_map: String = run["map"] if run["mode"] == "normal" else ""
+	var pos := Records.position_of(run["id"], run["difficulty"] if run["mode"] == "normal" else "", rank_map, run["mode"], run["daily"])
+	var count := Records.ranking(run["difficulty"] if run["mode"] == "normal" else "", rank_map, run["mode"], run["daily"]).size()
 	if pos > 0:
 		var place := UiTheme.label(tr("%s no ranking (%s · %s), entre %d partidas") % [Records.ordinal(pos), difficulty_name(run["difficulty"]), tr(map["name"]), count], 17, UiTheme.GOLD)
 		place.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

@@ -31,6 +31,7 @@ var elapsed := 0.0 ## Definido pelo Main a cada quadro.
 var difficulty := "normal"
 var map_id := "bay"
 var active := false
+var tide := 0 ## Maré da partida (Balance.TIDES).
 
 var _timer := 0.0
 var _fog_timer := 0.0
@@ -45,7 +46,8 @@ func reset() -> void:
 	elapsed = 0.0
 	_schedule.clear()
 	for i in Balance.BOSS_TIMES.size():
-		_schedule.append({"t": Balance.BOSS_TIMES[i], "boss": Maps.boss_at(map_id, i), "warned": false, "spawned": false})
+		var t := maxf(60.0, float(Balance.BOSS_TIMES[i]) - Balance.tide(tide, "boss_early"))
+		_schedule.append({"t": t, "boss": Maps.boss_at(map_id, i), "warned": false, "spawned": false})
 	if _diff()["extra_boss"]:
 		_schedule.append({"t": Balance.EXTRA_BOSS_TIME, "boss": Maps.boss_at(map_id, 2), "warned": false, "spawned": false})
 	_schedule.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["t"] < b["t"])
@@ -72,8 +74,23 @@ func boss_times() -> Array[float]:
 	return out
 
 
+## Valor da dificuldade no tempo atual, já com as marés.
 func _value(key: String) -> float:
-	return Balance.difficulty_value(difficulty, key, elapsed)
+	var v := Balance.difficulty_value(difficulty, key, elapsed)
+	match key:
+		"enemy_speed":
+			v *= Balance.tide(tide, "speed")
+		"enemy_hp":
+			v *= Balance.tide(tide, "hp")
+		"elite":
+			if elapsed >= Balance.ELITE_START:
+				v += Balance.tide(tide, "elite")
+	return v
+
+
+## Modo Chefões: sem os chefes da noite normal (o Main chama um por um).
+func clear_schedule() -> void:
+	_schedule.clear()
 
 
 func _diff() -> Dictionary:
@@ -130,7 +147,8 @@ func spawn_at(role: String, at: Vector2) -> Enemy:
 func spawn_boss(id: String) -> Boss:
 	var d := _diff()
 	var b: Boss = BOSS_SCRIPTS[id].new()
-	b.setup_boss(id, Balance.hp_multiplier(elapsed) * _value("enemy_hp"), _value("enemy_damage"), _value("enemy_speed"), d["enrage"])
+	b.setup_boss(id, Balance.hp_multiplier(elapsed) * _value("enemy_hp"), _value("enemy_damage"), _value("enemy_speed"), d["enrage"] or tide >= 9)
+	b.enrage_at = Balance.tide(tide, "enrage")
 	b.lighthouse = lighthouse
 	b.embers_root = embers_root
 	b.begin(rng.randf() * TAU)

@@ -15,6 +15,7 @@ var color := Color(1.0, 0.9, 0.62)
 var hot := false ## Sobrecarga: núcleo branco e mais intenso.
 var dim := false ## Feitiço da Cuca: luz fraca e arroxeada.
 var reflects := false ## Feixe principal: o espelho fechado devolve parte do dano.
+var source := "beam" ## Para o resumo de dano (DamageStats).
 
 
 func _ready() -> void:
@@ -36,6 +37,7 @@ func apply(delta: float, enemies: Array[Node], embers: Array[Node]) -> void:
 			continue
 		if covers(e.global_position - origin, e.radius):
 			e.take_light(dps * delta, reflects)
+			DamageStats.add(source, dps * delta)
 	for node in embers:
 		var m := node as Ember
 		if m and covers(m.global_position - origin, 6.0):
