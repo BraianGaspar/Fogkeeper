@@ -18,13 +18,16 @@ Confirme valores e regras no Steamworks antes de agir: estas notas refletem o co
 - Steam Cloud para `user://settings.cfg`, `user://records.json` e o futuro save de meta-progressão.
 - Leaderboards: uma por mapa e dificuldade (`fogkeeper_<mapa>_<dificuldade>`, ex. `fogkeeper_bay_hard`), enviando `score` ao fim de cada partida em `Main._end_run()`. A pontuação já é calculada só em `Balance.score_breakdown()`, então basta enviar o total; o ranking local continua para jogo offline.
 
-## Pendente: exportar o .exe do jogo
-Hoje o jogo é aberto pelo Godot (atalho "Fogkeeper" na área de trabalho, que roda `Godot_v4.4.1-stable_win64.exe --path <pasta do projeto>`). Antes de distribuir:
-1. No editor: **Editor → Gerenciar modelos de exportação** e baixar os templates 4.4.1.
-2. **Projeto → Exportar → Adicionar → Windows Desktop**; ícone do executável a partir de `icon.svg` (gerar um `.ico` de 256 px); marcar "Embed PCK" para sair um arquivo só.
-3. Salvar o preset (`export_presets.cfg` pode ir para o git; credenciais não) e exportar para `build/windows/Fogkeeper.exe` (`/build/` já está no `.gitignore`).
-4. Criar `tools/export.sh` com `godot --headless --export-release "Windows Desktop" build/windows/Fogkeeper.exe` e repetir para Linux.
-5. Testar o .exe numa máquina sem Godot instalado e trocar o atalho da área de trabalho para apontar para ele.
+## Exportar o .exe
+O jogo é exportado para `build/windows/Fogkeeper.exe` (um arquivo só, com o .pck embutido; `/build/` está no `.gitignore`) pelo preset "Windows Desktop" de `export_presets.cfg`:
+
+```bash
+GODOT=/caminho/do/godot tools/export.sh
+```
+
+O script gera `icon.ico` a partir de `icon.svg` (`tools/make_icon.gd`) e exporta em modo release. Requer os templates 4.4.1 em `%APPDATA%/Godot/export_templates/4.4.1.stable/` (Editor → Gerenciar modelos de exportação). O atalho "Fogkeeper" da área de trabalho aponta para esse .exe; rode o script de novo depois de mudar o jogo.
+
+Pendente: o ícone embutido no próprio .exe. O Godot 4.4 usa o `rcedit` para isso: baixe-o, configure em Editor → Configurações do Editor → Exportar → Windows → rcedit e ligue `application/modify_resources` no preset. Sem ele, o .exe mostra o ícone do Godot no Explorer, mas a janela e o atalho já usam o do farol. Antes de distribuir, teste numa máquina sem Godot instalado e repita para Linux.
 
 ## Builds
 - Exportar Windows e Linux (Linux ajuda no Steam Deck). Templates de exportação da mesma versão do editor (4.4.1).

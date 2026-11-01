@@ -43,6 +43,7 @@ scripts/ui/
 tools/check.sh            Carrega o projeto em headless, falha se houver erro, roda i18n_check
 tools/i18n_check.sh       Falha se algum texto traduzível não estiver em i18n.gd
 tools/autoplay.sh         N partidas com bot: autoplay.sh 10 --difficulty=hard --map=fjord
+tools/export.sh           Gera icon.ico e exporta build/windows/Fogkeeper.exe (atalho da área de trabalho)
 ```
 
 ## Convenções
