@@ -14,7 +14,7 @@ const MUSIC_RATE := 16000
 const VOICES := 16
 const BUSES := ["Music", "SFX", "Damage"]
 ## Intervalo mínimo (s) entre repetições do mesmo som, para não saturar.
-const THROTTLE := {&"burn": 0.05, &"ember": 0.035, &"damage": 0.14, &"hover": 0.04, &"pulse": 0.2, &"denied": 0.2}
+const THROTTLE := {&"steal": 0.15, &"burn": 0.05, &"ember": 0.035, &"damage": 0.14, &"hover": 0.04, &"pulse": 0.2, &"denied": 0.2}
 const MUSIC_DB := -8.0
 const SILENT_DB := -60.0
 const SEA_DB := -14.0
@@ -31,7 +31,9 @@ const SOUND_GROUP := {
 	&"hover": "ui", &"confirm": "ui", &"back": "ui", &"level_up": "ui", &"victory": "ui", &"defeat": "ui", &"denied": "ui",
 	&"burn": "creatures", &"ember": "embers", &"damage": "damage",
 	&"pulse": "abilities", &"flash": "abilities", &"overcharge": "abilities", &"bell": "abilities",
+	&"burn_big": "creatures", &"steal": "creatures",
 	&"boss": "bosses", &"splash": "bosses", &"ink": "bosses", &"throw": "bosses", &"growl": "bosses", &"roar": "bosses", &"relic": "bosses",
+	&"song": "bosses", &"ignite": "bosses", &"spell": "bosses", &"achievement": "alerts",
 	&"thunder": "weather", &"announce": "alerts", &"warning": "alerts",
 }
 
@@ -212,6 +214,12 @@ func _synthesize_all() -> void:
 	s[&"flash"] = _render(1.0, _s_flash)
 	s[&"overcharge"] = _render(0.9, _s_overcharge)
 	s[&"bell"] = _render(2.8, _s_bell)
+	s[&"steal"] = _render(0.3, _s_steal)
+	s[&"song"] = _render(3.6, _s_song)
+	s[&"ignite"] = _render(1.0, _s_ignite)
+	s[&"spell"] = _render(1.6, _s_spell)
+	s[&"achievement"] = _render(1.6, _s_achievement)
+	s[&"burn_big"] = _render(0.5, _s_burn_big)
 	s[&"sea"] = _render_sea(_rng)
 	s[&"music_bay"] = _render_music(
 		[[220.0, 261.6, 329.6], [174.6, 220.0, 261.6], [130.8, 196.0, 261.6], [196.0, 246.9, 293.7],
@@ -221,6 +229,10 @@ func _synthesize_all() -> void:
 		[[146.8, 174.6, 220.0], [116.5, 146.8, 174.6], [174.6, 220.0, 261.6], [130.8, 196.0, 261.6],
 		[146.8, 174.6, 220.0], [196.0, 233.1, 293.7], [220.0, 277.2, 329.6], [146.8, 174.6, 220.0]],
 		[587.3, 698.5, 784.0, 880.0, 1046.5, 1174.7], 33, 1.2)
+	s[&"music_amazon"] = _render_music(
+		[[146.8, 185.0, 220.0], [130.8, 164.8, 196.0], [174.6, 220.0, 261.6], [146.8, 185.0, 220.0],
+		[196.0, 246.9, 293.7], [130.8, 164.8, 196.0], [164.8, 207.7, 246.9], [146.8, 185.0, 220.0]],
+		[587.3, 659.3, 740.0, 880.0, 987.8, 1174.7], 47, 3.0)
 	s[&"music_tension"] = _render_tension()
 	s[&"music_boss"] = _render_boss_music()
 	_pending = s
@@ -541,3 +553,46 @@ static func _render_boss_music() -> AudioStreamWAV:
 			v += bright[int(fposmod(f * t, 1.0) * TABLE)] * 0.05 * env
 		samples[i] = v
 	return _to_wav(samples, MUSIC_RATE, true)
+
+
+# --- Rio Encantado, criaturas especiais e conquistas ----------------------------
+
+## Assobio curto e ladino: uma ladra levou uma brasa.
+func _s_steal(t: float) -> float:
+	var f := 1400.0 + 900.0 * sin(PI * clampf(t / 0.3, 0.0, 1.0))
+	return sin(TAU * f * t) * minf(1.0, t * 60.0) * minf(1.0, (0.3 - t) * 20.0) * 0.12
+
+
+## Canto da Iara: melodia aguda e ondulante, com eco.
+func _s_song(t: float) -> float:
+	var notes := [880.0, 987.8, 1174.7, 987.8, 1318.5, 1174.7]
+	var i := mini(int(t / 0.6), notes.size() - 1)
+	var local := t - i * 0.6
+	var f: float = notes[i] * (1.0 + 0.012 * sin(TAU * 6.0 * t))
+	var env := minf(1.0, local / 0.12) * (0.7 + 0.3 * exp(-local * 3.0)) * minf(1.0, (3.6 - t) / 0.8)
+	var v := sin(TAU * f * t) + 0.3 * sin(TAU * 2.0 * f * t)
+	return (v * env + 0.35 * sin(TAU * f * maxf(0.0, t - 0.25)) * env) * 0.09
+
+
+## Chama que reacende com um sopro.
+func _s_ignite(t: float) -> float:
+	_lp += 0.3 * (_rng.randf_range(-1.0, 1.0) - _lp)
+	var env := minf(1.0, t / 0.15) * exp(-t * 3.0)
+	return (_lp * 1.6 + sin(TAU * (80.0 + 60.0 * t) * t) * 0.4) * env * 0.45
+
+
+## Feitiço de sono: acorde descendente e misterioso.
+func _s_spell(t: float) -> float:
+	var f := 520.0 * pow(0.5, t / 1.6)
+	var env := minf(1.0, t * 10.0) * minf(1.0, (1.6 - t) * 2.0)
+	return (sin(TAU * f * t) + sin(TAU * f * 1.26 * t) * 0.6 + sin(TAU * f * 1.5 * t) * 0.4) * (0.7 + 0.3 * sin(TAU * 7.0 * t)) * env * 0.12
+
+
+func _s_achievement(t: float) -> float:
+	return _arpeggio(t, [659.3, 880.0, 1108.7, 1318.5], 0.07, 2.6) * 0.15
+
+
+## Queima forte (elites e criaturas grandes): estalo grave com chiado.
+func _s_burn_big(t: float) -> float:
+	_lp += 0.15 * (_rng.randf_range(-1.0, 1.0) - _lp)
+	return (_lp * 1.4 * exp(-t * 9.0) + sin(TAU * (160.0 - 120.0 * t) * t) * exp(-t * 10.0) * 0.6) * 0.4

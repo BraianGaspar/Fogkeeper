@@ -29,6 +29,22 @@ func attract() -> void:
 	_attracted = true
 
 
+func attracted() -> bool:
+	return _attracted
+
+
+## Levada por uma ladra de brasas: some e devolve o valor.
+func steal() -> int:
+	queue_free()
+	return value
+
+
+## Névoa devoradora: a brasa se apaga mais depressa.
+func drain(seconds: float) -> void:
+	if not _attracted:
+		_life -= seconds
+
+
 func _process(delta: float) -> void:
 	_time += delta
 	if not _attracted and lighthouse and position.length() < lighthouse.magnet_radius:

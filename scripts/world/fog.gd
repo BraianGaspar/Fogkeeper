@@ -45,8 +45,8 @@ func _process(delta: float) -> void:
 			p.x = -AREA.x * 0.5 - 200.0
 		b["pos"] = p
 	_flash = maxf(0.0, _flash - delta * 2.5)
-	# Relâmpagos só na tempestade da baía; no fiorde a tempestade é nevasca.
-	if storm > 0.6 and DayCycle.map == "bay" and Settings.weather:
+	# Relâmpagos na tempestade da baía e no temporal do rio; no fiorde é nevasca.
+	if storm > 0.6 and DayCycle.map != "fjord" and Settings.weather:
 		_next_flash -= delta
 		if _next_flash <= 0.0:
 			_next_flash = _rng.randf_range(3.0, 8.0)
@@ -77,6 +77,10 @@ func _draw() -> void:
 		_draw_aurora(rect, p.get("aurora", 0.0))
 		if Settings.weather:
 			_draw_snow(q, storm)
+	elif DayCycle.map == "amazon":
+		_draw_fireflies(q, p["night"] * (1.0 - 0.7 * storm))
+		if storm > 0.01 and Settings.weather:
+			_draw_rain(q, storm)
 	else:
 		_draw_birds(maxf(p["dusk"], p["dawn"]))
 		if storm > 0.01 and Settings.weather:
@@ -140,6 +144,22 @@ func _draw_rain(q: int, storm: float) -> void:
 		var y := fposmod(r.y + _time * r.z + AREA.y * 0.5, AREA.y) - AREA.y * 0.5
 		var x := fposmod(r.x + fall.x * _time * r.z + AREA.x * 0.5, AREA.x) - AREA.x * 0.5
 		draw_line(Vector2(x, y), Vector2(x, y) + fall * 16.0, col, 1.2)
+
+
+## Vaga-lumes piscando sobre a água e a mata do rio.
+func _draw_fireflies(q: int, night: float) -> void:
+	if night <= 0.05 or not Settings.particles:
+		return
+	for i in [12, 28, 44][q]:
+		var r := _rain[i]
+		var pos := Vector2(r.x * 0.55 + sin(_time * 0.3 + r.z) * 40.0, r.y * 0.6 + cos(_time * 0.25 + r.x) * 30.0)
+		if pos.length() < 120.0:
+			continue
+		var blink := clampf(sin(_time * (1.0 + fmod(r.z, 1.7)) + r.x) * 3.0 - 1.8, 0.0, 1.0)
+		if blink <= 0.0:
+			continue
+		draw_circle(pos, 7.0, Color(0.85, 1.0, 0.4, 0.12 * blink * night))
+		draw_circle(pos, 1.8, Color(0.95, 1.0, 0.6, 0.9 * blink * night))
 
 
 func _draw_birds(light: float) -> void:

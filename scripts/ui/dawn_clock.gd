@@ -6,6 +6,7 @@ extends Control
 var progress := 0.0
 var time_text := ""
 var caption := ""
+var show_marks := true ## Marcas dos chefes (escondidas no modo sem fim).
 
 var _time := 0.0
 
@@ -31,7 +32,7 @@ func _draw() -> void:
 	draw_rect(track.grow(2.0), UiTheme.GOLD_DARK, false, 2.0)
 	draw_rect(Rect2(track.position.x, track.position.y, track.size.x * progress, track.size.y), Color(1, 1, 1, 0.12))
 
-	for t: float in Balance.BOSS_TIMES:
+	for t: float in (Balance.BOSS_TIMES if show_marks else []):
 		var x := track.position.x + track.size.x * t / Balance.RUN_DURATION
 		UiTheme.diamond(self, Vector2(x, track.position.y - 7.0), 4.0, UiTheme.DANGER)
 

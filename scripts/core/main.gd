@@ -1,23 +1,28 @@
 extends Node2D
-## Orquestra a partida: estados, XP, níveis, chefes, pontuação e fim de jogo.
+## Orquestra a partida: estados, XP, níveis, chefes, pontuação, fim de jogo,
+## modo sem fim, tutorial e a progressão entre partidas.
 ##
 ## Argumentos de linha de comando (depois de `--`):
 ##   --autoplay       um bot joga sozinho e imprime um resumo (balanceamento)
 ##   --seed=N         semente fixa para partidas reproduzíveis
 ##   --difficulty=D   easy, normal, medium, hard ou impossible (padrão: normal)
-##   --map=M          bay ou fjord (padrão: bay)
+##   --map=M          bay, fjord ou amazon (padrão: bay)
 ##   --keeper=K       aparência do farol (classic, stone, iron, crystal)
 ##   --screenshot=T   salva user://screenshot.png aos T segundos
 ##                    (tempo de partida no autoplay; tempo real fora dele)
 ##   --ui=TELA        abre direto uma tela para inspecionar o visual:
 ##                    map, keeper, difficulty, settings, controls, graphics,
-##                    audio, history, ranking,
-##                    pause, levelup, end, victory, boss
+##                    audio, history, ranking, workshop, achievements, story,
+##                    pause, levelup, end, victory, boss, endless, tutorial
 ##   --cycle=T        fixa a hora do dia (segundos de partida) no cenário
+##   --no-save        não grava progresso (testes que abrem o jogo normalmente)
+##   --tutorial       com --autoplay: o bot faz o tutorial inteiro (teste dos passos)
 
-enum State { TITLE, PLAYING, LEVEL_UP, PAUSED, GAME_OVER, VICTORY }
+enum State { TITLE, STORY, PLAYING, LEVEL_UP, PAUSED, GAME_OVER, VICTORY }
 
 const TITLE_CAMERA := Vector2(-290, 0)
+const TUTORIAL_CLOCK := 140.0 ## Hora fixa do cenário no tutorial (noite clara).
+const ACHIEVEMENT_COLOR := Color(0.45, 0.95, 0.85)
 
 var state: State = State.TITLE
 var difficulty := "normal"
@@ -34,7 +39,13 @@ var xp_needed := 0
 var upgrade_levels: Dictionary = {}
 var upgrade_order: Array[String] = []
 var pending_level_ups := 0
+var endless := false
+var nights := 0 ## Noites extras completas no modo sem fim.
+var rerolls := 0
+var banishes := 0
+var banished: Array[String] = []
 var autoplay := false
+var tutorial: Tutorial = null
 var rng := RandomNumberGenerator.new()
 
 var world: Node2D
@@ -62,11 +73,17 @@ var _ember_streak := 0
 var _ember_timer := 0.0
 var _levelup_waiting := false
 var _bosses_alive := 0
+var _choices: Array = []
+var _run: Dictionary = {} ## Partida já salva (o modo sem fim a atualiza).
+var _oil_paid := 0 ## Óleo já pago por esta partida.
+var _kills_counted := 0 ## Criaturas desta partida já somadas ao total.
 var _ui_arg := ""
 var _cycle_arg := -1.0
 var _arg_map := ""
 var _arg_keeper := ""
 var _arg_difficulty := ""
+var _no_save := false
+var _arg_tutorial := false
 
 
 func _ready() -> void:
@@ -76,6 +93,10 @@ func _ready() -> void:
 	_parse_args()
 	if not autoplay:
 		Settings.load_settings()
+	# O bot mede o jogo puro: sem progressão. Capturas leem, mas não gravam.
+	Progress.enabled = not autoplay
+	Progress.read_only = _ui_arg != "" or _cycle_arg >= 0.0 or _no_save
+	Progress.load_progress()
 	difficulty = _arg_difficulty if _arg_difficulty != "" else (Settings.difficulty if not autoplay else "normal")
 	map_id = _arg_map if _arg_map != "" else (Settings.map if not autoplay else "bay")
 	keeper = _arg_keeper if _arg_keeper != "" else Settings.keeper
@@ -88,7 +109,10 @@ func _ready() -> void:
 	_build_world()
 	_build_hud()
 	_set_map(map_id)
-	if autoplay:
+	Achievements.listener = _on_achievement
+	if autoplay and _arg_tutorial:
+		start_tutorial()
+	elif autoplay:
 		start_run(map_id, keeper, difficulty)
 	else:
 		go_to_title()
@@ -113,6 +137,10 @@ func _parse_args() -> void:
 			_screenshot_at = float(arg.get_slice("=", 1))
 		elif arg.begins_with("--ui="):
 			_ui_arg = arg.get_slice("=", 1)
+		elif arg == "--tutorial":
+			_arg_tutorial = true
+		elif arg == "--no-save":
+			_no_save = true
 		elif arg.begins_with("--cycle="):
 			_cycle_arg = float(arg.get_slice("=", 1))
 	if _arg_difficulty != "" and not Balance.DIFFICULTIES.has(_arg_difficulty):
@@ -152,6 +180,7 @@ func _build_world() -> void:
 
 	spawner = Spawner.new()
 	spawner.enemies_root = enemies_root
+	spawner.embers_root = embers_root
 	spawner.lighthouse = lighthouse
 	spawner.rng = rng
 	spawner.enemy_spawned.connect(_on_enemy_spawned)
@@ -166,6 +195,7 @@ func _build_world() -> void:
 	abilities.effects_root = effects_root
 	world.add_child(abilities)
 	abilities.reset()
+	abilities.used.connect(_on_ability_used)
 
 
 func _container(node_name: String) -> Node2D:
@@ -179,12 +209,17 @@ func _build_hud() -> void:
 	hud = Hud.new()
 	add_child(hud)
 	hud.abilities = abilities
-	hud.start_requested.connect(start_run)
-	hud.restart_pressed.connect(func() -> void: start_run(map_id, keeper, difficulty))
+	hud.start_requested.connect(func(m: String, k: String, d: String) -> void: start_run(m, k, d, true))
+	hud.restart_pressed.connect(_restart)
 	hud.resume_pressed.connect(func() -> void: _set_paused(false))
 	hud.menu_pressed.connect(go_to_title)
-	hud.quit_pressed.connect(func() -> void: get_tree().quit())
+	hud.quit_pressed.connect(_quit)
 	hud.upgrade_chosen.connect(_apply_upgrade)
+	hud.reroll_pressed.connect(_reroll)
+	hud.banish_pressed.connect(_banish)
+	hud.story_finished.connect(_begin_night)
+	hud.endless_pressed.connect(continue_endless)
+	hud.tutorial_requested.connect(start_tutorial)
 
 
 ## Troca cenário, paleta e trilha calma para o mapa.
@@ -192,10 +227,11 @@ func _set_map(id: String) -> void:
 	map_id = id
 	DayCycle.set_map(id)
 	Sfx.set_map(id)
-	var want_fjord: bool = Maps.get_map(id)["scenery"] == "fjord"
-	if (background is FjordBackground) != want_fjord:
+	var scenery: String = Maps.get_map(id)["scenery"]
+	var want: Script = {"fjord": FjordBackground, "river": RiverBackground}.get(scenery, Background)
+	if background.get_script() != want:
 		background.queue_free()
-		background = FjordBackground.new() if want_fjord else Background.new()
+		background = want.new()
 		world.add_child(background)
 		world.move_child(background, 0)
 
@@ -208,6 +244,7 @@ func _clear_world() -> void:
 			c.queue_free()
 	spawner.active = false
 	_bosses_alive = 0
+	Engine.time_scale = 1.0
 	lighthouse.keeper = keeper
 	lighthouse.reset()
 	abilities.reset()
@@ -216,6 +253,8 @@ func _clear_world() -> void:
 ## Menu principal: o cenário do último mapa fica vivo ao fundo, com o farol
 ## girando sozinho.
 func go_to_title() -> void:
+	_save_endless_progress()
+	_drop_tutorial()
 	keeper = Settings.keeper
 	_set_map(Settings.map)
 	_clear_world()
@@ -225,7 +264,40 @@ func go_to_title() -> void:
 	hud.show_title()
 
 
-func start_run(new_map: String, new_keeper: String, diff: String) -> void:
+func _restart() -> void:
+	_save_endless_progress()
+	if tutorial:
+		start_tutorial()
+	else:
+		start_run(map_id, keeper, difficulty)
+
+
+func _quit() -> void:
+	_save_endless_progress()
+	get_tree().quit()
+
+
+## Começa uma partida. Vindo do menu, mostra antes a história do mapa.
+func start_run(new_map: String, new_keeper: String, diff: String, from_menu: bool = false) -> void:
+	_setup_run(new_map, new_keeper, diff)
+	if from_menu and Settings.show_story and not autoplay and _ui_arg == "":
+		state = State.STORY
+		get_tree().paused = true
+		Sfx.music(&"calm")
+		hud.show_story(map_id)
+	else:
+		_begin_night()
+
+
+func _drop_tutorial() -> void:
+	if tutorial:
+		tutorial.queue_free()
+		tutorial = null
+	hud.clear_tutorial()
+
+
+## Zera tudo para uma partida nova (sem começá-la).
+func _setup_run(new_map: String, new_keeper: String, diff: String) -> void:
 	difficulty = diff
 	keeper = new_keeper
 	_set_map(new_map)
@@ -237,7 +309,9 @@ func start_run(new_map: String, new_keeper: String, diff: String) -> void:
 	var d: Dictionary = Balance.DIFFICULTIES[difficulty]
 	lighthouse.hp_scale = d["lighthouse_hp"]
 	fog.density = float(d["fog"]) * Settings.FOG_LEVELS[clampi(Settings.fog_level, 0, 2)]
+	_drop_tutorial()
 	_clear_world()
+	Upgrades.apply_meta(lighthouse)
 	elapsed = 0.0
 	kills = 0
 	kill_points = 0
@@ -249,6 +323,14 @@ func start_run(new_map: String, new_keeper: String, diff: String) -> void:
 	upgrade_levels = {}
 	upgrade_order = []
 	pending_level_ups = 0
+	endless = false
+	nights = 0
+	rerolls = Balance.BASE_REROLLS + Progress.level("reroll")
+	banishes = Balance.BASE_BANISHES + Progress.level("banish")
+	banished = []
+	_run = {}
+	_oil_paid = 0
+	_kills_counted = 0
 	_levelup_waiting = false
 	_next_report = 30.0
 	_event_index = 0
@@ -256,15 +338,81 @@ func start_run(new_map: String, new_keeper: String, diff: String) -> void:
 	spawner.difficulty = difficulty
 	spawner.map_id = map_id
 	spawner.reset()
-	spawner.active = true
 	DayCycle.update(0.0)
+	hud.reset_level(level)
+	hud.set_endless(false)
+	_update_hud()
+
+
+## A noite começa de fato: criaturas, música e o primeiro aviso.
+func _begin_night() -> void:
 	state = State.PLAYING
 	get_tree().paused = false
+	spawner.active = tutorial == null
 	Sfx.music(&"calm")
-	hud.reset_level(level)
 	hud.show_playing()
+	if tutorial:
+		return
 	hud.announce(tr(Maps.get_map(map_id)["name"]) + "  —  " + tr("Resista até o amanhecer"))
-	_update_hud()
+	if Progress.level("head_start") > 0:
+		var pick: Dictionary = Upgrades.roll(upgrade_levels, rng, 1, banished)[0]
+		_apply_upgrade_silently(pick["id"])
+		hud.announce(tr("Pavio aceso: %s") % tr(pick["name"]), UiTheme.GOLD)
+
+
+## Tutorial: partida de treino guiada na Baía, sem relógio nem chefes marcados.
+func start_tutorial() -> void:
+	_setup_run("bay", Settings.keeper, "easy")
+	lighthouse.regen = 4.0
+	tutorial = Tutorial.new()
+	tutorial.main = self
+	add_child(tutorial)
+	tutorial.finished.connect(_on_tutorial_finished)
+	DayCycle.update(TUTORIAL_CLOCK)
+	_begin_night()
+	tutorial.begin()
+
+
+func _on_tutorial_finished() -> void:
+	if autoplay:
+		print("[tutorial] concluído em %s" % Records.format_time(elapsed))
+		get_tree().quit()
+		return
+	var first := not Progress.tutorial_done
+	Progress.tutorial_done = true
+	if first:
+		Progress.add_oil(Balance.OIL_TUTORIAL)
+	Progress.save()
+	Achievements.unlock("apprentice")
+	tutorial.queue_free()
+	tutorial = null
+	hud.clear_tutorial()
+	state = State.GAME_OVER
+	get_tree().paused = true
+	hud.show_tutorial_done(Balance.OIL_TUTORIAL if first else 0)
+
+
+## Depois do amanhecer: a névoa volta e a partida segue noite adentro.
+func continue_endless() -> void:
+	endless = true
+	state = State.PLAYING
+	get_tree().paused = false
+	spawner.start_endless(elapsed)
+	_event_index = 0
+	hud.set_endless(true)
+	hud.show_playing()
+	Sfx.music(&"calm")
+	hud.announce(tr("A névoa volta. Noite %d!") % (nights + 2), UiTheme.DANGER, true)
+	Sfx.play(&"warning")
+
+
+## Hora do ciclo do dia: no modo sem fim, cada noite recomeça às 18:00.
+func _cycle_time() -> float:
+	if endless:
+		return fposmod(elapsed - Balance.RUN_DURATION, Balance.RUN_DURATION)
+	if tutorial:
+		return TUTORIAL_CLOCK
+	return elapsed
 
 
 func _process(delta: float) -> void:
@@ -304,12 +452,17 @@ func _process(delta: float) -> void:
 func _process_run(delta: float) -> void:
 	elapsed += delta
 	spawner.elapsed = elapsed
-	DayCycle.update(elapsed)
+	DayCycle.update(_cycle_time())
 	_update_aim()
 	if autoplay:
 		_bot_abilities()
+	if tutorial:
+		tutorial.tick(delta)
+		_update_hud()
+		return
 	var events := DayCycle.events()
-	while _event_index < events.size() and elapsed / Balance.RUN_DURATION >= events[_event_index]["at"]:
+	var cycle_f := _cycle_time() / Balance.RUN_DURATION
+	while _event_index < events.size() and cycle_f >= events[_event_index]["at"]:
 		hud.announce(tr(events[_event_index]["text"]))
 		Sfx.play(&"announce")
 		_event_index += 1
@@ -322,10 +475,22 @@ func _process_run(delta: float) -> void:
 		print("[autoplay] %s  hp=%d/%d  nível=%d  inimigos=%d  mortes=%d" % [
 			Records.format_time(elapsed), lighthouse.hp, lighthouse.max_hp, level,
 			enemies_root.get_child_count(), kills])
-	if elapsed >= Balance.RUN_DURATION:
+	if endless:
+		if elapsed >= Balance.RUN_DURATION * (nights + 2):
+			_night_survived()
+	elif elapsed >= Balance.RUN_DURATION:
 		_end_run(true)
 		return
 	_update_hud()
+
+
+## Modo sem fim: mais uma noite inteira sobrevivida.
+func _night_survived() -> void:
+	nights += 1
+	_event_index = 0
+	hud.announce(tr("Noite %d sobrevivida! +%s pontos") % [nights + 1, Records.format_number(Balance.SCORE_PER_NIGHT)], UiTheme.GOOD, true)
+	Sfx.play(&"victory")
+	Achievements.unlock("endless")
 
 
 func _update_aim() -> void:
@@ -333,6 +498,8 @@ func _update_aim() -> void:
 		var target := _closest_enemy()
 		if target:
 			lighthouse.target_angle = target.position.angle()
+		else:
+			lighthouse.target_angle = lighthouse.aim_angle + 0.5 # Varre a névoa esperando.
 		return
 
 	var stick := Input.get_vector(&"aim_left", &"aim_right", &"aim_up", &"aim_down")
@@ -359,6 +526,12 @@ func _update_aim() -> void:
 
 ## O bot usa as habilidades de forma simples, para medir o jogo com elas.
 func _bot_abilities() -> void:
+	if tutorial:
+		if tutorial.step == Tutorial.Step.ABILITIES:
+			for i in 3:
+				if abilities.is_ready(i):
+					abilities.use(i)
+		return
 	var near := 0
 	for node in enemies_root.get_children():
 		var e := node as Enemy
@@ -377,7 +550,7 @@ func _closest_enemy() -> Enemy:
 	var best_d := INF
 	for node in enemies_root.get_children():
 		var e := node as Enemy
-		if e == null or e.dying or e.invulnerable:
+		if e == null or e.dying or e.invulnerable or e.immune_to_light():
 			continue
 		var d := e.position.length()
 		if d < best_d:
@@ -403,8 +576,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func _set_paused(paused: bool) -> void:
 	state = State.PAUSED if paused else State.PLAYING
 	get_tree().paused = paused
+	Engine.time_scale = 1.0
 	if paused:
-		var summary := "%s   •   %s   •   %s   •   %s" % [DayCycle.clock_text(elapsed), Records.format_time(elapsed),
+		var summary := "%s   •   %s   •   %s   •   %s" % [DayCycle.clock_text(_cycle_time()), Records.format_time(elapsed),
 			tr("Nível %d") % level, tr("%s pts") % Records.format_number(_current_score())]
 		hud.show_pause(summary, upgrade_order)
 	else:
@@ -415,6 +589,7 @@ func _set_paused(paused: bool) -> void:
 
 func _on_enemy_spawned(e: Enemy) -> void:
 	e.killed.connect(_on_enemy_killed)
+	e.escaped.connect(_on_enemy_escaped)
 
 
 func _boss_name(id: String) -> String:
@@ -432,10 +607,13 @@ func _on_boss_warning(id: String) -> void:
 func _on_boss_spawned(boss: Boss) -> void:
 	_bosses_alive += 1
 	boss.enraged_now.connect(_on_boss_enraged)
+	if boss is Cuca:
+		(boss as Cuca).interrupted.connect(func() -> void: hud.announce(tr("Feitiço da Cuca interrompido!"), UiTheme.GOOD))
 	hud.set_boss(boss)
 	hud.announce(tr("%s emergiu!") % _boss_name(boss.kind), UiTheme.DANGER, true)
 	Sfx.play(&"boss")
 	Sfx.music(&"boss")
+	_ring_fx(boss.position, 140.0, Color(1.0, 0.3, 0.25), 0.8, 8.0)
 	_shake = 8.0
 
 
@@ -443,6 +621,13 @@ func _on_boss_enraged(boss: Boss) -> void:
 	hud.announce(tr("%s está enfurecido!") % _boss_name(boss.kind), UiTheme.DANGER)
 	Sfx.play(&"roar")
 	_shake = 6.0
+
+
+func _on_enemy_escaped(enemy: Enemy) -> void:
+	if tutorial:
+		tutorial.on_escape(enemy)
+	if enemy.carried > 0 and (state == State.PLAYING or state == State.LEVEL_UP):
+		hud.announce(tr("%s fugiu com %d brasas!") % [tr(Maps.CREATURE_NAMES[enemy.art]), enemy.carried], UiTheme.TEXT_DIM)
 
 
 func _on_enemy_killed(enemy: Enemy) -> void:
@@ -453,23 +638,49 @@ func _on_enemy_killed(enemy: Enemy) -> void:
 		_on_boss_killed(enemy as Boss)
 	else:
 		kill_points += enemy.score_value
-	if enemy.xp_value > 0:
-		var pieces := 6 if enemy.is_boss() else 1
+	var pieces := 6 if enemy.is_boss() else 1
+	if enemy.kind == "thief" and enemy.carried > 0:
+		pieces = 1 + mini(enemy.carried, 10)
+		Achievements.unlock("thief")
+	if enemy.xp_value > 0 or pieces > 1:
 		for i in pieces:
 			var ember := Ember.new()
-			ember.value = maxi(1, enemy.xp_value / pieces)
+			ember.value = maxi(1, enemy.xp_value / pieces) if enemy.is_boss() else (enemy.xp_value if i == 0 else 1)
 			ember.position = enemy.position + (Vector2.from_angle(TAU * i / pieces) * 30.0 if pieces > 1 else Vector2.ZERO)
 			ember.lighthouse = lighthouse
-			ember.lifetime = Balance.DIFFICULTIES[difficulty]["ember_life"]
+			ember.lifetime = float(Balance.DIFFICULTIES[difficulty]["ember_life"]) + 1.5 * Progress.level("long_wick")
 			ember.collected.connect(_on_ember_collected)
 			embers_root.add_child(ember)
+	var big := enemy.is_boss() or enemy.elite or enemy.radius >= 18.0
 	if Settings.particles and Settings.quality > Settings.QUALITY_LOW and effects_root.get_child_count() < 150:
 		var fx := BurnFx.new()
 		fx.position = enemy.position
 		fx.radius = enemy.radius
-		fx.count = (16 if enemy.is_boss() else 7) if Settings.quality == Settings.QUALITY_HIGH else 4
+		fx.count = (16 if big else 7) if Settings.quality == Settings.QUALITY_HIGH else 4
 		effects_root.add_child(fx)
-	Sfx.play(&"burn", randf_range(0.85, 1.2), 4.0 if enemy.is_boss() else 0.0)
+		if big:
+			_ring_fx(enemy.position, enemy.radius * 3.0, Color(1.0, 0.75, 0.4), 0.3, 4.0)
+	if big and not enemy.is_boss():
+		Sfx.play(&"burn_big", randf_range(0.9, 1.1))
+		_hit_stop(0.05)
+		_shake = maxf(_shake, 3.0)
+	else:
+		Sfx.play(&"burn", randf_range(0.85, 1.2), 4.0 if enemy.is_boss() else 0.0)
+	if lighthouse.combustion > 0:
+		_explode.call_deferred(enemy.position, lighthouse.combustion)
+	if tutorial:
+		tutorial.on_kill(enemy)
+
+
+## Combustão: a criatura queimada explode e fere as vizinhas.
+func _explode(at: Vector2, lv: int) -> void:
+	var r := Balance.COMBUSTION_RADIUS + 15.0 * lv
+	var dmg := Balance.COMBUSTION_DAMAGE * lv * lighthouse.beam_dps / Balance.BEAM_DPS
+	for node in enemies_root.get_children():
+		var e := node as Enemy
+		if e and not e.dying and not e.is_boss() and e.position.distance_to(at) <= r + e.radius:
+			e.take_light(dmg)
+	_ring_fx(at, r, Color(1.0, 0.55, 0.2), 0.3, 3.0)
 
 
 ## Chefe derrotado: relíquia exclusiva, cura e bônus de pontos.
@@ -482,17 +693,27 @@ func _on_boss_killed(boss: Boss) -> void:
 	var relic: Dictionary = Balance.RELICS[boss.kind]
 	hud.announce(tr("%s derrotado! Relíquia: %s — %s") % [_boss_name(boss.kind), tr(relic["name"]), tr(relic["desc"])], Color(0.7, 0.9, 1.0))
 	Sfx.play(&"relic")
+	Achievements.unlock("boss_" + boss.kind)
 	if _bosses_alive == 0:
 		Sfx.music(&"calm")
 		hud.set_boss(null)
-	_shake = 10.0
+	_ring_fx(boss.position, 260.0, Color(1.0, 0.9, 0.6), 0.9, 10.0)
+	_hit_stop(0.3)
+	_shake = 12.0
 
 
 func _on_ember_collected(value: int) -> void:
 	xp += value
 	_ember_streak += 1
 	_ember_timer = 0.6
+	if lighthouse.ember_heal > 0.0:
+		lighthouse.heal(lighthouse.ember_heal)
 	Sfx.play(&"ember", 1.0 + minf(_ember_streak, 14) * 0.04)
+	if tutorial:
+		tutorial.on_ember()
+		if not tutorial.allows_level_up():
+			xp = mini(xp, xp_needed - 1)
+			return
 	while xp >= xp_needed:
 		xp -= xp_needed
 		level += 1
@@ -506,15 +727,51 @@ func _on_ember_collected(value: int) -> void:
 			_open_level_up()
 
 
-func _open_level_up() -> void:
-	var choices := Upgrades.roll(upgrade_levels, rng, 3)
+## Tutorial: sobe um nível na hora certa, para ensinar a escolha.
+func force_level_up() -> void:
+	level += 1
+	xp = 0
+	xp_needed = Balance.xp_for_level(level, difficulty)
+	pending_level_ups += 1
+	_open_level_up()
+
+
+func _card_count() -> int:
+	return 3 + Progress.level("fourth_card")
+
+
+func _open_level_up(reroll: bool = false) -> void:
+	if not reroll:
+		_choices = Upgrades.roll(upgrade_levels, rng, _card_count(), banished)
 	state = State.LEVEL_UP
 	if autoplay:
-		_apply_upgrade(choices[rng.randi() % choices.size()]["id"])
+		_apply_upgrade(_choices[rng.randi() % _choices.size()]["id"])
 		return
 	get_tree().paused = true
+	Engine.time_scale = 1.0
 	_update_hud()
-	hud.show_level_up(level - pending_level_ups + 1, choices, upgrade_levels)
+	_ring_fx(Vector2.ZERO, 200.0, UiTheme.GOLD, 0.6, 6.0)
+	hud.show_level_up(level - pending_level_ups + 1, _choices, upgrade_levels, rerolls, banishes, tutorial != null)
+
+
+func _reroll() -> void:
+	if rerolls <= 0 or state != State.LEVEL_UP:
+		Sfx.play(&"denied")
+		return
+	rerolls -= 1
+	_choices = Upgrades.roll(upgrade_levels, rng, _card_count(), banished)
+	_open_level_up(true)
+
+
+func _banish(id: String) -> void:
+	if banishes <= 0 or state != State.LEVEL_UP or Upgrades.is_evolution(id) or id == Upgrades.FALLBACK["id"]:
+		Sfx.play(&"denied")
+		return
+	banishes -= 1
+	banished.append(id)
+	hud.announce(tr("%s banida desta partida.") % tr(Upgrades.find(id)["name"]), UiTheme.TEXT_DIM)
+	_choices = Upgrades.roll(upgrade_levels, rng, _card_count(), banished)
+	_open_level_up(true)
 
 
 func _apply_upgrade(id: String) -> void:
@@ -522,6 +779,12 @@ func _apply_upgrade(id: String) -> void:
 	upgrade_order.append(id)
 	Upgrades.apply(id, lighthouse)
 	pending_level_ups -= 1
+	if Upgrades.is_evolution(id):
+		hud.announce(tr("Evolução: %s!") % tr(Upgrades.find(id)["name"]), Color(0.85, 0.7, 1.0), true)
+		Achievements.unlock("evolution")
+		_ring_fx(Vector2.ZERO, 320.0, Color(0.85, 0.7, 1.0), 0.9, 8.0)
+	if tutorial:
+		tutorial.on_upgrade()
 	if pending_level_ups > 0:
 		_open_level_up()
 	else:
@@ -530,38 +793,66 @@ func _apply_upgrade(id: String) -> void:
 		hud.show_playing()
 
 
+func _on_ability_used(i: int) -> void:
+	if tutorial:
+		tutorial.on_ability(i)
+
+
+# --- Efeitos ------------------------------------------------------------------
+
+func _ring_fx(at: Vector2, radius: float, color: Color, duration: float, width: float) -> void:
+	if not Settings.particles or autoplay:
+		return
+	var fx := RingFx.new()
+	fx.position = at
+	fx.max_radius = radius
+	fx.color = color
+	fx.duration = duration
+	fx.width = width
+	effects_root.add_child(fx)
+
+
+## Congela a ação por um instante nos golpes fortes (pode ser desligado).
+func _hit_stop(seconds: float) -> void:
+	if not Settings.hit_stop or autoplay or Engine.time_scale < 1.0:
+		return
+	Engine.time_scale = 0.08
+	get_tree().create_timer(seconds, true, false, true).timeout.connect(func() -> void: Engine.time_scale = 1.0)
+
+
 # --- Fim de partida -------------------------------------------------------
 
 func _on_lighthouse_damaged(amount: float) -> void:
 	_shake = minf(10.0, _shake + amount * 0.8)
+	hud.hurt(amount / maxf(1.0, lighthouse.max_hp))
 	Sfx.play(&"damage", randf_range(0.9, 1.1))
 
 
 func _on_lighthouse_died() -> void:
+	if tutorial:
+		lighthouse.revive()
+		hud.announce(tr("O farol foi reacendido. Tente de novo!"))
+		return
 	if state == State.PLAYING or state == State.LEVEL_UP:
 		_end_run(false)
 
 
 func _current_score() -> int:
-	return Balance.score_breakdown(kill_points, bosses_killed, elapsed, false, 0.0, difficulty)["total"]
+	return Balance.score_breakdown(kill_points, bosses_killed, elapsed, endless, 0.0, difficulty)["total"]
 
 
-func _end_run(victory: bool) -> void:
-	state = State.VICTORY if victory else State.GAME_OVER
-	var breakdown := Balance.score_breakdown(kill_points, bosses_killed, elapsed, victory, lighthouse.hp / lighthouse.max_hp, difficulty)
-	if autoplay:
-		print("[autoplay] FIM  mapa=%s  dificuldade=%s  vitória=%s  tempo=%s  nível=%d  mortes=%d  chefes=%d  pontos=%d  melhorias=%s" % [
-			map_id, difficulty, victory, Records.format_time(elapsed), level, kills, bosses_killed, breakdown["total"], upgrade_levels])
-		get_tree().quit()
-		return
-	var run := {
-		"id": "%d-%d" % [Time.get_unix_time_from_system(), rng.randi()],
-		"date": int(Time.get_unix_time_from_system()),
+func _build_run(victory: bool) -> Dictionary:
+	var hp_fraction: float = lighthouse.hp / lighthouse.max_hp if victory else float(_run.get("hp_fraction", 0.0))
+	var won := victory or endless
+	var breakdown := Balance.score_breakdown(kill_points, bosses_killed, elapsed, won, hp_fraction, difficulty)
+	return {
+		"id": _run.get("id", "%d-%d" % [Time.get_unix_time_from_system(), rng.randi()]),
+		"date": _run.get("date", int(Time.get_unix_time_from_system())),
 		"name": Settings.display_name(),
 		"map": map_id,
 		"keeper": keeper,
 		"difficulty": difficulty,
-		"victory": victory,
+		"victory": won,
 		"duration": elapsed,
 		"level": level,
 		"kills": kills,
@@ -570,15 +861,67 @@ func _end_run(victory: bool) -> void:
 		"breakdown": breakdown,
 		"upgrades": upgrade_order.duplicate(),
 		"relics": relics.duplicate(),
+		"hp_fraction": hp_fraction,
 	}
-	if _ui_arg == "":
+
+
+## Salva a partida (ou atualiza a do amanhecer, no modo sem fim), paga o óleo
+## e confere metas e conquistas. Devolve o que a tela de fim deve mostrar.
+func _record_run(run: Dictionary) -> Dictionary:
+	var out := {"oil": 0, "unlocks": [], "achievements": []}
+	if _ui_arg != "":
+		return out
+	if _run.is_empty():
 		Records.add(run)
+		Progress.add_stat("runs")
+		if run["victory"]:
+			Progress.add_stat("wins")
+	else:
+		Records.update(run)
+	_run = run
+	Progress.add_stat("kills", kills - _kills_counted)
+	_kills_counted = kills
+	var oil := maxi(0, Progress.oil_for(int(run["score"])) - _oil_paid)
+	_oil_paid += oil
+	Progress.add_oil(oil, false)
+	out["oil"] = oil
+	for id in Progress.check_goals(run):
+		out["unlocks"].append(Progress.unlock_name(id))
+	for id in Achievements.check_run(run):
+		out["achievements"].append(tr(Achievements.find(id)["name"]))
+	Progress.save()
+	return out
+
+
+## No modo sem fim, sair pelo menu ou reiniciar também guarda o progresso.
+func _save_endless_progress() -> void:
+	if endless and (state == State.PLAYING or state == State.PAUSED or state == State.LEVEL_UP):
+		_record_run(_build_run(false))
+		endless = false
+
+
+func _end_run(victory: bool) -> void:
+	Engine.time_scale = 1.0
+	state = State.VICTORY if victory else State.GAME_OVER
+	var run := _build_run(victory)
+	if autoplay:
+		print("[autoplay] FIM  mapa=%s  dificuldade=%s  vitória=%s  tempo=%s  nível=%d  mortes=%d  chefes=%d  pontos=%d  melhorias=%s" % [
+			map_id, difficulty, victory, Records.format_time(elapsed), level, kills, bosses_killed, run["score"], upgrade_levels])
+		get_tree().quit()
+		return
+	var was_endless := endless
+	var rewards := _record_run(run)
+	endless = false
 	var context := {
-		"clock": DayCycle.clock_text(elapsed),
-		"hours_left": DayCycle.hours_left_text(elapsed),
-		"time_left": Records.format_time(maxf(0.0, Balance.RUN_DURATION - elapsed)),
+		"clock": DayCycle.clock_text(_cycle_time()),
+		"hours_left": DayCycle.hours_left_text(_cycle_time()),
+		"time_left": Records.format_time(maxf(0.0, Balance.RUN_DURATION - _cycle_time())),
 		"next": "",
+		"endless": was_endless,
+		"nights": nights + 1,
+		"can_continue": victory and not was_endless,
 	}
+	context.merge(rewards)
 	var nb := spawner.next_boss()
 	if not victory and not nb.is_empty() and float(nb["t"]) > elapsed:
 		context["next"] = tr("Próximo marco: %s chegaria em %s.") % [_boss_name(nb["boss"]), Records.format_time(float(nb["t"]) - elapsed)]
@@ -586,6 +929,7 @@ func _end_run(victory: bool) -> void:
 	if victory:
 		# O sol nasce: as criaturas se desfazem e o cenário clareia ao fundo.
 		spawner.active = false
+		_sunrise = 0.0
 		for node in enemies_root.get_children():
 			(node as Enemy).dissolve()
 		Sfx.play(&"victory")
@@ -595,6 +939,11 @@ func _end_run(victory: bool) -> void:
 		Sfx.play(&"defeat")
 		Sfx.music(&"none")
 	hud.show_end(run, context)
+
+
+func _on_achievement(a: Dictionary) -> void:
+	hud.announce(tr("Conquista desbloqueada: %s") % tr(a["name"]), ACHIEVEMENT_COLOR)
+	Sfx.play(&"achievement")
 
 
 func _take_screenshot() -> void:
@@ -607,7 +956,7 @@ func _take_screenshot() -> void:
 
 
 func _update_hud() -> void:
-	hud.update_stats(lighthouse.hp, lighthouse.max_hp, xp, xp_needed, level, elapsed, kills, _current_score())
+	hud.update_stats(lighthouse.hp, lighthouse.max_hp, xp, xp_needed, level, elapsed, kills, _current_score(), _cycle_time(), nights + 2 if endless else 1)
 
 
 # --- Inspeção visual (--ui=) ----------------------------------------------
@@ -628,7 +977,18 @@ func _open_debug_ui(screen: String) -> void:
 			hud.show_history()
 		"ranking":
 			hud.show_ranking()
-		"pause", "levelup", "end", "victory", "boss":
+		"workshop":
+			hud.show_workshop()
+		"achievements":
+			hud.show_achievements()
+		"story":
+			start_run(map_id, keeper, difficulty)
+			state = State.STORY
+			get_tree().paused = true
+			hud.show_story(map_id)
+		"tutorial":
+			start_tutorial()
+		"pause", "levelup", "end", "victory", "boss", "endless":
 			start_run(map_id, keeper, difficulty)
 			elapsed = 250.0
 			spawner.elapsed = elapsed
@@ -637,11 +997,13 @@ func _open_debug_ui(screen: String) -> void:
 			level = 14
 			xp = 30
 			xp_needed = Balance.xp_for_level(level, difficulty)
-			for id: String in ["wide_lens", "intense_flame", "intense_flame", "pulse", "gears", "twin_lens"]:
+			for id: String in ["wide_lens", "wide_lens", "wide_lens", "wide_lens", "wide_lens", "gears", "gears", "gears", "gears", "pulse", "twin_lens"]:
 				_apply_upgrade_silently(id)
+			var roles := ["basic", "fast", "brute", "thief", "mirror", "moth"]
 			for i in 30:
-				spawner.spawn(["basic", "fast", "brute"][i % 3]).position *= rng.randf_range(0.35, 0.9)
-			spawner.spawn_boss(Maps.boss_at(map_id, 0))
+				spawner.spawn(roles[i % roles.size()]).position *= rng.randf_range(0.35, 0.9)
+			spawner.spawn("fogbank").position = Vector2(-320, -120)
+			spawner.spawn_boss(Maps.boss_at(map_id, 0 if screen != "endless" else 1))
 			abilities.cooldowns[1] = 12.0
 			DayCycle.update(elapsed)
 			_update_hud()
@@ -657,6 +1019,13 @@ func _open_debug_ui(screen: String) -> void:
 				relics.assign([Maps.boss_at(map_id, 0), Maps.boss_at(map_id, 1)])
 				elapsed = Balance.RUN_DURATION
 				_end_run(true)
+			elif screen == "endless":
+				elapsed = Balance.RUN_DURATION + 200.0
+				endless = true
+				nights = 0
+				spawner.elapsed = elapsed
+				hud.set_endless(true)
+				_update_hud()
 
 
 func _apply_upgrade_silently(id: String) -> void:

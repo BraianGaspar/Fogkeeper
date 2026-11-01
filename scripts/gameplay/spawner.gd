@@ -3,6 +3,7 @@ extends Node
 ## Cria inimigos na borda da tela conforme o tempo de partida. Ritmo e
 ## composição vêm de Balance (ajustados pela dificuldade); a aparência e os
 ## chefes vêm do mapa. Avisa os chefes BOSS_WARNING segundos antes.
+## No modo sem fim, os chefes do mapa voltam em rodízio.
 
 signal enemy_spawned(enemy: Enemy)
 signal boss_warning(boss_id: String)
@@ -13,9 +14,13 @@ const BOSS_SCRIPTS := {
 	"kraken": preload("res://scripts/gameplay/bosses/kraken.gd"),
 	"jotunn": preload("res://scripts/gameplay/bosses/jotunn.gd"),
 	"fenrir": preload("res://scripts/gameplay/bosses/fenrir.gd"),
+	"iara": preload("res://scripts/gameplay/bosses/iara.gd"),
+	"boitata": preload("res://scripts/gameplay/bosses/boitata.gd"),
+	"cuca": preload("res://scripts/gameplay/bosses/cuca.gd"),
 }
 
 var enemies_root: Node2D
+var embers_root: Node2D
 var lighthouse: Lighthouse
 var rng: RandomNumberGenerator
 var elapsed := 0.0 ## Definido pelo Main a cada quadro.
@@ -24,18 +29,43 @@ var map_id := "bay"
 var active := false
 
 var _timer := 0.0
+var _fog_timer := 0.0
+var _endless := false
 var _schedule: Array[Dictionary] = [] # {t, boss, warned, spawned}
 
 
 func reset() -> void:
 	_timer = 1.0
+	_fog_timer = Balance.FOGBANK_START
+	_endless = false
 	elapsed = 0.0
 	_schedule.clear()
 	for i in Balance.BOSS_TIMES.size():
 		_schedule.append({"t": Balance.BOSS_TIMES[i], "boss": Maps.boss_at(map_id, i), "warned": false, "spawned": false})
 	if _diff()["extra_boss"]:
-		_schedule.append({"t": Balance.EXTRA_BOSS_TIME, "boss": Maps.boss_at(map_id, 0), "warned": false, "spawned": false})
+		_schedule.append({"t": Balance.EXTRA_BOSS_TIME, "boss": Maps.boss_at(map_id, 2), "warned": false, "spawned": false})
 	_schedule.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a["t"] < b["t"])
+
+
+## Modo sem fim: a partir de agora, um chefe a cada ENDLESS_BOSS_EVERY
+## segundos, em rodízio por todos os chefes do mapa.
+func start_endless(now: float) -> void:
+	_endless = true
+	active = true
+	_fog_timer = minf(_fog_timer, now + Balance.ENDLESS_FOGBANK_EVERY)
+	_schedule.clear()
+	var bosses: Array = Maps.get_map(map_id)["bosses"]
+	for i in 40:
+		_schedule.append({"t": now + Balance.ENDLESS_BOSS_FIRST + i * Balance.ENDLESS_BOSS_EVERY,
+			"boss": bosses[i % bosses.size()], "warned": false, "spawned": false})
+
+
+## Momentos dos chefes que ainda faltam (para o relógio da noite).
+func boss_times() -> Array[float]:
+	var out: Array[float] = []
+	for s in _schedule:
+		out.append(float(s["t"]))
+	return out
 
 
 func _value(key: String) -> float:
@@ -53,7 +83,11 @@ func _process(delta: float) -> void:
 	if _timer <= 0.0:
 		_timer += Balance.spawn_interval(elapsed) / _value("spawn")
 		for i in Balance.group_size(elapsed):
-			spawn(_pick_role())
+			if enemies_root.get_child_count() < Balance.MAX_ENEMIES:
+				spawn(_pick_role())
+	if elapsed >= _fog_timer:
+		_fog_timer = elapsed + (Balance.ENDLESS_FOGBANK_EVERY if _endless else Balance.FOGBANK_EVERY)
+		spawn("fogbank")
 	for s in _schedule:
 		if not s["warned"] and elapsed >= float(s["t"]) - Balance.BOSS_WARNING:
 			s["warned"] = true
@@ -72,8 +106,11 @@ func next_boss() -> Dictionary:
 
 
 func spawn(role: String) -> Enemy:
-	var e := _make(role, rng.randf() < _value("elite") and role != "tentacle" and role != "boulder")
+	var can_elite := role not in ["tentacle", "boulder", "fogbank"]
+	var e := _make(role, can_elite and rng.randf() < _value("elite"))
 	e.position = Vector2.from_angle(rng.randf() * TAU) * _ring()
+	if role == "fogbank":
+		e.begin_drift(rng)
 	_add(e)
 	return e
 
@@ -91,6 +128,7 @@ func spawn_boss(id: String) -> Boss:
 	var b: Boss = BOSS_SCRIPTS[id].new()
 	b.setup_boss(id, Balance.hp_multiplier(elapsed) * _value("enemy_hp"), _value("enemy_damage"), _value("enemy_speed"), d["enrage"])
 	b.lighthouse = lighthouse
+	b.embers_root = embers_root
 	b.begin(rng.randf() * TAU)
 	b.spawn_request.connect(spawn_at)
 	_add(b)
@@ -103,6 +141,7 @@ func _make(role: String, elite: bool) -> Enemy:
 	var art: String = Maps.get_map(map_id)["creatures"].get(role, "wraith")
 	e.setup(role, art, Balance.hp_multiplier(elapsed) * _value("enemy_hp"), _value("enemy_damage"), _value("enemy_speed"), rng, elite)
 	e.lighthouse = lighthouse
+	e.embers_root = embers_root
 	return e
 
 

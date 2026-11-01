@@ -37,6 +37,11 @@ const ENEMIES := {
 	"basic": {"hp": 14.0, "speed": 54.0, "radius": 12.0, "damage": 4.0, "xp": 1, "score": 10},
 	"fast": {"hp": 9.0, "speed": 110.0, "radius": 9.0, "damage": 3.0, "xp": 1, "score": 12},
 	"brute": {"hp": 55.0, "speed": 28.0, "radius": 20.0, "damage": 10.0, "xp": 4, "score": 40},
+	# Criaturas especiais (ver Enemy): ladra de brasas, espelho, mariposa e névoa.
+	"thief": {"hp": 16.0, "speed": 95.0, "radius": 11.0, "damage": 0.0, "xp": 1, "score": 25},
+	"mirror": {"hp": 30.0, "speed": 38.0, "radius": 15.0, "damage": 8.0, "xp": 3, "score": 35},
+	"moth": {"hp": 26.0, "speed": 44.0, "radius": 13.0, "damage": 6.0, "xp": 2, "score": 30},
+	"fogbank": {"hp": 90.0, "speed": 26.0, "radius": 70.0, "damage": 0.0, "xp": 3, "score": 50},
 	# Lacaios criados por chefes.
 	"tentacle": {"hp": 26.0, "speed": 70.0, "radius": 10.0, "damage": 7.0, "xp": 1, "score": 15},
 	"boulder": {"hp": 20.0, "speed": 135.0, "radius": 13.0, "damage": 12.0, "xp": 0, "score": 5},
@@ -44,6 +49,18 @@ const ENEMIES := {
 
 ## Criaturas de elite (Médio em diante): mais fortes e valiosas.
 const ELITE := {"hp": 3.0, "damage": 1.5, "radius": 1.3, "xp": 4, "score": 3}
+
+# --- Criaturas especiais ---
+const THIEF_CARRY := 4 ## Brasas que a ladra rouba antes de fugir.
+const THIEF_PATIENCE := 12.0 ## Segundos procurando brasas antes de desistir e fugir.
+const MIRROR_CLOSED := 2.6 ## Segundos fechado: a luz não fere e o feixe principal volta em parte para o farol.
+const MIRROR_OPEN := 1.8 ## Segundos aberto (vulnerável).
+const MIRROR_REFLECT := 0.08 ## Fração do dano do feixe principal refletida no farol.
+const MOTH_GROW := 0.5 ## Crescimento por segundo enquanto iluminada.
+const MOTH_MAX := 1.5 ## Crescimento máximo (dano e brasas crescem junto).
+const FOGBANK_START := 150.0 ## Primeira névoa devoradora.
+const FOGBANK_EVERY := 70.0
+const FOGBANK_DRAIN := 5.0 ## Brasas dentro da névoa somem este tanto mais rápido.
 
 # --- Chefes ---
 ## Vida e recompensas; os números de cada mecânica ficam junto do chefe.
@@ -56,6 +73,12 @@ const BOSSES := {
 		"stand": 250.0, "throw_every": 3.2, "advance": 18.0},
 	"fenrir": {"hp": 820.0, "speed": 0.9, "radius": 30.0, "damage": 18.0, "xp": 40,
 		"circle": 270.0, "charge_every": 6.5, "telegraph": 1.1, "dash_speed": 520.0, "dodge_after": 0.6, "dodge_cooldown": 2.5},
+	"iara": {"hp": 700.0, "speed": 0.3, "radius": 26.0, "damage": 0.0, "xp": 30,
+		"stand": 285.0, "sing_every": 9.0, "sing_time": 4.0, "pull": 1.7, "spawn_every": 1.1},
+	"boitata": {"hp": 820.0, "speed": 0.42, "radius": 28.0, "damage": 16.0, "xp": 40,
+		"start_radius": 430.0, "blaze_time": 6.5, "dim_time": 3.5, "wisp_every": 1.8, "dim_damage": 1.6, "approach": 12.0},
+	"cuca": {"hp": 850.0, "speed": 40.0, "radius": 30.0, "damage": 0.0, "xp": 40,
+		"stand": 290.0, "cast_every": 7.0, "cast_time": 2.4, "interrupt": 0.08, "sleep_time": 4.5, "sleep_power": 0.35},
 }
 const BOSS_TIMES := [300.0, 540.0] ## Momentos dos chefes (o mapa diz quem aparece).
 const BOSS_WARNING := 8.0 ## Segundos de aviso antes de um chefe surgir.
@@ -69,6 +92,9 @@ const RELICS := {
 	"kraken": {"name": "Olho do Kraken", "desc": "Feixe alcança 20% mais longe."},
 	"jotunn": {"name": "Coração de Gelo", "desc": "Criaturas iluminadas ficam ainda mais lentas."},
 	"fenrir": {"name": "Presa de Fenrir", "desc": "Feixe gira 30% mais rápido e causa 15% mais dano."},
+	"iara": {"name": "Pérola da Iara", "desc": "Brasas são puxadas de 50% mais longe e o farol regenera 0,5 de vida por segundo."},
+	"boitata": {"name": "Olho do Boitatá", "desc": "Toda a luz causa 25% mais dano."},
+	"cuca": {"name": "Caldeirão da Cuca", "desc": "Habilidades recarregam 30% mais rápido."},
 }
 
 # --- Habilidades ativas ---
@@ -120,11 +146,58 @@ static func difficulty_value(difficulty: String, key: String, t: float) -> float
 		return v
 	return lerpf(1.0, v, clampf(t / DIFFICULTY_RAMP, 0.0, 1.0))
 
+# --- Modo sem fim (depois do amanhecer) ---
+const ENDLESS_BOSS_FIRST := 60.0 ## Segundos até o primeiro chefe da nova noite.
+const ENDLESS_BOSS_EVERY := 150.0
+const ENDLESS_FOGBANK_EVERY := 45.0
+const MAX_ENEMIES := 240 ## Teto de criaturas vivas (protege o desempenho nas noites longas).
+
 # --- Pontuação ---
 const SCORE_PER_SECOND := 5
 const SCORE_PER_BOSS := 1500
 const SCORE_VICTORY := 5000
 const SCORE_HEALTH_BONUS := 2000 ## Ao amanhecer, proporcional à vida restante.
+const SCORE_ENDLESS_PER_SECOND := 10 ## Depois do amanhecer, cada segundo vale o dobro.
+const SCORE_PER_NIGHT := 4000 ## Cada noite extra sobrevivida no modo sem fim.
+
+# --- Melhorias desbloqueáveis ---
+const VITAL_EMBER_HEAL := 0.4 ## Vida por brasa recolhida, por nível de Brasas vitais.
+const COMBUSTION_RADIUS := 70.0 ## + 15 por nível da melhoria Combustão.
+const COMBUSTION_DAMAGE := 10.0 ## Por nível, escalado pelo dano da luz.
+
+# --- Progressão entre partidas ---
+const OIL_PER_SCORE := 0.005 ## Óleo ganho por ponto ao fim de cada partida.
+const OIL_MIN := 5
+const OIL_TUTORIAL := 50
+
+## Melhorias permanentes da oficina. Custo do nível n = cost × n.
+const META := [
+	{"id": "granite", "name": "Paredes de granito", "desc": "+10 de vida máxima por nível.", "max": 5, "cost": 60},
+	{"id": "polish", "name": "Lente polida", "desc": "+5% de dano da luz por nível.", "max": 5, "cost": 80},
+	{"id": "fine_gears", "name": "Engrenagens finas", "desc": "+6% de velocidade de giro por nível.", "max": 3, "cost": 70},
+	{"id": "long_wick", "name": "Pavio longo", "desc": "Brasas duram 1,5 s a mais por nível.", "max": 3, "cost": 60},
+	{"id": "copper", "name": "Ímã de cobre", "desc": "Brasas são puxadas de 10% mais longe por nível.", "max": 3, "cost": 60},
+	{"id": "reroll", "name": "Segunda opinião", "desc": "+1 troca de cartas por partida, por nível.", "max": 3, "cost": 90},
+	{"id": "banish", "name": "Lista negra", "desc": "+1 banimento de carta por partida, por nível.", "max": 2, "cost": 120},
+	{"id": "fourth_card", "name": "Olhar atento", "desc": "Uma carta a mais em cada escolha de melhoria.", "max": 1, "cost": 400},
+	{"id": "head_start", "name": "Pavio aceso", "desc": "Começa a partida com uma melhoria aleatória.", "max": 1, "cost": 250},
+	{"id": "fisher", "name": "Sorte do pescador", "desc": "+10% de óleo ganho por nível.", "max": 3, "cost": 100},
+]
+const BASE_REROLLS := 1
+const BASE_BANISHES := 0
+
+## Desbloqueios: por óleo, ou de graça ao cumprir a meta ("goal").
+## Metas: "midnight" (sobreviver até a meia-noite), "boss" (derrotar um
+## chefe), "dawn" (ver o amanhecer).
+const UNLOCKS := [
+	{"id": "fjord", "kind": "map", "cost": 150, "goal": "midnight"},
+	{"id": "amazon", "kind": "map", "cost": 300, "goal": "boss"},
+	{"id": "stone", "kind": "keeper", "cost": 80, "goal": ""},
+	{"id": "iron", "kind": "keeper", "cost": 160, "goal": ""},
+	{"id": "crystal", "kind": "keeper", "cost": 240, "goal": "dawn"},
+	{"id": "combustion", "kind": "upgrade", "cost": 200, "goal": ""},
+	{"id": "vital_embers", "kind": "upgrade", "cost": 200, "goal": ""},
+]
 
 
 static func xp_for_level(level: int, difficulty: String = "normal") -> int:
@@ -133,16 +206,19 @@ static func xp_for_level(level: int, difficulty: String = "normal") -> int:
 
 
 ## Pontuação em partes fáceis de ler: criaturas, tempo e bônus, depois a
-## dificuldade multiplica o subtotal.
+## dificuldade multiplica o subtotal. O tempo depois do amanhecer (modo sem
+## fim) entra em "endless", com noites extras valendo bônus.
 static func score_breakdown(kill_points: int, bosses: int, seconds: float, victory: bool, hp_fraction: float, difficulty: String) -> Dictionary:
-	var survival := int(seconds) * SCORE_PER_SECOND
+	var survival := int(minf(seconds, RUN_DURATION)) * SCORE_PER_SECOND
+	var extra := maxf(0.0, seconds - RUN_DURATION)
+	var endless := int(extra) * SCORE_ENDLESS_PER_SECOND + int(extra / RUN_DURATION) * SCORE_PER_NIGHT
 	var boss_bonus := bosses * SCORE_PER_BOSS
 	var win := SCORE_VICTORY if victory else 0
 	var health := roundi(SCORE_HEALTH_BONUS * clampf(hp_fraction, 0.0, 1.0)) if victory else 0
-	var subtotal := kill_points + survival + boss_bonus + win + health
+	var subtotal := kill_points + survival + endless + boss_bonus + win + health
 	var mult: float = DIFFICULTIES[difficulty]["score"]
 	return {
-		"kills": kill_points, "survival": survival, "bosses": boss_bonus, "victory": win, "health": health,
+		"kills": kill_points, "survival": survival, "endless": endless, "bosses": boss_bonus, "victory": win, "health": health,
 		"subtotal": subtotal, "multiplier": mult, "total": roundi(subtotal * mult),
 	}
 
@@ -166,6 +242,12 @@ static func spawn_weights(t: float) -> Dictionary:
 		w["fast"] = minf(6.0, (t - 45.0) / 15.0)
 	if t >= 120.0:
 		w["brute"] = minf(3.0, (t - 120.0) / 90.0)
+	if t >= 90.0:
+		w["thief"] = minf(1.0, (t - 90.0) / 60.0)
+	if t >= 160.0:
+		w["mirror"] = minf(1.0, (t - 160.0) / 120.0)
+	if t >= 210.0:
+		w["moth"] = minf(1.0, (t - 210.0) / 120.0)
 	return w
 
 

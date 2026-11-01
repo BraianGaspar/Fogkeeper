@@ -10,12 +10,15 @@ var enemies_root: Node2D
 var embers_root: Node2D
 var effects_root: Node2D
 var cooldowns: Array[float] = []
+var _full: Array[float] = [] ## Recarga cheia de cada uma (o farol pode encurtar).
 
 
 func reset() -> void:
 	cooldowns.clear()
+	_full.clear()
 	for a in Balance.ABILITIES:
 		cooldowns.append(0.0)
+		_full.append(float(a["cooldown"]))
 
 
 func is_ready(i: int) -> bool:
@@ -24,7 +27,7 @@ func is_ready(i: int) -> bool:
 
 ## 0 = pronta, 1 = acabou de ser usada.
 func fraction(i: int) -> float:
-	return cooldowns[i] / float(Balance.ABILITIES[i]["cooldown"])
+	return cooldowns[i] / maxf(0.01, _full[i])
 
 
 func _process(delta: float) -> void:
@@ -39,15 +42,17 @@ func use(i: int) -> bool:
 		Sfx.play(&"denied")
 		return false
 	var a: Dictionary = Balance.ABILITIES[i]
-	cooldowns[i] = a["cooldown"]
+	_full[i] = float(a["cooldown"]) * lighthouse.ability_cooldown
+	cooldowns[i] = _full[i]
 	match a["id"]:
 		"flash":
 			var r: float = a["radius"]
 			for node in enemies_root.get_children():
 				var e := node as Enemy
 				if e and not e.dying and e.position.length() - e.radius <= r:
-					e.take_light(a["damage"])
+					# Atordoa antes do dano: o Clarão apaga o Boitatá e abre o espelho.
 					e.stun(a["stun"])
+					e.take_light(a["damage"])
 			_ring(r, Color(1.0, 0.95, 0.8), 0.5, 10.0)
 			Sfx.play(&"flash")
 		"overcharge":

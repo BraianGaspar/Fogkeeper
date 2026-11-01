@@ -6,22 +6,32 @@ extends MenuScreen
 signal restart_pressed
 signal ranking_pressed
 signal menu_pressed
+signal endless_pressed
 
 var run: Dictionary = {}
-## Dados de apresentação vindos do Main: clock, hours_left, time_left, next.
+## Dados de apresentação vindos do Main: clock, hours_left, time_left, next,
+## endless, nights, can_continue, oil, unlocks, achievements.
 var context: Dictionary = {}
 
 
 func _build() -> void:
-	var victory: bool = run["victory"]
+	var dawn: bool = context.get("can_continue", false)
+	var endless: bool = context.get("endless", false)
 	var map := Maps.get_map(run["map"])
 	var box := centered_panel(920, 22)
 	box.add_theme_constant_override("separation", 8)
-	var head := title(box, tr("Amanheceu!") if victory else tr("A luz se apagou"), 42)
-	if not victory:
+	var heading := tr("A luz se apagou")
+	if dawn:
+		heading = tr("Amanheceu!")
+	elif endless:
+		heading = tr("A luz se apagou na noite %d") % int(context["nights"])
+	var head := title(box, heading, 42)
+	if not dawn:
 		head.add_theme_color_override("font_color", UiTheme.DANGER)
-	if victory:
+	if dawn:
 		text(box, tr("O sol nasceu às 06:00 sobre %s. O farol resistiu à noite inteira.") % tr(map["name"]), 17, UiTheme.TEXT)
+	elif endless:
+		text(box, tr("Depois do amanhecer, o farol ainda resistiu até as %s da noite %d.") % [context["clock"], int(context["nights"])], 17, UiTheme.TEXT)
 	else:
 		text(box, tr("A luz se apagou às %s. Faltavam %s (%s de partida) para o amanhecer.") % [context["clock"], context["hours_left"], context["time_left"]], 17, UiTheme.TEXT)
 		if context.get("next", "") != "":
@@ -35,7 +45,7 @@ func _build() -> void:
 	stat_row(stats, tr("Farol"), tr(Keepers.get_keeper(run["keeper"])["name"]))
 	stat_row(stats, tr("Dificuldade"), difficulty_name(run["difficulty"]))
 	stat_row(stats, tr("Tempo sobrevivido"), Records.format_time(run["duration"]))
-	stat_row(stats, tr("Horário do amanhecer") if victory else tr("Horário da derrota"), context["clock"])
+	stat_row(stats, tr("Horário do amanhecer") if dawn else tr("Horário da derrota"), context["clock"])
 	stat_row(stats, tr("Nível alcançado"), str(run["level"]))
 	stat_row(stats, tr("Criaturas queimadas"), Records.format_number(run["kills"]))
 	stat_row(stats, tr("Chefes derrotados"), str(run["bosses"]))
@@ -45,6 +55,8 @@ func _build() -> void:
 	var rows: Array[Control] = []
 	rows.append(_score_row(score_col, tr("Criaturas queimadas"), bd["kills"]))
 	rows.append(_score_row(score_col, tr("Tempo sobrevivido"), bd["survival"]))
+	if int(bd.get("endless", 0)) > 0:
+		rows.append(_score_row(score_col, tr("Modo sem fim"), bd["endless"]))
 	rows.append(_score_row(score_col, tr("Bônus de chefes"), bd["bosses"]))
 	rows.append(_score_row(score_col, tr("Bônus de vitória"), bd["victory"]))
 	rows.append(_score_row(score_col, tr("Bônus de vida restante"), bd["health"]))
@@ -75,6 +87,20 @@ func _build() -> void:
 		chips.add_child(UiTheme.label(tr("Relíquias: %s") % ", ".join(relics), 14, Color(0.7, 0.9, 1.0)))
 	box.add_child(chips)
 
+	# Recompensas que ficam: óleo, desbloqueios e conquistas.
+	var rewards: Array[String] = []
+	if int(context.get("oil", 0)) > 0:
+		rewards.append(tr("+%d de óleo (total: %s)") % [int(context["oil"]), Records.format_number(Progress.oil)])
+	for u: String in context.get("unlocks", []):
+		rewards.append(tr("Liberado: %s") % u)
+	for a: String in context.get("achievements", []):
+		rewards.append(tr("Conquista: %s") % a)
+	if not rewards.is_empty():
+		var r := UiTheme.label("   •   ".join(rewards), 15, Color(0.45, 0.95, 0.85))
+		r.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(r)
+
 	var pos := Records.position_of(run["id"], run["difficulty"], run["map"])
 	var count := Records.ranking(run["difficulty"], run["map"]).size()
 	if pos > 0:
@@ -91,11 +117,17 @@ func _build() -> void:
 	buttons.add_theme_constant_override("separation", 12)
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_child(buttons)
-	default_focus = add_button(buttons, tr("Jogar de novo"), func() -> void: restart_pressed.emit())
+	if dawn:
+		default_focus = add_button(buttons, tr("Continuar noite adentro"), func() -> void: endless_pressed.emit())
+		add_button(buttons, tr("Jogar de novo"), func() -> void: restart_pressed.emit())
+	else:
+		default_focus = add_button(buttons, tr("Jogar de novo"), func() -> void: restart_pressed.emit())
 	add_button(buttons, tr("Ver ranking"), func() -> void: ranking_pressed.emit())
 	add_button(buttons, tr("Menu principal"), func() -> void: menu_pressed.emit(), &"back")
 	for b in buttons.get_children():
-		(b as Control).custom_minimum_size.x = 230
+		(b as Control).custom_minimum_size.x = 200 if dawn else 230
+	if dawn:
+		text(box, tr("Modo sem fim: a névoa volta e as noites seguem, cada vez mais difíceis. Os pontos continuam somando nesta partida."), 13, UiTheme.TEXT_DIM)
 
 
 func _column(parent: Control, heading: String) -> VBoxContainer:

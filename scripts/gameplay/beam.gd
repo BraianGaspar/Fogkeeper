@@ -13,6 +13,8 @@ var dps := 10.0
 var intensity := 1.0
 var color := Color(1.0, 0.9, 0.62)
 var hot := false ## Sobrecarga: núcleo branco e mais intenso.
+var dim := false ## Feitiço da Cuca: luz fraca e arroxeada.
+var reflects := false ## Feixe principal: o espelho fechado devolve parte do dano.
 
 
 func _ready() -> void:
@@ -33,7 +35,7 @@ func apply(delta: float, enemies: Array[Node], embers: Array[Node]) -> void:
 		if e == null or e.dying:
 			continue
 		if covers(e.global_position - origin, e.radius):
-			e.take_light(dps * delta)
+			e.take_light(dps * delta, reflects)
 	for node in embers:
 		var m := node as Ember
 		if m and covers(m.global_position - origin, 6.0):
@@ -51,6 +53,9 @@ func covers(rel: Vector2, radius: float) -> bool:
 
 
 func _draw() -> void:
+	if dim:
+		_draw_cone(half_angle, range_px, 0.18 * intensity, Color(0.7, 0.55, 1.0))
+		return
 	_draw_cone(half_angle, range_px, 0.45 * intensity)
 	_draw_cone(half_angle * 0.35, range_px * 0.92, 0.3 * intensity)
 	if hot:

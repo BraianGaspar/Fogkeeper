@@ -67,7 +67,32 @@ const FJORD_KEYS := [
 		"fog": Color(1.0, 0.98, 0.95), "fog_a": 0.15, "moon": 0.0, "dusk": 0.0, "dawn": 0.7, "storm": 0.0, "night": 0.0, "aurora": 0.0},
 ]
 
-const PALETTES := {"bay": BAY_KEYS, "fjord": FJORD_KEYS}
+## No Rio Encantado "sea" é a água barrenta; a noite é verde-escura, cheia de
+## vaga-lumes, e a tempestade é um temporal de chuva tropical.
+const AMAZON_KEYS := [
+	{"at": 0.0, "sea": Color(0.36, 0.24, 0.12), "wave": Color(0.95, 0.65, 0.4), "land": Color(1.0, 0.75, 0.6),
+		"fog": Color(0.9, 0.6, 0.45), "fog_a": 0.7, "moon": 0.0, "dusk": 0.9, "dawn": 0.0, "storm": 0.0, "night": 0.15},
+	{"at": 0.1, "sea": Color(0.07, 0.12, 0.09), "wave": Color(0.35, 0.55, 0.42), "land": Color(0.55, 0.68, 0.6),
+		"fog": Color(0.45, 0.6, 0.5), "fog_a": 1.0, "moon": 0.3, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.3, "sea": Color(0.06, 0.12, 0.1), "wave": Color(0.45, 0.65, 0.55), "land": Color(0.6, 0.72, 0.66),
+		"fog": Color(0.5, 0.65, 0.55), "fog_a": 1.0, "moon": 1.0, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.44, "sea": Color(0.05, 0.09, 0.08), "wave": Color(0.38, 0.5, 0.45), "land": Color(0.48, 0.56, 0.52),
+		"fog": Color(0.42, 0.52, 0.48), "fog_a": 1.15, "moon": 0.3, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.5, "sea": Color(0.04, 0.07, 0.07), "wave": Color(0.42, 0.52, 0.5), "land": Color(0.42, 0.5, 0.48),
+		"fog": Color(0.4, 0.48, 0.46), "fog_a": 1.3, "moon": 0.0, "dusk": 0.0, "dawn": 0.0, "storm": 1.0, "night": 1.0},
+	{"at": 0.58, "sea": Color(0.04, 0.07, 0.07), "wave": Color(0.42, 0.52, 0.5), "land": Color(0.42, 0.5, 0.48),
+		"fog": Color(0.4, 0.48, 0.46), "fog_a": 1.3, "moon": 0.0, "dusk": 0.0, "dawn": 0.0, "storm": 1.0, "night": 1.0},
+	{"at": 0.66, "sea": Color(0.06, 0.12, 0.1), "wave": Color(0.45, 0.62, 0.52), "land": Color(0.58, 0.7, 0.62),
+		"fog": Color(0.5, 0.62, 0.55), "fog_a": 1.0, "moon": 0.8, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.84, "sea": Color(0.08, 0.12, 0.12), "wave": Color(0.45, 0.55, 0.6), "land": Color(0.58, 0.62, 0.66),
+		"fog": Color(0.6, 0.6, 0.66), "fog_a": 0.95, "moon": 0.3, "dusk": 0.0, "dawn": 0.1, "storm": 0.0, "night": 0.9},
+	{"at": 1.0, "sea": Color(0.32, 0.25, 0.2), "wave": Color(1.0, 0.78, 0.62), "land": Color(1.0, 0.85, 0.75),
+		"fog": Color(1.0, 0.8, 0.7), "fog_a": 0.55, "moon": 0.0, "dusk": 0.0, "dawn": 1.0, "storm": 0.0, "night": 0.1},
+	{"at": 1.1, "sea": Color(0.3, 0.34, 0.2), "wave": Color(0.95, 0.95, 0.75), "land": Color(1.0, 1.0, 0.92),
+		"fog": Color(1.0, 0.95, 0.85), "fog_a": 0.12, "moon": 0.0, "dusk": 0.0, "dawn": 0.7, "storm": 0.0, "night": 0.0},
+]
+
+const PALETTES := {"bay": BAY_KEYS, "fjord": FJORD_KEYS, "amazon": AMAZON_KEYS}
 
 ## Avisos mostrados no HUD quando a partida passa por estes pontos.
 const EVENTS := {
@@ -77,6 +102,10 @@ const EVENTS := {
 	],
 	"fjord": [
 		{"at": 0.42, "text": "O vento uiva: vem aí uma nevasca..."},
+		{"at": 0.88, "text": "O céu começa a clarear. Aguente firme!"},
+	],
+	"amazon": [
+		{"at": 0.42, "text": "Trovões ecoam sobre a mata: vem aí um temporal..."},
 		{"at": 0.88, "text": "O céu começa a clarear. Aguente firme!"},
 	],
 }

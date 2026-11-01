@@ -17,11 +17,14 @@ Leia `references/game-design.md` antes de propor mecânicas novas e `references/
 ```
 scenes/main.tscn          Cena única; raiz com scripts/core/main.gd
 scripts/core/
-  main.gd                 Estados, XP, níveis, chefes, relíquias, pontuação, fim de jogo, autoplay
+  main.gd                 Estados, XP, níveis, chefes, relíquias, pontuação, fim de jogo, modo sem fim, autoplay
+  progress.gd             Progressão entre partidas (user://progress.json): óleo, oficina, desbloqueios
+  achievements.gd         Conquistas locais (unlock() é o ponto único para a Steam)
+  tutorial.gd             Tutorial guiado em passos (as dicas de teclas só aparecem aqui)
   balance.gd              TODOS os números: criaturas, chefes, habilidades, dificuldades, pontuação
   maps.gd                 Mapas: nome, história, aparência de cada papel de criatura, chefes
   keepers.gd              Faróis selecionáveis (só aparência)
-  upgrades.gd             Melhorias + apply() e relíquias dos chefes (apply_relic)
+  upgrades.gd             Melhorias, evoluções, relíquias (apply_relic) e oficina (apply_meta)
   game_input.gd           Ações de input; teclas configuráveis (REBINDABLE)
   settings.gd             Preferências (user://settings.cfg): idioma, gráficos, áudio, teclas
   records.gd              Histórico e ranking local (user://records.json) + formatação ("1º lugar")
@@ -29,17 +32,21 @@ scripts/core/
   i18n.gd                 Traduções PT/EN/ES (chave = texto em português)
 scripts/audio/sfx.gd      Sons, trilha dinâmica (calma por mapa, tensão, batalha), grupos de som
 scripts/gameplay/
-  enemy.gd                Criatura comum: papel + arte do mapa, elite, atordoamento
-  creature_art.gd         Desenho de cada criatura comum (espectro, sereia, draugr, lobo...)
-  bosses/                 Boss (base) e um script por chefe: leviathan, kraken, jotunn, fenrir
+  enemy.gd                Criatura: papel + arte do mapa, elite, atordoamento e os papéis especiais
+                          (thief, mirror, moth, fogbank)
+  creature_art.gd         Desenho de cada criatura (espectro, draugr, saci, mapinguari...)
+  bosses/                 Boss (base) e um script por chefe: leviathan, kraken, jotunn, fenrir,
+                          iara, boitata, cuca
   lighthouse.gd, lighthouse_art.gd, beam, ember, pulse_wave, spawner, abilities, burn_fx, ring_fx
-scripts/world/            background (Baía), fjord_background (Fiorde), fog (névoa, chuva, neve, aurora)
+scripts/world/            background (Baía), fjord_background (Fiorde), river_background (Rio),
+                          fog (névoa, chuva, neve, aurora, vaga-lumes)
 scripts/ui/
   hud.gd                  HUD, barra do chefe, habilidades, fila de avisos, registro e troca de telas
   ui_theme.gd             Paleta, fontes, botões, divisores (identidade visual)
   ornate_*, dawn_clock, ability_bar, choice_card, card_picker, icons
-  screens/                Uma tela por arquivo (título, mapa, farol, dificuldade, nível, pausa,
-                          fim, configurações, histórico, ranking), todas herdando MenuScreen
+  screens/                Uma tela por arquivo (título, mapa, farol, dificuldade, história, nível,
+                          pausa, fim, configurações, histórico, ranking, oficina, conquistas,
+                          confirmação), todas herdando MenuScreen
 tools/check.sh            Carrega o projeto em headless, falha se houver erro, roda i18n_check
 tools/i18n_check.sh       Falha se algum texto traduzível não estiver em i18n.gd
 tools/autoplay.sh         N partidas com bot: autoplay.sh 10 --difficulty=hard --map=fjord
@@ -55,12 +62,15 @@ tools/export.sh           Gera icon.ico e exporta build/windows/Fogkeeper.exe (a
 - **Visual segue mapa, dia e configurações.** Cenário lê `DayCycle.p` e `Settings.quality`/`particles`/`weather`/`lightning_flash`. Efeitos puramente visuais usam `randf()` global, nunca o `rng` da partida.
 - **Um script por classe, com `class_name`.** Tipos explícitos em variáveis e retornos. Valores lidos de dicionários precisam de tipo explícito (`var x: float = d["k"]`), senão o GDScript não infere.
 - **Números ficam em `balance.gd`.** Nenhum valor de jogo (vida, dano, velocidade, tempos, recargas) deve aparecer literal em outro script. Ajustes puramente visuais podem ficar no script que desenha.
-- **Criaturas: estatística por papel, aparência por mapa.** `Balance.ENEMIES` tem os papéis (basic, fast, brute, tentacle, boulder); `Maps.LIST[mapa].creatures` diz qual arte cada papel usa. Assim um mapa novo não exige rebalancear tudo.
+- **Criaturas: estatística por papel, aparência por mapa.** `Balance.ENEMIES` tem os papéis (basic, fast, brute, thief, mirror, moth, fogbank, tentacle, boulder); `Maps.LIST[mapa].creatures` diz qual arte cada papel usa. Assim um mapa novo não exige rebalancear tudo.
 - **O farol fica na origem.** O mundo é centrado em (0, 0). Não mova o farol nem a raiz `World` (é a câmera que desliza no menu).
 - **Pausa:** `Main`, `Hud`, `Sfx` e a câmera usam `PROCESS_MODE_ALWAYS`; tudo dentro de `World` é `PAUSABLE`, exceto cenário e névoa, que continuam animando nos menus.
 - **Dificuldade muda regras, não só números.** `Balance.DIFFICULTIES` tem multiplicadores e regras (elites, duração das brasas, fúria dos chefes, chefe extra, vida do farol, névoa). "normal" é a referência do autoplay.
 - **Pontuação** vem só de `Balance.score_breakdown()` (criaturas, tempo, chefes, vitória, vida → subtotal × dificuldade). O texto de regras do ranking é montado das constantes; confira a tela se mudar a fórmula.
-- **Colisão é matemática, não física.** O feixe testa ângulo e distância (`Beam.covers`); quem está `invulnerable` ignora a luz.
+- **Colisão é matemática, não física.** O feixe testa ângulo e distância (`Beam.covers`); quem está `invulnerable` ignora a luz. `take_light(amount, reflect)`: só o feixe principal passa `reflect = true` (espelhos devolvem parte dele). Quem é imune à luz agora responde `immune_to_light()` (o bot mira em outro).
+- **Progressão é leve e opcional para o balanceamento.** `Progress.enabled` é falso no autoplay (sem bônus da oficina, tudo liberado) e `read_only` nas capturas `--ui`. Bônus permanentes entram em `Upgrades.apply_meta()` e em `Progress.level()`; desbloqueios em `Balance.UNLOCKS`.
+- **Dicas de teclas só no tutorial.** As telas normais não mostram "A/D ou ←/→..."; o tutorial (`Tutorial._refresh`) e a escolha de melhoria com `show_hints` mostram, com as teclas reais de `Settings.controls`.
+- **Golpes fortes têm peso.** Use `Main._ring_fx()`, `_hit_stop()` (respeita `Settings.hit_stop`) e `_shake`; nada disso roda no autoplay.
 
 ## Receitas
 
@@ -76,12 +86,18 @@ tools/export.sh           Gera icon.ico e exporta build/windows/Fogkeeper.exe (a
 4. Inspecione com `--ui=boss --map=...` e rode o autoplay no mapa.
 
 **Novo mapa**
-Entrada em `Maps.LIST` (história curta: como o faroleiro chegou ali), paleta em `DayCycle.PALETTES` + `EVENTS`, cenário (classe que estende `Background`, escolhida em `Main._set_map`), trilha calma em `Sfx._synthesize_all` (`music_<id>`), clima em `Fog`, prévia em `MapScreen.draw_preview`.
+Entrada em `Maps.LIST` e em `Maps.ORDER` (história curta: como o faroleiro chegou ali; ela aparece antes da partida), arte de todos os papéis, paleta em `DayCycle.PALETTES` + `EVENTS`, cenário (classe que estende `Background`, ligada ao `scenery` em `Main._set_map`), desbloqueio em `Balance.UNLOCKS`, trilha calma em `Sfx._synthesize_all` (`music_<id>`), clima em `Fog`, prévia em `MapScreen.draw_preview`.
 
 **Nova melhoria**
 1. Entrada em `Upgrades.LIST` com `id`, `name`, `desc` e `max`; caso em `Upgrades.apply()`. Atributo novo no farol → inicialize em `Lighthouse.reset()`.
 2. Melhorias que adicionam fontes de luz chamam `lh.rebuild_beams()`.
 3. Traduza `name` e `desc` e desenhe um ícone em `Icons.draw()`.
+
+**Nova evolução**
+Entrada em `Upgrades.EVOLUTIONS` com `needs` (duas melhorias que precisam estar no máximo), caso em `Upgrades.apply()` (efeito costuma ser uma flag no farol), ícone em `Icons._evolution()` e traduções.
+
+**Nova conquista**
+Entrada em `Achievements.LIST` e um `Achievements.unlock("id")` no momento certo (ou em `check_run()` se depender do resultado). Traduza nome e descrição.
 
 **Nova habilidade ativa**
 Entrada em `Balance.ABILITIES` (id, nome, descrição, recarga), caso em `Abilities.use()`, ícone em `Icons.draw()`, ação `ability_N` em `GameInput.REBINDABLE` e `ACTION_NAMES`, e um espaço a mais em `AbilityBar`.
@@ -102,6 +118,7 @@ Depois de qualquer mudança em código, rode:
 ```bash
 GODOT=/caminho/do/godot tools/check.sh
 GODOT=/caminho/do/godot tools/autoplay.sh 5
+godot --headless --path . --fixed-fps 20 -- --autoplay --tutorial   # o bot faz o tutorial inteiro (passos não podem travar)
 ```
 
 Se não houver Godot no ambiente, baixe a versão 4.4.1 (release oficial em github.com/godotengine/godot) para rodar em headless. Não rode o jogo em janela ao mesmo tempo que lotes de autoplay: uma instância já travou esperando a outra.
@@ -109,7 +126,8 @@ Se não houver Godot no ambiente, baixe a versão 4.4.1 (release oficial em gith
 Mudou algo visual? Gere capturas e olhe para elas (`user://screenshot.png`; no Windows, `%APPDATA%/Godot/app_userdata/Fogkeeper/`). Sem monitor, prefixe com `xvfb-run -a` e use `--audio-driver Dummy`:
 
 ```bash
-godot --path . --resolution 1280x720 -- --ui=boss --map=fjord --screenshot=4   # telas: map, keeper, difficulty, settings, history, ranking, pause, levelup, end, victory, boss
+godot --path . --resolution 1280x720 -- --ui=boss --map=fjord --screenshot=4   # telas: map, keeper, difficulty, settings, history, ranking, workshop, achievements, story,
+                                                                                 # tutorial, pause, levelup, end, victory, boss, endless
 godot --path . --resolution 1280x720 --fixed-fps 20 -- --autoplay --seed=2 --map=fjord --cycle=180 --screenshot=45   # cenário numa hora do dia
 ```
 

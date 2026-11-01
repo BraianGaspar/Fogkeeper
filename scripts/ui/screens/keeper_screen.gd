@@ -6,6 +6,8 @@ signal chosen(keeper_id: String)
 
 const CARD := Vector2(215, 330)
 
+var _status: Label
+
 
 func _build() -> void:
 	var box := centered_panel(1000, 24)
@@ -19,17 +21,50 @@ func _build() -> void:
 		var card := ChoiceCard.new(tr(k["name"]), "", tr(k["desc"]), CARD)
 		card.accent = (k["beam"] as Color).lerp(UiTheme.GOLD, 0.3)
 		card.preview = draw_preview.bind(id)
+		card.locked = not Progress.is_unlocked(id)
+		if card.locked:
+			card.lock_text = tr("%s de óleo") % Records.format_number(int(Progress.unlock_entry(id)["cost"]))
 		cards.append(card)
-		if id == Settings.keeper:
+		if id == Settings.keeper and not card.locked:
 			start = i
 	var picker := CardPicker.new()
 	picker.gap = 22.0
 	picker.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	box.add_child(picker)
+	_status = text(box, "", 15, UiTheme.GOLD)
+	picker.selection_changed.connect(_show_status)
 	picker.setup(cards, start)
-	picker.chosen.connect(func(i: int) -> void: chosen.emit(Keepers.ORDER[i]))
-	text(box, tr("A/D ou ←/→ para escolher   •   Enter ou clique para continuar   •   Esc para voltar"), 14, UiTheme.TEXT_DIM)
+	picker.chosen.connect(_on_chosen.bind(picker))
 	back_button(box)
+
+
+func _show_status(i: int) -> void:
+	var id: String = Keepers.ORDER[i]
+	if Progress.is_unlocked(id):
+		_status.text = ""
+		return
+	var goal := Progress.goal_text(id)
+	_status.text = tr("Escolha para comprar por %s de óleo (você tem %s).") % [
+		Records.format_number(int(Progress.unlock_entry(id)["cost"])), Records.format_number(Progress.oil)]
+	if goal != "":
+		_status.text += "  " + tr("Ou libere de graça: %s.") % goal
+
+
+func _on_chosen(i: int, picker: CardPicker) -> void:
+	var id: String = Keepers.ORDER[i]
+	if Progress.is_unlocked(id):
+		chosen.emit(id)
+		return
+	if Progress.buy_unlock(id):
+		Sfx.play(&"relic")
+		Settings.keeper = id
+		for c in get_children():
+			c.queue_free()
+		_build.call_deferred()
+		return
+	Sfx.play(&"denied")
+	picker.rearm()
+	_status.text = tr("Óleo insuficiente: você tem %s.") % Records.format_number(Progress.oil)
 
 
 ## O farol girando o feixe sobre o mar, na cor dele.

@@ -22,18 +22,23 @@ Teclas do teclado podem ser trocadas em **Configurações → Controles**.
 | Sino da Névoa | R ou F | Y |
 | Navegar nas cartas (mapa, farol, dificuldade, melhoria) | A/D, ←/→ ou mouse | D-pad |
 | Escolher | Enter, Espaço, 1-5 ou clique | A |
+| Trocar as cartas / banir uma (na escolha de melhoria) | T / B | X / Back |
 | Pausar / voltar | Esc ou P | Start / B |
 
 ## O que tem no jogo
-- Dois mapas com história própria: **Baía da Névoa** (Leviatã e Kraken) e **Fiorde Congelado** (Jötunn e Fenrir), cada um com criaturas, clima e trilha diferentes.
-- Quatro faróis para escolher (só aparência).
+- Três mapas com história própria, contada antes da partida: **Baía da Névoa** (Leviatã e Kraken), **Fiorde Congelado** (Jötunn e Fenrir) e **Rio Encantado**, do folclore brasileiro (Iara, Boitatá e Cuca), cada um com criaturas, clima e trilha diferentes.
+- Criaturas especiais que mexem na mira: ladras de brasas, espelhos que refletem a luz, mariposas que crescem na luz e névoas que apagam as brasas.
+- Evoluções de melhorias, troca e banimento de cartas.
+- Oficina do faroleiro: óleo ganho em toda partida compra melhorias permanentes e libera mapas, faróis e cartas.
+- Modo sem fim depois do amanhecer, 20 conquistas e um tutorial guiado.
+- Quatro faróis para escolher (só aparência; três se liberam na oficina).
 - Cinco dificuldades: Fácil, Normal, Médio, Difícil e Impossível, com regras próprias (elites, fúria dos chefes, chefe extra).
 - Habilidades ativas com recarga, chefes com mecânicas e relíquias, música que muda antes e durante as lutas.
 - Uma noite em 10 minutos, das 18:00 às 06:00, com tempestade ou nevasca no meio.
 - Configurações de idioma (PT/EN/ES), controles, gráficos e áudio (inclusive dispositivo de saída e sons individuais).
 - Histórico de partidas e ranking local com posição ("1º lugar") e a regra de pontuação na tela.
 
-Preferências e histórico ficam na pasta de dados do Godot (`%APPDATA%/Godot/app_userdata/Fogkeeper/` no Windows).
+Preferências, histórico e progresso (`progress.json`) ficam na pasta de dados do Godot (`%APPDATA%/Godot/app_userdata/Fogkeeper/` no Windows).
 
 ## Ferramentas
 ```bash

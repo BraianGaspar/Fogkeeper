@@ -47,8 +47,8 @@ func lit_factor() -> float:
 	return lerpf(1.0, lighthouse.lit_slow, 0.5)
 
 
-func take_light(amount: float) -> void:
-	super.take_light(amount)
+func take_light(amount: float, reflect: bool = false) -> void:
+	super.take_light(amount, reflect)
 	if can_enrage and not enraged and not dying and hp < max_hp * Balance.ENRAGE_AT:
 		enraged = true
 		enraged_now.emit(self)

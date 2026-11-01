@@ -56,6 +56,18 @@ static func draw(ci: CanvasItem, id: String, c: Vector2, s: float, col: Color) -
 			ci.draw_circle(c + Vector2(0, s * 0.25), s * 0.5, col)
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.46, s * 0.1), c + Vector2(0, -s * 0.85), c + Vector2(s * 0.46, s * 0.1)]), col)
 			ci.draw_circle(c + Vector2(-s * 0.15, s * 0.3), s * 0.14, Color(light, 0.7))
+		"combustion":
+			for i in 8:
+				var a := TAU * i / 8.0
+				ci.draw_line(c + Vector2.from_angle(a) * s * 0.3, c + Vector2.from_angle(a) * s * 0.9, Color(1.0, 0.55, 0.2), 3.0)
+			_flame(ci, c + Vector2(0, s * 0.2), s * 0.7, col)
+		"vital_embers":
+			for i in 3:
+				ci.draw_circle(c + Vector2(-s * 0.5 + i * s * 0.5, s * 0.45), s * 0.16, Color(1.0, 0.6, 0.2))
+			ci.draw_rect(Rect2(c.x - s * 0.12, c.y - s * 0.75, s * 0.24, s * 0.8), col)
+			ci.draw_rect(Rect2(c.x - s * 0.4, c.y - s * 0.47, s * 0.8, s * 0.24), col)
+		"fresnel", "crown", "ember_tide", "bastion", "fan":
+			_evolution(ci, id, c, s, col)
 		"flash":
 			for i in 12:
 				var a := TAU * i / 12.0
@@ -77,6 +89,38 @@ static func draw(ci: CanvasItem, id: String, c: Vector2, s: float, col: Color) -
 				_flame(ci, Vector2(x, c.y + s * 0.2), s * 0.62 * k, col)
 		_:
 			ci.draw_circle(c, s * 0.5, col)
+
+
+## Evoluções: estrela de oito pontas atrás do símbolo de cada uma.
+static func _evolution(ci: CanvasItem, id: String, c: Vector2, s: float, col: Color) -> void:
+	var star := PackedVector2Array()
+	for i in 16:
+		star.append(c + Vector2.from_angle(TAU * i / 16.0) * s * (1.0 if i % 2 == 0 else 0.62))
+	ci.draw_colored_polygon(star, Color(col, 0.25))
+	var light := Color(1.0, 0.97, 0.9)
+	match id:
+		"fresnel":
+			_cone(ci, c + Vector2(-s * 0.8, 0), 0.0, 0.22, s * 1.7, light)
+			for i in 3:
+				ci.draw_arc(c + Vector2(-s * 0.8, 0), s * (0.3 + i * 0.12), -0.9, 0.9, 10, col, 2.0)
+		"crown":
+			for i in 5:
+				_cone(ci, c, -PI / 2.0 + (i - 2) * 0.55, 0.13, s * 0.95, light)
+			ci.draw_circle(c, s * 0.2, col)
+		"ember_tide":
+			for i in 3:
+				ci.draw_arc(c, s * (0.35 + i * 0.25), 0.0, TAU, 28, Color(light, 0.9 - i * 0.25), 2.5)
+			for i in 6:
+				ci.draw_circle(c + Vector2.from_angle(TAU * i / 6.0) * s * 0.6, s * 0.1, Color(1.0, 0.6, 0.2))
+		"bastion":
+			ci.draw_rect(Rect2(c.x - s * 0.5, c.y - s * 0.4, s * 1.0, s * 0.9), light)
+			for i in 3:
+				ci.draw_rect(Rect2(c.x - s * 0.5 + i * s * 0.38, c.y - s * 0.62, s * 0.24, s * 0.24), light)
+			ci.draw_rect(Rect2(c.x - s * 0.08, c.y - s * 0.25, s * 0.16, s * 0.5), col)
+			ci.draw_rect(Rect2(c.x - s * 0.25, c.y - s * 0.08, s * 0.5, s * 0.16), col)
+		"fan":
+			_cone(ci, c + Vector2(0, s * 0.6), -PI / 2.0, 0.85, s * 1.4, light)
+			_gear(ci, c + Vector2(0, s * 0.6), s * 0.3, col)
 
 
 static func _cone(ci: CanvasItem, origin: Vector2, angle: float, half: float, length: float, col: Color) -> void:

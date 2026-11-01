@@ -3,6 +3,9 @@ extends MenuScreen
 ## Tela inicial: logotipo sobre o cenário vivo e o menu principal.
 
 signal play_pressed
+signal tutorial_pressed
+signal workshop_pressed
+signal achievements_pressed
 signal history_pressed
 signal ranking_pressed
 signal settings_pressed
@@ -39,26 +42,38 @@ func _build() -> void:
 	root.add_child(sub)
 
 	var spacer := Control.new()
-	spacer.custom_minimum_size.y = 26
+	spacer.custom_minimum_size.y = 18
 	root.add_child(spacer)
 
 	var center := CenterContainer.new()
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(center)
-	var panel := OrnatePanel.new(26)
+	var panel := OrnatePanel.new(24)
 	center.add_child(panel)
 	var menu := VBoxContainer.new()
-	menu.custom_minimum_size.x = 320
+	menu.custom_minimum_size.x = 440
 	menu.add_theme_constant_override("separation", 10)
 	panel.add_child(menu)
 	default_focus = add_button(menu, tr("Jogar"), func() -> void: play_pressed.emit())
-	add_button(menu, tr("Histórico"), func() -> void: history_pressed.emit())
-	add_button(menu, tr("Ranking"), func() -> void: ranking_pressed.emit())
-	add_button(menu, tr("Configurações"), func() -> void: settings_pressed.emit())
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	menu.add_child(grid)
+	for entry: Array in [
+		[tr("Tutorial"), tutorial_pressed], [tr("Oficina"), workshop_pressed],
+		[tr("Conquistas"), achievements_pressed], [tr("Histórico"), history_pressed],
+		[tr("Ranking"), ranking_pressed], [tr("Configurações"), settings_pressed],
+	]:
+		var sig: Signal = entry[1]
+		var b := add_button(grid, entry[0], func() -> void: sig.emit())
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_button(menu, tr("Sair"), func() -> void: quit_pressed.emit(), &"back")
+	var oil := UiTheme.label(tr("Óleo do farol: %s") % Records.format_number(Progress.oil), 16, UiTheme.GOLD)
+	oil.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	menu.add_child(oil)
 
-	var footer := UiTheme.label("v%s   •   %s" % [ProjectSettings.get_setting("application/config/version", ""),
-		tr("Mouse, A/D ou analógico: girar o feixe   •   Esc: pausar")], 14, UiTheme.TEXT_DIM)
+	var footer := UiTheme.label("v%s" % ProjectSettings.get_setting("application/config/version", ""), 14, UiTheme.TEXT_DIM)
 	footer.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	footer.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	footer.position.y -= 34

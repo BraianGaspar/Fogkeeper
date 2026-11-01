@@ -92,6 +92,8 @@ func _show(run: Dictionary) -> void:
 	var bd: Dictionary = run["breakdown"]
 	stat_row(_detail, tr("Criaturas queimadas"), Records.format_number(bd["kills"]))
 	stat_row(_detail, tr("Tempo sobrevivido"), Records.format_number(bd["survival"]))
+	if int(bd.get("endless", 0)) > 0:
+		stat_row(_detail, tr("Modo sem fim"), Records.format_number(bd["endless"]))
 	stat_row(_detail, tr("Bônus de chefes"), Records.format_number(bd["bosses"]))
 	stat_row(_detail, tr("Bônus de vitória"), Records.format_number(bd["victory"]))
 	stat_row(_detail, tr("Bônus de vida restante"), Records.format_number(bd["health"]))

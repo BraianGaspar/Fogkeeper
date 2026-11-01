@@ -24,6 +24,8 @@ static var window_mode := WINDOWED
 static var resolution := "1280x720"
 static var vsync := true
 static var screen_shake := true
+static var hit_stop := true ## Pausa curta nos golpes fortes.
+static var show_story := true ## História do mapa antes da partida.
 static var particles := true
 static var weather := true
 static var lightning_flash := true
@@ -53,6 +55,8 @@ static func load_settings() -> void:
 	resolution = cfg.get_value("graphics", "resolution", "1280x720")
 	vsync = cfg.get_value("graphics", "vsync", true)
 	screen_shake = cfg.get_value("graphics", "screen_shake", true)
+	hit_stop = cfg.get_value("graphics", "hit_stop", true)
+	show_story = cfg.get_value("general", "show_story", true)
 	particles = cfg.get_value("graphics", "particles", true)
 	weather = cfg.get_value("graphics", "weather", true)
 	lightning_flash = cfg.get_value("graphics", "lightning_flash", true)
@@ -89,6 +93,8 @@ static func save() -> void:
 	cfg.set_value("graphics", "resolution", resolution)
 	cfg.set_value("graphics", "vsync", vsync)
 	cfg.set_value("graphics", "screen_shake", screen_shake)
+	cfg.set_value("graphics", "hit_stop", hit_stop)
+	cfg.set_value("general", "show_story", show_story)
 	cfg.set_value("graphics", "particles", particles)
 	cfg.set_value("graphics", "weather", weather)
 	cfg.set_value("graphics", "lightning_flash", lightning_flash)

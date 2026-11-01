@@ -24,7 +24,7 @@ const ACTION_NAMES := {
 }
 
 ## Teclas que não podem ser usadas em ações configuráveis.
-const RESERVED := [KEY_ESCAPE, KEY_P, KEY_ENTER, KEY_KP_ENTER, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5]
+const RESERVED := [KEY_ESCAPE, KEY_P, KEY_ENTER, KEY_KP_ENTER, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_T, KEY_B]
 
 
 static func setup() -> void:
@@ -39,6 +39,11 @@ static func setup() -> void:
 	_keys(&"menu_right", [KEY_D, KEY_RIGHT])
 	_keys(&"menu_confirm", [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE])
 	_keys(&"menu_back", [])
+	# Escolha de melhoria: trocar as cartas e banir uma.
+	_keys(&"reroll", [KEY_T])
+	_keys(&"banish", [KEY_B])
+	_joy_button(&"reroll", JOY_BUTTON_X)
+	_joy_button(&"banish", JOY_BUTTON_BACK)
 	_joy_button(&"menu_left", JOY_BUTTON_DPAD_LEFT)
 	_joy_button(&"menu_right", JOY_BUTTON_DPAD_RIGHT)
 	_joy_button(&"menu_confirm", JOY_BUTTON_A)

@@ -66,6 +66,13 @@ func confirm(i: int) -> void:
 	get_tree().create_timer(0.2, true).timeout.connect(func() -> void: chosen.emit(i))
 
 
+## Volta a aceitar escolhas (uma escolha foi recusada pela tela).
+func rearm() -> void:
+	_done = false
+	for c in _cards:
+		c.create_tween().tween_property(c, "modulate:a", 1.0, 0.1)
+
+
 func _on_card_hover(i: int) -> void:
 	select(i)
 

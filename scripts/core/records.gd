@@ -29,6 +29,16 @@ static func add(run: Dictionary) -> void:
 	_save()
 
 
+## Substitui uma partida já salva (modo sem fim continua a partida do amanhecer).
+static func update(run: Dictionary) -> void:
+	for i in runs().size():
+		if _runs[i]["id"] == run["id"]:
+			_runs[i] = run
+			_save()
+			return
+	add(run)
+
+
 ## Partidas da melhor para a pior. Filtros vazios = todas.
 static func ranking(difficulty: String = "", map: String = "") -> Array[Dictionary]:
 	var list: Array[Dictionary] = []
@@ -95,6 +105,7 @@ static func _normalize(r: Dictionary) -> Dictionary:
 	var bosses_pts := int(bd.get("bosses", 0))
 	var win := int(bd.get("victory", 0))
 	var health := int(bd.get("health", 0))
+	var endless := int(bd.get("endless", 0))
 	return {
 		"id": str(r.get("id", "")),
 		"date": int(r.get("date", 0)),
@@ -109,8 +120,8 @@ static func _normalize(r: Dictionary) -> Dictionary:
 		"bosses": int(r.get("bosses", 0)),
 		"score": int(r.get("score", 0)),
 		"breakdown": {
-			"kills": kills_pts, "survival": survival, "bosses": bosses_pts, "victory": win, "health": health,
-			"subtotal": int(bd.get("subtotal", kills_pts + survival + bosses_pts + win + health)),
+			"kills": kills_pts, "survival": survival, "endless": endless, "bosses": bosses_pts, "victory": win, "health": health,
+			"subtotal": int(bd.get("subtotal", kills_pts + survival + endless + bosses_pts + win + health)),
 			"multiplier": float(bd.get("multiplier", 1.0)),
 			"total": int(bd.get("total", r.get("score", 0))),
 		},

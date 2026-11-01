@@ -76,6 +76,7 @@ func _show_tab(i: int) -> void:
 			var locales := I18n.LANGUAGE_NAMES.keys()
 			_row(tr("Idioma"), _selector(I18n.LANGUAGE_NAMES.values(), locales.find(Settings.locale), _set_locale, false))
 			_row(tr("Nome do faroleiro"), name_edit())
+			_row(tr("Mostrar a história ao começar"), _toggle(Settings.show_story, _set_story))
 		1:
 			_build_controls()
 		2:
@@ -84,6 +85,7 @@ func _show_tab(i: int) -> void:
 			_row(tr("Resolução (janela)"), _selector(Settings.RESOLUTIONS, maxi(0, Settings.RESOLUTIONS.find(Settings.resolution)), _set_resolution, false))
 			_row(tr("Sincronização vertical (VSync)"), _toggle(Settings.vsync, _set_vsync))
 			_row(tr("Tremor de tela"), _toggle(Settings.screen_shake, _set_shake))
+			_row(tr("Pausa de impacto nos golpes fortes"), _toggle(Settings.hit_stop, _set_hit_stop))
 			_row(tr("Partículas e faíscas"), _toggle(Settings.particles, _set_particles))
 			_row(tr("Efeitos climáticos (chuva, neve)"), _toggle(Settings.weather, _set_weather))
 			_row(tr("Clarões de relâmpago"), _toggle(Settings.lightning_flash, _set_lightning))
@@ -217,6 +219,16 @@ func _set_vsync(on: bool) -> void:
 
 func _set_shake(on: bool) -> void:
 	Settings.screen_shake = on
+	_changed()
+
+
+func _set_story(on: bool) -> void:
+	Settings.show_story = on
+	_changed()
+
+
+func _set_hit_stop(on: bool) -> void:
+	Settings.hit_stop = on
 	_changed()
 
 

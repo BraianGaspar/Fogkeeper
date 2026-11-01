@@ -10,6 +10,11 @@ signal resume_pressed
 signal menu_pressed
 signal quit_pressed
 signal upgrade_chosen(id: String)
+signal reroll_pressed
+signal banish_pressed(id: String)
+signal story_finished
+signal endless_pressed
+signal tutorial_requested
 
 const DIM_TITLE := 0.15
 const DIM_MENU := 0.6
@@ -56,6 +61,13 @@ var _pause_upgrades: Array = []
 var _last_run_id := ""
 var _pending_map := "bay"
 var _pending_keeper := "classic"
+var _endless := false
+var _hurt := 0.0
+var _vignette: Control
+var _tutorial_panel: PanelContainer
+var _tutorial_title: Label
+var _tutorial_body: Label
+var _tutorial_progress: Label
 
 
 func _ready() -> void:
@@ -168,6 +180,79 @@ func _build_play_ui() -> void:
 	_xp_bar.offset_bottom = -14
 	_play_ui.add_child(_xp_bar)
 
+	# Painel do tutorial, acima das habilidades.
+	_tutorial_panel = PanelContainer.new()
+	_tutorial_panel.add_theme_stylebox_override("panel", UiTheme.flat(Color(0.03, 0.05, 0.09, 0.88), Color(0.45, 0.95, 0.85, 0.8), 2, 14.0))
+	_tutorial_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_tutorial_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_tutorial_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_tutorial_panel.offset_left = -330
+	_tutorial_panel.offset_right = 330
+	_tutorial_panel.offset_bottom = -158
+	_tutorial_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tutorial_panel.visible = false
+	var tbox := VBoxContainer.new()
+	tbox.add_theme_constant_override("separation", 2)
+	_tutorial_panel.add_child(tbox)
+	var head := HBoxContainer.new()
+	tbox.add_child(head)
+	_tutorial_title = UiTheme.label("", 19, Color(0.45, 0.95, 0.85), true)
+	_tutorial_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(_tutorial_title)
+	_tutorial_progress = UiTheme.label("", 17, UiTheme.GOLD, true)
+	head.add_child(_tutorial_progress)
+	_tutorial_body = UiTheme.label("", 15, UiTheme.TEXT)
+	_tutorial_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tutorial_body.custom_minimum_size.x = 630
+	tbox.add_child(_tutorial_body)
+	_play_ui.add_child(_tutorial_panel)
+
+	# Bordas vermelhas quando o farol leva dano.
+	_vignette = Control.new()
+	_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_vignette.draw.connect(_draw_vignette)
+	_play_ui.add_child(_vignette)
+	_play_ui.move_child(_vignette, 0)
+
+
+func _draw_vignette() -> void:
+	if _hurt <= 0.0:
+		return
+	var s := _vignette.size
+	for i in 10:
+		var w := 6.0 + i * 7.0
+		var a := 0.06 * _hurt * (1.0 - i / 10.0)
+		var col := Color(0.9, 0.05, 0.05, a)
+		_vignette.draw_rect(Rect2(0, 0, s.x, w), col)
+		_vignette.draw_rect(Rect2(0, s.y - w, s.x, w), col)
+		_vignette.draw_rect(Rect2(0, 0, w, s.y), col)
+		_vignette.draw_rect(Rect2(s.x - w, 0, w, s.y), col)
+
+
+## O farol levou dano: as bordas da tela pulsam em vermelho.
+func hurt(fraction: float) -> void:
+	if Settings.screen_shake or Settings.particles:
+		_hurt = minf(1.0, _hurt + 0.35 + fraction * 4.0)
+
+
+func set_tutorial(title_text: String, body: String, progress: String) -> void:
+	_tutorial_panel.visible = true
+	_tutorial_title.text = title_text
+	_tutorial_body.text = body
+	_tutorial_progress.text = progress
+
+
+func clear_tutorial() -> void:
+	if _tutorial_panel:
+		_tutorial_panel.visible = false
+
+
+## Modo sem fim: o relógio deixa de marcar o amanhecer como fim.
+func set_endless(on: bool) -> void:
+	_endless = on
+	_clock.show_marks = not on
+
 
 ## Avisos ficam numa camada acima de tudo, inclusive da escolha de melhoria.
 func _build_alerts() -> void:
@@ -196,17 +281,21 @@ func _process(delta: float) -> void:
 	elif _boss_box.visible:
 		_boss_box.visible = false
 	_process_alerts(delta)
+	if _hurt > 0.0:
+		_hurt = maxf(0.0, _hurt - delta * 2.5)
+		_vignette.queue_redraw()
 	_log_timer -= delta
 	if _log_timer <= 0.0:
 		_log_timer = 0.25
 		_refresh_log()
 
 
-func update_stats(hp: float, max_hp: float, xp: int, xp_needed: int, level: int, elapsed: float, kills: int, score: int) -> void:
-	_clock_time = elapsed
+## `cycle` é a hora do ciclo do dia (recomeça a cada noite no modo sem fim).
+func update_stats(hp: float, max_hp: float, xp: int, xp_needed: int, level: int, elapsed: float, kills: int, score: int, cycle: float, night: int) -> void:
+	_clock_time = cycle
 	_hp_caption.text = tr("Farol")
 	_hp_bar.set_values(hp, max_hp)
-	_hp_bar.text = "%d / %d" % [ceili(hp), int(max_hp)]
+	_hp_bar.text = "%d / %d" % [ceili(hp), ceili(max_hp)]
 	if level != _last_level:
 		_last_level = level
 		_xp_bar.set_values(xp, xp_needed)
@@ -215,9 +304,12 @@ func update_stats(hp: float, max_hp: float, xp: int, xp_needed: int, level: int,
 	_xp_bar.set_values(xp, xp_needed)
 	_xp_bar.badge = str(level)
 	_xp_bar.text = tr("%d / %d XP   (%d%%)   —   próximo nível: %d") % [xp, xp_needed, int(100.0 * xp / maxf(1.0, xp_needed)), level + 1]
-	_clock.progress = elapsed / Balance.RUN_DURATION
-	_clock.time_text = DayCycle.clock_text(elapsed)
-	_clock.caption = tr("%s de partida   •   amanhecer em %s") % [Records.format_time(elapsed), Records.format_time(maxf(0.0, Balance.RUN_DURATION - elapsed))]
+	_clock.progress = cycle / Balance.RUN_DURATION
+	_clock.time_text = DayCycle.clock_text(cycle)
+	if _endless:
+		_clock.caption = tr("Noite %d (sem fim)   •   %s de partida") % [night, Records.format_time(elapsed)]
+	else:
+		_clock.caption = tr("%s de partida   •   amanhecer em %s") % [Records.format_time(elapsed), Records.format_time(maxf(0.0, Balance.RUN_DURATION - cycle))]
 	_score_label.text = Records.format_number(score)
 	_score_caption.text = tr("pontos")
 	_kills_label.text = tr("%s criaturas queimadas") % Records.format_number(kills)
@@ -331,6 +423,8 @@ func _on_back(screen: MenuScreen) -> void:
 		show_keeper_select()
 	elif screen is KeeperScreen:
 		show_map_select()
+	elif screen is StoryScreen:
+		story_finished.emit()
 	else:
 		menu_pressed.emit()
 
@@ -346,17 +440,67 @@ func show_playing() -> void:
 		_screen = null
 	_overlay.visible = false
 	_play_ui.visible = true
+	_ability_bar.visible = true
 
 
 func show_title() -> void:
 	clear_alerts()
 	var s := TitleScreen.new()
-	s.play_pressed.connect(show_map_select)
+	s.play_pressed.connect(_on_play)
+	s.tutorial_pressed.connect(func() -> void: tutorial_requested.emit())
+	s.workshop_pressed.connect(show_workshop)
+	s.achievements_pressed.connect(show_achievements)
 	s.history_pressed.connect(show_history)
 	s.ranking_pressed.connect(show_ranking)
 	s.settings_pressed.connect(show_settings.bind(false))
 	s.quit_pressed.connect(func() -> void: quit_pressed.emit())
 	_set_screen(s, DIM_TITLE, false)
+
+
+## Na primeira vez, oferece o tutorial antes de jogar.
+func _on_play() -> void:
+	if Progress.tutorial_done or Progress.stat("tutorial_offered") > 0:
+		show_map_select()
+		return
+	Progress.add_stat("tutorial_offered")
+	Progress.save()
+	var s := ConfirmScreen.new()
+	s.heading = tr("Primeira noite no farol?")
+	s.body = tr("Um tutorial rápido ensina a girar a luz, recolher brasas, usar as habilidades e enfrentar um chefe. Leva uns dois minutos e rende óleo para a oficina.")
+	s.options = [
+		[tr("Fazer o tutorial"), func() -> void: tutorial_requested.emit()],
+		[tr("Pular e jogar"), show_map_select],
+	]
+	_set_screen(s, DIM_MENU, false)
+
+
+func show_workshop() -> void:
+	_set_screen(WorkshopScreen.new(), DIM_MENU, false)
+
+
+func show_achievements() -> void:
+	_set_screen(AchievementsScreen.new(), DIM_MENU, false)
+
+
+## História do mapa antes da partida (o jogo fica pausado por trás).
+func show_story(map_id: String) -> void:
+	var s := StoryScreen.new()
+	s.map_id = map_id
+	s.finished.connect(func() -> void: story_finished.emit())
+	_set_screen(s, 0.75, false)
+
+
+func show_tutorial_done(oil: int) -> void:
+	var s := ConfirmScreen.new()
+	s.heading = tr("Tutorial concluído!")
+	s.body = tr("Agora você conhece o farol. Na partida de verdade, as criaturas ficam mais fortes a cada hora e dois chefes aparecem antes do amanhecer.")
+	if oil > 0:
+		s.body += "\n\n" + tr("+%d de óleo para a oficina.") % oil
+	s.options = [
+		[tr("Jogar agora"), show_map_select],
+		[tr("Menu principal"), func() -> void: menu_pressed.emit()],
+	]
+	_set_screen(s, DIM_MENU, false)
 
 
 ## Preparação da partida: mapa → farol → dificuldade.
@@ -425,13 +569,20 @@ func _show_pause_again() -> void:
 	_set_screen(s, DIM_MENU, true)
 
 
-func show_level_up(level: int, choices: Array, levels: Dictionary) -> void:
+## `hints` mostra as teclas (só no tutorial).
+func show_level_up(level: int, choices: Array, levels: Dictionary, rerolls: int, banishes: int, hints: bool) -> void:
 	var s := LevelUpScreen.new()
 	s.level = level
 	s.choices = choices
 	s.levels = levels
+	s.rerolls = rerolls
+	s.banishes = banishes
+	s.show_hints = hints
 	s.upgrade_chosen.connect(func(id: String) -> void: upgrade_chosen.emit(id))
+	s.reroll_pressed.connect(func() -> void: reroll_pressed.emit())
+	s.banish_pressed.connect(func(id: String) -> void: banish_pressed.emit(id))
 	_set_screen(s, 0.5, true)
+	_ability_bar.visible = false # Os botões de trocar e banir ficam onde está a barra.
 
 
 func show_end(run: Dictionary, context: Dictionary) -> void:
@@ -443,4 +594,5 @@ func show_end(run: Dictionary, context: Dictionary) -> void:
 	s.restart_pressed.connect(func() -> void: restart_pressed.emit())
 	s.ranking_pressed.connect(func() -> void: show_ranking(run["difficulty"], run["map"]))
 	s.menu_pressed.connect(func() -> void: menu_pressed.emit())
-	_set_screen(s, 0.35 if run["victory"] else 0.6, false)
+	s.endless_pressed.connect(func() -> void: endless_pressed.emit())
+	_set_screen(s, 0.35 if context.get("can_continue", false) else 0.6, false)

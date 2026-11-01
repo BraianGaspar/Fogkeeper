@@ -7,9 +7,47 @@ extends RefCounted
 const BURN := Color(1.0, 0.55, 0.2)
 
 
-static func draw(ci: CanvasItem, art: String, r: float, t: float, phase: float, face: Vector2, lit: float, alpha: float) -> void:
+## `extra` depende da criatura: abertura do espelho, crescimento da mariposa,
+## brasas carregadas pela ladra ou vida restante da névoa (ver Enemy._art_extra).
+static func draw(ci: CanvasItem, art: String, r: float, t: float, phase: float, face: Vector2, lit: float, alpha: float, extra: float = 0.0) -> void:
 	ci.draw_set_transform(Vector2.ZERO, face.angle())
 	match art:
+		# Especiais de cada mapa.
+		"ghost_gull":
+			bird(ci, r, t, phase, lit, alpha, Color(0.82, 0.88, 0.96, 0.8), Color(0.6, 0.66, 0.78, 0.75), Color(0.95, 0.8, 0.35), Color(0.5, 1.0, 1.0), extra)
+		"raven":
+			bird(ci, r, t, phase, lit, alpha, Color(0.1, 0.1, 0.14), Color(0.17, 0.17, 0.24), Color(0.3, 0.3, 0.33), Color(1.0, 0.85, 0.3), extra)
+		"saci":
+			_saci(ci, r, t, phase, lit, alpha, extra)
+		"oyster":
+			shell(ci, r, t, lit, alpha, Color(0.48, 0.44, 0.5), Color(0.9, 0.75, 0.8), Color(0.3, 0.27, 0.32), extra)
+		"ice_shell":
+			shell(ci, r, t, lit, alpha, Color(0.62, 0.82, 0.95), Color(0.35, 0.45, 0.6), Color(0.88, 0.97, 1.0), extra)
+		"jabuti":
+			_jabuti(ci, r, t, phase, lit, alpha, extra)
+		"jellyfish":
+			_jellyfish(ci, r, t, phase, lit, alpha, extra)
+		"frost_moth":
+			_moth(ci, r, t, phase, lit, alpha, extra)
+		"mula":
+			_mula(ci, r, t, phase, lit, alpha, extra)
+		"fog_bay":
+			fogbank(ci, r, t, phase, lit, alpha, extra, Color(0.16, 0.12, 0.24), Color(0.85, 0.4, 1.0))
+		"fog_fjord":
+			fogbank(ci, r, t, phase, lit, alpha, extra, Color(0.2, 0.26, 0.34), Color(0.5, 0.95, 1.0))
+		"fog_amazon":
+			fogbank(ci, r, t, phase, lit, alpha, extra, Color(0.1, 0.18, 0.12), Color(1.0, 0.85, 0.3))
+		# Rio Encantado.
+		"corpo_seco":
+			_corpo_seco(ci, r, t, phase, lit, alpha)
+		"curupira":
+			_curupira(ci, r, t, phase, lit, alpha)
+		"mapinguari":
+			_mapinguari(ci, r, t, phase, lit, alpha)
+		"boto":
+			_boto(ci, r, t, phase, lit, alpha)
+		"wisp":
+			_wisp(ci, r, t, phase, lit, alpha)
 		"wraith":
 			_wraith(ci, r, t, phase, lit, alpha)
 		"siren":
@@ -212,3 +250,281 @@ static func _boulder(ci: CanvasItem, r: float, t: float, phase: float, lit: floa
 	ci.draw_colored_polygon(pts, c(Color(0.62, 0.8, 0.92), lit, alpha))
 	ci.draw_circle(Vector2(-r * 0.25, -r * 0.25), r * 0.3, c(Color(0.9, 0.97, 1.0), lit, alpha))
 	ci.draw_line(Vector2(-r * 0.4, r * 0.1), Vector2(r * 0.3, r * 0.35), c(Color(0.35, 0.5, 0.62), lit, alpha), 1.5)
+
+
+# --- Criaturas especiais ----------------------------------------------------------
+
+## Ave vista de cima (gaivota-fantasma, corvo). `carried` > 0 mostra a brasa no bico.
+static func bird(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, body: Color, wing: Color, beak: Color, eye: Color, carried: float) -> void:
+	var flap := sin(t * 11.0 + phase)
+	var b := c(body, lit, alpha)
+	var w := c(wing, lit, alpha)
+	for s: float in [-1.0, 1.0]:
+		ci.draw_colored_polygon(PackedVector2Array([Vector2(r * 0.3, s * r * 0.22), Vector2(-r * 0.1, s * r * (1.5 + 0.5 * flap)),
+			Vector2(-r * 0.85, s * r * (1.25 + 0.4 * flap)), Vector2(-r * 0.45, s * r * 0.18)]), w)
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(-r * 0.55, -r * 0.22), Vector2(-r * 1.25, -r * 0.42), Vector2(-r * 1.15, 0),
+		Vector2(-r * 1.25, r * 0.42), Vector2(-r * 0.55, r * 0.22)]), w)
+	var pts := PackedVector2Array()
+	for i in 16:
+		var a := TAU * i / 16.0
+		pts.append(Vector2(cos(a) * r * 0.85, sin(a) * r * 0.38))
+	ci.draw_colored_polygon(pts, b)
+	ci.draw_circle(Vector2(r * 0.68, 0), r * 0.34, b)
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(r * 0.92, -r * 0.1), Vector2(r * 1.38, 0), Vector2(r * 0.92, r * 0.1)]), c(beak, lit, alpha))
+	eyes(ci, Vector2(r * 0.78, 0), r * 0.17, maxf(1.2, r * 0.08), eye, lit, alpha)
+	if carried > 0.0:
+		_ember_glow(ci, Vector2(r * 1.4, 0), r * 0.3, t, alpha)
+
+
+## Brasa roubada, presa no bico ou na mão.
+static func _ember_glow(ci: CanvasItem, at: Vector2, s: float, t: float, alpha: float) -> void:
+	var pulse := 0.8 + 0.2 * sin(t * 9.0)
+	ci.draw_circle(at, s * 2.2, Color(1.0, 0.5, 0.15, 0.2 * alpha * pulse))
+	ci.draw_circle(at, s, Color(1.0, 0.8, 0.45, alpha))
+
+
+## Saci: menino de uma perna só, gorro vermelho e cachimbo, dentro do redemoinho.
+static func _saci(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, carried: float) -> void:
+	for i in 4:
+		var a0 := -t * 9.0 + i * 1.6 + phase
+		ci.draw_arc(Vector2.ZERO, r * (1.0 + i * 0.22), a0, a0 + 2.2, 10, Color(0.8, 0.7, 0.55, 0.4 * alpha * (1.0 - i * 0.2)), 2.0)
+	var skin := c(Color(0.36, 0.22, 0.15), lit, alpha)
+	ci.draw_line(Vector2(-r * 0.1, r * 0.15), Vector2(-r * 0.55, r * 0.5), skin, maxf(2.0, r * 0.2))
+	ci.draw_circle(Vector2(-r * 0.05, 0), r * 0.48, c(Color(0.55, 0.3, 0.2), lit, alpha))
+	# Braço com o cachimbo e a fumaça indo para trás.
+	ci.draw_line(Vector2(0, -r * 0.35), Vector2(r * 0.6, -r * 0.45), skin, maxf(1.5, r * 0.15))
+	ci.draw_line(Vector2(r * 0.6, -r * 0.45), Vector2(r * 0.85, -r * 0.6), c(Color(0.4, 0.26, 0.15), lit, alpha), 2.0)
+	for i in 3:
+		var k := fmod(t * 0.8 + i / 3.0 + phase, 1.0)
+		ci.draw_circle(Vector2(r * (0.85 - k * 1.8), -r * (0.6 + k * 0.5)), r * (0.12 + k * 0.2), Color(0.9, 0.9, 0.92, 0.35 * (1.0 - k) * alpha))
+	ci.draw_circle(Vector2(r * 0.3, 0), r * 0.36, skin)
+	var sway := sin(t * 6.0 + phase) * r * 0.15
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(r * 0.48, -r * 0.33), Vector2(r * 0.48, r * 0.33), Vector2(-r * 0.75, sway)]), c(Color(0.85, 0.12, 0.1), lit, alpha))
+	ci.draw_circle(Vector2(-r * 0.75, sway), r * 0.1, c(Color(0.95, 0.9, 0.85), lit, alpha))
+	eyes(ci, Vector2(r * 0.55, 0), r * 0.13, maxf(1.2, r * 0.08), Color(1.0, 1.0, 0.9), lit, alpha)
+	if carried > 0.0:
+		_ember_glow(ci, Vector2(r * 0.5, r * 0.55), r * 0.28, t, alpha)
+
+
+## Concha que abre e fecha (ostra, escudo de gelo). Fechada, brilha como espelho.
+static func shell(ci: CanvasItem, r: float, t: float, lit: float, alpha: float, outer: Color, inner: Color, ridge: Color, open: float) -> void:
+	var gap := open * r * 0.5
+	if open > 0.05:
+		ci.draw_circle(Vector2(r * 0.05, 0), r * 0.6, c(inner, lit, alpha))
+		ci.draw_circle(Vector2(r * 0.35, 0), r * 0.22 * open, Color(1.0, 0.9, 0.4, alpha))
+		ci.draw_circle(Vector2(r * 0.4, 0), r * 0.09 * open, Color(0.1, 0.05, 0.05, alpha))
+	for s: float in [-1.0, 1.0]:
+		var pts := PackedVector2Array()
+		for i in 13:
+			var a := PI * i / 12.0
+			pts.append(Vector2(cos(a) * r * 1.05, s * (sin(a) * r * 0.85 + gap)))
+		ci.draw_colored_polygon(pts, c(outer, lit, alpha))
+		for i in 5:
+			var a := PI * (i + 1) / 6.0
+			ci.draw_line(Vector2(0, s * gap), Vector2(cos(a) * r * 0.95, s * (sin(a) * r * 0.78 + gap)), c(ridge, lit, alpha * 0.8), 1.5)
+	if open < 0.6:
+		var k := (1.0 - open / 0.6) * (0.6 + 0.4 * sin(t * 3.0))
+		ci.draw_line(Vector2(-r * 0.55, -r * 0.55), Vector2(r * 0.35, -r * 0.25), Color(1, 1, 1, 0.6 * k * alpha), 3.0)
+		ci.draw_arc(Vector2.ZERO, r * 1.15, 0.0, TAU, 28, Color(1, 1, 0.9, 0.35 * k * alpha), 2.0)
+
+
+## Jabuti encantado: casco dourado que reflete a luz; aberto, põe a cabeça para fora.
+static func _jabuti(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, open: float) -> void:
+	var skin := c(Color(0.45, 0.4, 0.25), lit, alpha)
+	for i in 4:
+		var x := r * (0.55 if i < 2 else -0.55)
+		var s := -1.0 if i % 2 == 0 else 1.0
+		ci.draw_circle(Vector2(x, s * r * 0.75) * (0.7 + 0.3 * open), r * 0.22, skin)
+	ci.draw_circle(Vector2(r * (0.6 + 0.45 * open), 0), r * 0.28, skin)
+	if open > 0.3:
+		eyes(ci, Vector2(r * (0.75 + 0.45 * open), 0), r * 0.12, maxf(1.2, r * 0.06), Color(1.0, 0.9, 0.4), lit, alpha)
+	var dome := PackedVector2Array()
+	for i in 6:
+		dome.append(Vector2.from_angle(TAU * i / 6.0 + PI / 6.0) * r * 0.95)
+	ci.draw_colored_polygon(dome, c(Color(0.5, 0.35, 0.15), lit, alpha))
+	for i in 6:
+		var p := Vector2.from_angle(TAU * i / 6.0) * r * 0.55
+		var hex := PackedVector2Array()
+		for j in 6:
+			hex.append(p + Vector2.from_angle(TAU * j / 6.0 + PI / 6.0) * r * 0.26)
+		ci.draw_colored_polygon(hex, c(Color(0.68, 0.5, 0.2), lit, alpha))
+	ci.draw_circle(Vector2.ZERO, r * 0.3, c(Color(0.75, 0.58, 0.25), lit, alpha))
+	if open < 0.6:
+		var k := (1.0 - open / 0.6) * (0.6 + 0.4 * sin(t * 3.0 + phase))
+		ci.draw_arc(Vector2.ZERO, r * 1.15, 0.0, TAU, 28, Color(1.0, 0.85, 0.4, 0.45 * k * alpha), 2.5)
+		ci.draw_line(Vector2(-r * 0.5, -r * 0.5), Vector2(r * 0.3, -r * 0.2), Color(1, 1, 0.9, 0.6 * k * alpha), 2.5)
+
+
+## Água-viva: brilha e cresce conforme se alimenta de luz (`g` 0..1).
+static func _jellyfish(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, g: float) -> void:
+	ci.draw_circle(Vector2.ZERO, r * (1.4 + 0.6 * g), Color(0.85, 0.55, 1.0, (0.06 + 0.16 * g) * alpha))
+	var tentacle := c(Color(0.85, 0.65, 1.0, 0.6), lit, alpha)
+	for i in 5:
+		var y := (i - 2) * r * 0.24
+		var pts := PackedVector2Array()
+		for k in 7:
+			var f := k / 6.0
+			pts.append(Vector2(-r * 0.2 - f * r * (1.5 + 0.4 * (i % 2)), y + sin(t * 6.0 + phase + i + f * 4.0) * r * 0.3 * f))
+		ci.draw_polyline(pts, tentacle, maxf(1.0, r * 0.1))
+	ci.draw_circle(Vector2(r * 0.15, 0), r * 0.85, c(Color(0.7, 0.5, 0.95, 0.75), lit, alpha))
+	ci.draw_circle(Vector2(r * 0.25, 0), r * 0.5, Color(1.0, 0.85, 1.0, (0.3 + 0.55 * g) * alpha))
+	ci.draw_arc(Vector2(r * 0.15, 0), r * 0.85, 0.0, TAU, 24, Color(1.0, 0.9, 1.0, 0.5 * alpha), 1.5)
+
+
+## Mariposa de geada: asas claras que se abrem mais conforme cresce.
+static func _moth(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, g: float) -> void:
+	var flap := 0.75 + 0.25 * sin(t * 14.0 + phase)
+	ci.draw_circle(Vector2.ZERO, r * (1.5 + 0.6 * g), Color(0.6, 0.9, 1.0, (0.05 + 0.15 * g) * alpha))
+	var wing := c(Color(0.82, 0.9, 1.0, 0.85), lit, alpha)
+	var spot := c(Color(0.35, 0.55, 0.85), lit, alpha)
+	for s: float in [-1.0, 1.0]:
+		var front := PackedVector2Array([Vector2(r * 0.2, s * r * 0.1), Vector2(r * 0.6, s * r * 1.3 * flap), Vector2(-r * 0.3, s * r * 1.4 * flap), Vector2(-r * 0.1, s * r * 0.1)])
+		var back := PackedVector2Array([Vector2(-r * 0.1, s * r * 0.1), Vector2(-r * 0.4, s * r * 1.0 * flap), Vector2(-r * 0.9, s * r * 0.6 * flap)])
+		ci.draw_colored_polygon(front, wing)
+		ci.draw_colored_polygon(back, wing)
+		ci.draw_circle(Vector2(r * 0.1, s * r * 0.8 * flap), r * 0.2, spot)
+		ci.draw_line(Vector2(r * 0.45, s * r * 0.08), Vector2(r * 0.95, s * r * 0.4), c(Color(0.7, 0.8, 0.9), lit, alpha), 1.2)
+	ci.draw_line(Vector2(-r * 0.6, 0), Vector2(r * 0.45, 0), c(Color(0.55, 0.6, 0.7), lit, alpha), maxf(2.0, r * 0.25))
+	eyes(ci, Vector2(r * 0.45, 0), r * 0.1, maxf(1.0, r * 0.06), Color(0.4, 0.95, 1.0), lit, alpha)
+
+
+## Mula sem cabeça: no lugar da cabeça, uma chama que cresce com a luz.
+static func _mula(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, g: float) -> void:
+	var hide := c(Color(0.32, 0.2, 0.12), lit, alpha)
+	var dark := c(Color(0.18, 0.11, 0.07), lit, alpha)
+	var gait := t * 12.0 + phase
+	for i in 4:
+		var x := r * (0.55 if i < 2 else -0.55)
+		var s := -1.0 if i % 2 == 0 else 1.0
+		ci.draw_line(Vector2(x, s * r * 0.3), Vector2(x + sin(gait + i * PI * 0.5) * r * 0.35, s * r * 0.7), dark, maxf(1.5, r * 0.18))
+	tail(ci, -r * 0.95, r * 0.9, r * 0.15, t, phase, r * 0.3, dark, 6)
+	var body := PackedVector2Array()
+	for i in 18:
+		var a := TAU * i / 18.0
+		body.append(Vector2(cos(a) * r * 1.0, sin(a) * r * 0.48))
+	ci.draw_colored_polygon(body, hide)
+	ci.draw_line(Vector2(-r * 0.7, 0), Vector2(r * 0.6, 0), dark, maxf(1.5, r * 0.15))
+	# Pescoço em chamas.
+	var neck := Vector2(r * 1.0, 0)
+	var size := r * (0.45 + 0.4 * g)
+	for i in 5:
+		var flick := sin(t * 18.0 + i * 1.7 + phase) * size * 0.2
+		var col := Color(1.0, 0.35 + i * 0.12, 0.1 + i * 0.1, (0.75 - i * 0.1) * alpha)
+		ci.draw_colored_polygon(PackedVector2Array([neck + Vector2(0, -size * (0.6 - i * 0.08)), neck + Vector2(size * (1.6 - i * 0.2), flick),
+			neck + Vector2(0, size * (0.6 - i * 0.08))]), col)
+	ci.draw_circle(neck, size * 1.6, Color(1.0, 0.5, 0.15, (0.08 + 0.12 * g) * alpha))
+
+
+## Névoa devoradora: nuvem escura com olhos; encolhe enquanto a luz a dissipa.
+static func fogbank(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, life: float, tint: Color, eye: Color) -> void:
+	for i in 9:
+		var a := TAU * i / 9.0 + t * 0.15
+		var p := Vector2.from_angle(a) * r * (0.45 + 0.1 * sin(t * 0.8 + i * 1.3 + phase))
+		ci.draw_circle(p, r * 0.55, Color(tint, 0.16 * alpha))
+	ci.draw_circle(Vector2.ZERO, r * 0.7, Color(tint.darkened(0.3), 0.3 * alpha))
+	if lit > 0.0:
+		ci.draw_arc(Vector2.ZERO, r * 0.95, 0.0, TAU, 40, Color(1.0, 0.7, 0.35, 0.35 * lit * alpha), 4.0)
+	var blink := 1.0 if fmod(t + phase, 4.0) > 0.15 else 0.1
+	var e := Color(eye, (0.35 + 0.4 * life) * alpha * blink)
+	for s: float in [-1.0, 1.0]:
+		ci.draw_circle(Vector2(r * 0.15, s * r * 0.16), maxf(2.0, r * 0.06), e)
+		ci.draw_circle(Vector2(r * 0.15, s * r * 0.16), maxf(4.0, r * 0.14), Color(eye, 0.12 * alpha * blink))
+
+
+# --- Rio Encantado ------------------------------------------------------------------
+
+## Corpo-seco: morto ressecado, magro, de braços estendidos.
+static func _corpo_seco(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var skin := c(Color(0.45, 0.4, 0.33), lit, alpha)
+	var dark := c(Color(0.25, 0.21, 0.17), lit, alpha)
+	var reach := sin(t * 4.0 + phase) * r * 0.15
+	for s: float in [-1.0, 1.0]:
+		var hand := Vector2(r * 0.9 + reach * s, s * r * 0.45)
+		ci.draw_line(Vector2(0, s * r * 0.55), hand, skin, maxf(1.5, r * 0.13))
+		for k in 3:
+			ci.draw_line(hand, hand + Vector2(r * 0.25, s * r * (k - 1) * 0.1), dark, 1.0)
+	var torso := PackedVector2Array()
+	for i in 14:
+		var a := TAU * i / 14.0
+		torso.append(Vector2(cos(a) * r * 0.42, sin(a) * r * 0.75))
+	ci.draw_colored_polygon(torso, skin)
+	for i in 3:
+		ci.draw_line(Vector2(-r * 0.05 - i * r * 0.12, -r * 0.5), Vector2(-r * 0.05 - i * r * 0.12, r * 0.5), dark, 1.2)
+	ci.draw_circle(Vector2(r * 0.3, 0), r * 0.34, c(Color(0.62, 0.57, 0.48), lit, alpha))
+	eyes(ci, Vector2(r * 0.45, 0), r * 0.14, maxf(1.3, r * 0.08), Color(1.0, 0.35, 0.2), lit, alpha)
+
+
+## Curupira: pequeno guardião da mata, de cabelo de fogo e pés virados para trás.
+static func _curupira(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var skin := c(Color(0.3, 0.45, 0.25), lit, alpha)
+	var run := sin(t * 14.0 + phase)
+	# Pés virados para trás: as pontas apontam para longe do farol.
+	for s: float in [-1.0, 1.0]:
+		var foot := Vector2(-r * (0.35 + 0.2 * run * s), s * r * 0.35)
+		ci.draw_line(Vector2(0, s * r * 0.25), foot, skin, maxf(1.5, r * 0.18))
+		ci.draw_colored_polygon(PackedVector2Array([foot + Vector2(0, -r * 0.1), foot + Vector2(-r * 0.4, 0), foot + Vector2(0, r * 0.1)]), c(Color(0.22, 0.32, 0.18), lit, alpha))
+	ci.draw_circle(Vector2.ZERO, r * 0.5, skin)
+	# Cabelo de fogo esvoaçando.
+	for i in 5:
+		var y := (i - 2) * r * 0.16
+		var length := r * (1.0 + 0.3 * sin(t * 16.0 + i * 1.9))
+		ci.draw_colored_polygon(PackedVector2Array([Vector2(r * 0.35, y - r * 0.12), Vector2(r * 0.35 - length, y + sin(t * 12.0 + i) * r * 0.2),
+			Vector2(r * 0.35, y + r * 0.12)]), Color(1.0, 0.3 + i * 0.08, 0.1, 0.85 * alpha))
+	ci.draw_circle(Vector2(r * 0.45, 0), r * 0.32, skin)
+	eyes(ci, Vector2(r * 0.62, 0), r * 0.13, maxf(1.2, r * 0.08), Color(1.0, 0.9, 0.3), lit, alpha)
+
+
+## Mapinguari: gigante peludo de um olho só e boca na barriga.
+static func _mapinguari(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var fur := c(Color(0.42, 0.22, 0.14), lit, alpha)
+	var dark := c(Color(0.25, 0.12, 0.08), lit, alpha)
+	var sway := sin(t * 2.5 + phase) * 0.1
+	for i in 14:
+		var a := TAU * i / 14.0
+		ci.draw_circle(Vector2.from_angle(a) * r * 0.85, r * 0.3, dark)
+	ci.draw_circle(Vector2.ZERO, r * 0.95, fur)
+	# Garras para a frente.
+	for s: float in [-1.0, 1.0]:
+		var hand := Vector2(r * 0.95, s * r * (0.75 + sway))
+		ci.draw_line(Vector2(r * 0.3, s * r * 0.7), hand, fur, maxf(2.0, r * 0.28))
+		for k in 3:
+			ci.draw_line(hand, hand + Vector2(r * 0.3, s * r * (k - 1) * 0.12), c(Color(0.9, 0.85, 0.75), lit, alpha), 1.5)
+	# Boca na barriga, abrindo e fechando.
+	var open := 0.35 + 0.2 * sin(t * 3.0 + phase)
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(-r * 0.45, 0), Vector2(0, -r * open), Vector2(r * 0.35, 0), Vector2(0, r * open)]), Color(0.3, 0.02, 0.04, alpha))
+	for i in 5:
+		var x := -r * 0.35 + i * r * 0.15
+		ci.draw_colored_polygon(PackedVector2Array([Vector2(x, -r * open * 0.7), Vector2(x + r * 0.06, -r * open * 0.25), Vector2(x + r * 0.12, -r * open * 0.7)]), Color(0.95, 0.9, 0.8, alpha))
+		ci.draw_colored_polygon(PackedVector2Array([Vector2(x, r * open * 0.7), Vector2(x + r * 0.06, r * open * 0.25), Vector2(x + r * 0.12, r * open * 0.7)]), Color(0.95, 0.9, 0.8, alpha))
+	# Um olho só, no alto da cabeça.
+	ci.draw_circle(Vector2(r * 0.68, 0), r * 0.24, Color(0.95, 0.9, 0.7, alpha) if lit <= 0.0 else Color(1.0, 1.0, 0.8, alpha))
+	ci.draw_circle(Vector2(r * 0.72, 0), r * 0.1, Color(0.15, 0.05, 0.02, alpha))
+
+
+## Boto encantado: golfinho cor-de-rosa do rio, de chapéu branco.
+static func _boto(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var pink := c(Color(0.92, 0.6, 0.66), lit, alpha)
+	var spine := tail(ci, -r * 0.3, r * 1.4, r * 0.5, t * 1.4, phase, r * 0.35, pink, 8)
+	var end := spine[spine.size() - 1]
+	ci.draw_colored_polygon(PackedVector2Array([end, end + Vector2(-r * 0.3, -r * 0.55), end + Vector2(-r * 0.15, 0), end + Vector2(-r * 0.3, r * 0.55)]), pink)
+	var body := PackedVector2Array()
+	for i in 16:
+		var a := TAU * i / 16.0
+		body.append(Vector2(cos(a) * r * 0.85, sin(a) * r * 0.5))
+	ci.draw_colored_polygon(body, pink)
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(r * 0.7, -r * 0.12), Vector2(r * 1.45, 0), Vector2(r * 0.7, r * 0.12)]), pink)
+	ci.draw_circle(Vector2(r * 0.15, 0), r * 0.36, c(Color(0.96, 0.95, 0.92), lit, alpha))
+	ci.draw_arc(Vector2(r * 0.15, 0), r * 0.36, 0.0, TAU, 16, c(Color(0.3, 0.3, 0.32), lit, alpha), 1.5)
+	ci.draw_circle(Vector2(r * 0.15, 0), r * 0.2, c(Color(0.88, 0.86, 0.8), lit, alpha))
+	eyes(ci, Vector2(r * 0.6, 0), r * 0.22, maxf(1.1, r * 0.06), Color(0.25, 0.1, 0.12), lit, alpha)
+
+
+## Fogo-fátuo: bola de fogo azulada cuspida pelo Boitatá.
+static func _wisp(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	for i in 6:
+		var k := i / 6.0
+		var p := Vector2(-r * (0.4 + k * 2.2), sin(t * 10.0 + phase + k * 4.0) * r * 0.3 * k)
+		ci.draw_circle(p, r * (0.75 - k * 0.6), Color(0.35, 0.95, 0.85, 0.35 * (1.0 - k) * alpha))
+	ci.draw_circle(Vector2.ZERO, r * 1.5, Color(0.3, 0.9, 1.0, 0.15 * alpha))
+	ci.draw_circle(Vector2.ZERO, r * 0.9, c(Color(0.35, 0.95, 0.85), lit, alpha))
+	ci.draw_circle(Vector2(r * 0.15, 0), r * 0.5, Color(0.9, 1.0, 0.95, alpha))

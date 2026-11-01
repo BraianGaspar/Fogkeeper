@@ -15,6 +15,9 @@ var pips := 0 ## Losangos acesos (nível que a carta levará).
 var max_pips := 0
 var selected := false
 var card_size := SIZE
+var banish_mode := false ## Escolher agora bane a carta (X vermelho).
+var locked := false ## Mapa ou farol ainda bloqueado na oficina.
+var lock_text := ""
 
 var _glow := 0.0
 var _flash := 0.0
@@ -110,6 +113,21 @@ func _draw() -> void:
 		draw_circle(hk, 13.0, Color(0, 0, 0, 0.7))
 		draw_arc(hk, 13.0, 0.0, TAU, 24, Color(accent, 0.7), 1.5)
 		UiTheme.draw_text(self, hotkey, hk, 15, accent, UiTheme.heading_font())
+
+	if locked:
+		draw_rect(r.grow(-2.0), Color(0.0, 0.0, 0.02, 0.62))
+		var c := Vector2(card_size.x / 2.0, card_size.y * 0.2)
+		draw_arc(c + Vector2(0, -8), 12.0, PI, TAU, 16, UiTheme.GOLD, 4.0)
+		draw_rect(Rect2(c + Vector2(-17, -8), Vector2(34, 26)), UiTheme.GOLD)
+		draw_circle(c + Vector2(0, 3), 4.0, UiTheme.INK)
+		if lock_text != "":
+			UiTheme.draw_text(self, lock_text, Vector2(card_size.x / 2.0, card_size.y * 0.2 + 38.0), 14, UiTheme.GOLD, null, card_size.x - 20.0)
+	if banish_mode:
+		var k := 0.45 + 0.4 * _glow
+		draw_rect(r, Color(0.5, 0.0, 0.0, 0.18 * k))
+		var m := 30.0
+		draw_line(Vector2(m, m), card_size - Vector2(m, m), Color(UiTheme.DANGER, k), 6.0)
+		draw_line(Vector2(card_size.x - m, m), Vector2(m, card_size.y - m), Color(UiTheme.DANGER, k), 6.0)
 
 	if _flash > 0.0:
 		draw_rect(r, Color(1.0, 0.95, 0.8, 0.5 * _flash))
