@@ -15,7 +15,8 @@ Confirme valores e regras no Steamworks antes de agir: estas notas refletem o co
 - Use **GodotSteam** (addon GDExtension, ou a build pré-compilada do editor). Crie um autoload `SteamService` que inicializa a Steam e falha de forma silenciosa quando o jogo roda fora da Steam (dev, autoplay, CI). Nunca deixe o jogo depender da Steam para iniciar.
 - Durante o desenvolvimento, use o app id de teste 480 (Spacewar); troque pelo seu app id antes de enviar builds.
 - Conquistas sugeridas: primeira vitória, derrotar o Leviatã, vencer sem Paredes reforçadas, 5.000 criaturas queimadas no total.
-- Steam Cloud para o save de meta-progressão (um arquivo em `user://`).
+- Steam Cloud para `user://settings.cfg`, `user://records.json` e o futuro save de meta-progressão.
+- Leaderboards: uma por dificuldade (`fogkeeper_easy`, `_normal`, `_hard`), enviando `score` ao fim de cada partida em `Main._end_run()`. A pontuação já é calculada só em `Balance.score_breakdown()`, então basta enviar o total; o ranking local continua para jogo offline.
 
 ## Builds
 - Exportar Windows e Linux (Linux ajuda no Steam Deck). Templates de exportação da mesma versão do editor (4.4.1).
