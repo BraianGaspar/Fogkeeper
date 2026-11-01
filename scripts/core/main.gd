@@ -107,6 +107,8 @@ func _ready() -> void:
 	_parse_args()
 	if not autoplay:
 		Settings.load_settings()
+	elif _trailer == "":
+		Settings.window_mode = Settings.WINDOWED # Testes do bot não tomam a tela.
 	# O bot mede o jogo puro: sem progressão. Capturas leem, mas não gravam.
 	Progress.enabled = not autoplay
 	Progress.read_only = _ui_arg != "" or _cycle_arg >= 0.0 or _no_save

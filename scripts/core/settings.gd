@@ -27,7 +27,7 @@ static var colorblind := 0 ## 0 desligado, 1 protanopia, 2 deuteranopia, 3 trita
 static var text_scale := 0 ## Índice de TEXT_SCALES.
 static var reduce_flashes := false ## Menos clarões e piscadas (fotossensibilidade).
 static var quality := QUALITY_HIGH
-static var window_mode := WINDOWED
+static var window_mode := BORDERLESS
 static var resolution := "1280x720"
 static var vsync := true
 static var screen_shake := true
@@ -68,7 +68,7 @@ static func load_settings() -> void:
 	text_scale = cfg.get_value("accessibility", "text_scale", text_scale)
 	reduce_flashes = cfg.get_value("accessibility", "reduce_flashes", false)
 	quality = cfg.get_value("graphics", "quality", quality)
-	window_mode = cfg.get_value("graphics", "window_mode", WINDOWED)
+	window_mode = cfg.get_value("graphics", "window_mode", BORDERLESS)
 	resolution = cfg.get_value("graphics", "resolution", "1280x720")
 	vsync = cfg.get_value("graphics", "vsync", true)
 	screen_shake = cfg.get_value("graphics", "screen_shake", true)
@@ -150,17 +150,20 @@ static func apply() -> void:
 	if DisplayServer.get_name() == "headless" or OS.has_feature("mobile"):
 		return
 	var mode := DisplayServer.WINDOW_MODE_WINDOWED
-	if window_mode == BORDERLESS:
-		mode = DisplayServer.WINDOW_MODE_FULLSCREEN
-	elif window_mode == EXCLUSIVE:
+	if window_mode == EXCLUSIVE:
 		mode = DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
-	if DisplayServer.window_get_mode() != mode:
+	elif window_mode == BORDERLESS:
+		# No Windows, o FULLSCREEN do Godot deixa 1 pixel livre em cada borda;
+		# o "exclusivo" de lá já é uma janela sem borda cobrindo o monitor.
+		mode = DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN if OS.get_name() == "Windows" else DisplayServer.WINDOW_MODE_FULLSCREEN
+	var changed := DisplayServer.window_get_mode() != mode
+	if changed:
 		DisplayServer.window_set_mode(mode)
 	if mode == DisplayServer.WINDOW_MODE_WINDOWED:
-		var size := resolution_size()
-		if DisplayServer.window_get_size() != size:
+		var screen := DisplayServer.screen_get_usable_rect(DisplayServer.window_get_current_screen())
+		var size := resolution_size().min(screen.size)
+		if changed or DisplayServer.window_get_size() != size:
 			DisplayServer.window_set_size(size)
-			var screen := DisplayServer.screen_get_usable_rect()
 			DisplayServer.window_set_position(screen.position + (screen.size - size) / 2)
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
 
