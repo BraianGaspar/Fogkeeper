@@ -48,7 +48,7 @@ GODOT=/caminho/do/godot tools/check.sh        # carrega o projeto, acusa erros e
 GODOT=/caminho/do/godot tools/autoplay.sh 10 --difficulty=hard --map=fjord  # partidas com bot
 GODOT=/caminho/do/godot tools/export.sh       # gera build/windows/Fogkeeper.exe (um arquivo só)
 GODOT=/caminho/do/godot tools/export_android.sh  # gera build/android/Fogkeeper.apk
-GODOT=/caminho/do/godot tools/trailer.sh          # grava build/trailer_en.avi e trailer_pt.avi
+GODOT=/caminho/do/godot FFMPEG=/caminho/do/ffmpeg tools/trailer.sh  # grava build/trailer_en.mp4 e trailer_pt.mp4
 godot --path . --script tools/store_art.gd     # arte da loja da Steam em docs/store/
 godot --path . -- --ui=levelup --screenshot=3 # abre uma tela e salva user://screenshot.png
 ```

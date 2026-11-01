@@ -46,14 +46,7 @@ Gerada por `godot --path . --script tools/store_art.gd` (precisa de janela):
 Capturas (1920×1080): `godot --path . --resolution 1920x1080 -- --ui=boss --map=japan --screenshot=7` (troque mapa e tela).
 
 ## Trailer
-`Trailer` (scripts/core/trailer.gd) grava ~45 s com o bot jogando cada mapa, legendas e o logo final:
-
-```bash
-godot --path . --resolution 1920x1080 --fixed-fps 30 --write-movie build/trailer_en.avi -- --trailer=en
-godot --path . --resolution 1920x1080 --fixed-fps 30 --write-movie build/trailer_pt.avi -- --trailer=pt
-```
-
-O Godot grava AVI (MJPEG + som). Converta para MP4 H.264 antes de enviar (HandBrake, ou `ffmpeg -i trailer_en.avi -c:v libx264 -crf 18 -c:a aac trailer_en.mp4`).
+`Trailer` (scripts/core/trailer.gd) grava ~43 s com o bot jogando cada mapa, legendas e o logo final. `tools/trailer.sh` grava em tela cheia, quadro a quadro em PNG, e converte com o ffmpeg (`winget install Gyan.FFmpeg`) para `build/trailer_en.mp4` e `build/trailer_pt.mp4` (H.264, 1920×1080, 30 fps), prontos para a Steam.
 
 ## Tamanho e requisitos
 - **Tamanho:** o .exe tem ~98 MB, quase tudo do motor (não há arquivos de arte ou áudio). Na Steam, o download comprimido fica em torno de 30–40 MB. Dá para chegar perto de 20 MB compilando um template do Godot sem os módulos 3D e de física.

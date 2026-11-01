@@ -3,7 +3,7 @@ extends CanvasLayer
 ## Trailer roteirizado para a Steam: o bot joga cenas curtas de cada mapa
 ## (com chefes) enquanto legendas contam a ideia do jogo, e termina no logo.
 ## Grave com o Movie Maker do Godot:
-##   godot --path . --resolution 1920x1080 --write-movie build/trailer.avi -- --trailer=en
+##   GODOT=... FFMPEG=... tools/trailer.sh   (grava em PNG e converte para MP4)
 ## As legendas ficam aqui (en ou pt), fora das traduções do jogo.
 
 ## Cenas: mapa, segundos de partida simulados, chefe (índice no mapa, -1 = nenhum),
@@ -41,10 +41,14 @@ func _ready() -> void:
 	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_fade)
-	_caption = UiTheme.label("", 44, UiTheme.TEXT, true)
-	_caption.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	_caption.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_caption.offset_top = -230
+	_caption = UiTheme.label("", 42, UiTheme.TEXT, true)
+	_caption.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	_caption.offset_left = 120
+	_caption.offset_right = -120
+	_caption.offset_top = -250
+	_caption.offset_bottom = -160
+	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_caption.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_caption.add_theme_constant_override("outline_size", 10)
 	add_child(_caption)
