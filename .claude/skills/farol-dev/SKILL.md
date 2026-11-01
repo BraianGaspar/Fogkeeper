@@ -1,6 +1,6 @@
 ---
 name: farol-dev
-description: Guia de desenvolvimento do jogo Farol (Godot 4, GDScript), um survivors-like em que um farol fixo gira um feixe de luz contra criaturas da névoa. Use esta skill sempre que for mexer no projeto Farol, mesmo em pedidos curtos: criar ou ajustar inimigos, melhorias (upgrades), chefes, balanceamento, HUD, input, efeitos visuais, áudio, salvamento, Steam (GodotSteam, conquistas, builds) ou revisar código e commits do repositório. Também use quando o usuário falar em "o jogo do farol", "a luz", "o feixe", "as brasas" ou "a névoa" neste contexto.
+description: "Guia de desenvolvimento do jogo Farol (Godot 4, GDScript), um survivors-like em que um farol fixo gira um feixe de luz contra criaturas da névoa. Use esta skill sempre que for mexer no projeto Farol, mesmo em pedidos curtos: criar ou ajustar inimigos, melhorias (upgrades), chefes, balanceamento, HUD, input, efeitos visuais, áudio, salvamento, Steam (GodotSteam, conquistas, builds) ou revisar código e commits do repositório. Também use quando o usuário falar em \"o jogo do farol\", \"a luz\", \"o feixe\", \"as brasas\" ou \"a névoa\" neste contexto."
 ---
 
 # Farol — guia de desenvolvimento
