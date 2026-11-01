@@ -18,6 +18,14 @@ Confirme valores e regras no Steamworks antes de agir: estas notas refletem o co
 - Steam Cloud para `user://settings.cfg`, `user://records.json` e o futuro save de meta-progressão.
 - Leaderboards: uma por dificuldade (`fogkeeper_easy`, `_normal`, `_hard`), enviando `score` ao fim de cada partida em `Main._end_run()`. A pontuação já é calculada só em `Balance.score_breakdown()`, então basta enviar o total; o ranking local continua para jogo offline.
 
+## Pendente: exportar o .exe do jogo
+Hoje o jogo é aberto pelo Godot (atalho "Fogkeeper" na área de trabalho, que roda `Godot_v4.4.1-stable_win64.exe --path <pasta do projeto>`). Antes de distribuir:
+1. No editor: **Editor → Gerenciar modelos de exportação** e baixar os templates 4.4.1.
+2. **Projeto → Exportar → Adicionar → Windows Desktop**; ícone do executável a partir de `icon.svg` (gerar um `.ico` de 256 px); marcar "Embed PCK" para sair um arquivo só.
+3. Salvar o preset (`export_presets.cfg` pode ir para o git; credenciais não) e exportar para `build/windows/Fogkeeper.exe` (`/build/` já está no `.gitignore`).
+4. Criar `tools/export.sh` com `godot --headless --export-release "Windows Desktop" build/windows/Fogkeeper.exe` e repetir para Linux.
+5. Testar o .exe numa máquina sem Godot instalado e trocar o atalho da área de trabalho para apontar para ele.
+
 ## Builds
 - Exportar Windows e Linux (Linux ajuda no Steam Deck). Templates de exportação da mesma versão do editor (4.4.1).
 - Enviar com SteamCMD + `app_build.vdf`; manter o script de build em `tools/` sem credenciais (credenciais ficam fora do repositório).
