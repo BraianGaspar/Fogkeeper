@@ -1,41 +1,32 @@
 class_name RankingScreen
 extends MenuScreen
-## Ranking local: melhores pontuações, filtráveis por dificuldade, com a
-## posição do jogador e as regras de pontuação.
+## Ranking local: melhores pontuações, filtráveis por dificuldade e mapa,
+## com a posição do jogador ("1º lugar") e as regras de pontuação.
 
-const FILTERS := ["", "easy", "normal", "hard"]
-const COLUMNS := [50, 200, 120, 80, 100, 120, 170] ## Larguras: # Jogador Pontos Nível Duração Dificuldade Data
+const COLUMNS := [100, 160, 110, 60, 80, 160, 110, 150] ## Posição Jogador Pontos Nível Tempo Mapa Dificuldade Data
 const SHOWN := 50
 
 var filter := ""
+var map_filter := ""
 var highlight_id := "" ## Partida recém-terminada, destacada na tabela.
 
 var _table: VBoxContainer
 var _footer: Label
-var _filter_buttons: Array[Button] = []
 
 
 func _build() -> void:
-	var box := centered_panel(920, 26)
-	title(box, tr("Ranking"), 36)
+	var box := centered_panel(1040, 22)
+	box.add_theme_constant_override("separation", 10)
+	title(box, tr("Ranking"), 34)
 
-	var filters := HBoxContainer.new()
-	filters.alignment = BoxContainer.ALIGNMENT_CENTER
-	filters.add_theme_constant_override("separation", 8)
-	box.add_child(filters)
-	var group := ButtonGroup.new()
-	for f: String in FILTERS:
-		var label := tr("Todas") if f == "" else difficulty_name(f)
-		var b := UiTheme.small_button(label, _set_filter.bind(f), true)
-		b.button_group = group
-		b.custom_minimum_size.x = 130
-		b.button_pressed = f == filter
-		filters.add_child(b)
-		_filter_buttons.append(b)
-		if f == filter:
-			default_focus = b
+	var diffs := [""]
+	diffs.append_array(Balance.DIFFICULTY_ORDER)
+	box.add_child(_filter_row(diffs, filter, _set_filter, func(f: String) -> String: return tr("Todas") if f == "" else difficulty_name(f)))
+	var maps := [""]
+	maps.append_array(Maps.ORDER)
+	box.add_child(_filter_row(maps, map_filter, _set_map_filter, func(f: String) -> String: return tr("Todos os mapas") if f == "" else tr(Maps.get_map(f)["name"])))
 
-	box.add_child(_row(["#", tr("Jogador"), tr("Pontos"), tr("Nível"), tr("Duração"), tr("Dificuldade"), tr("Data")], UiTheme.GOLD, null))
+	box.add_child(_row([tr("Posição"), tr("Jogador"), tr("Pontos"), tr("Nível"), tr("Tempo"), tr("Mapa"), tr("Dificuldade"), tr("Data")], UiTheme.GOLD, null))
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, 250)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -55,15 +46,36 @@ func _build() -> void:
 	_refresh()
 
 
+func _filter_row(values: Array, current: String, on_pick: Callable, label_of: Callable) -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 6)
+	var group := ButtonGroup.new()
+	for v: String in values:
+		var b := UiTheme.small_button(label_of.call(v), on_pick.bind(v), true)
+		b.button_group = group
+		b.custom_minimum_size.x = 118
+		b.button_pressed = v == current
+		row.add_child(b)
+		if v == current and default_focus == null:
+			default_focus = b
+	return row
+
+
 func _set_filter(f: String) -> void:
 	filter = f
+	_refresh()
+
+
+func _set_map_filter(f: String) -> void:
+	map_filter = f
 	_refresh()
 
 
 func _refresh() -> void:
 	for c in _table.get_children():
 		c.queue_free()
-	var list := Records.ranking(filter)
+	var list := Records.ranking(filter, map_filter)
 	var me := Settings.display_name()
 	if list.is_empty():
 		var empty := UiTheme.label(tr("Nenhuma partida nesta categoria ainda."), 17, UiTheme.TEXT_DIM)
@@ -80,24 +92,25 @@ func _refresh() -> void:
 			bg = Color(1, 1, 1, 0.03)
 		var color := UiTheme.GOLD if i < 3 else UiTheme.TEXT
 		_table.add_child(_row([
-			"%d" % (i + 1), r["name"], Records.format_number(r["score"]), str(r["level"]),
-			Records.format_time(r["duration"]), difficulty_name(r["difficulty"]), Records.format_date(r["date"]),
+			Records.ordinal(i + 1), r["name"], Records.format_number(r["score"]), str(r["level"]),
+			Records.format_time(r["duration"]), tr(Maps.get_map(r["map"])["name"]), difficulty_name(r["difficulty"]),
+			Records.format_date(r["date"]),
 		], color, bg))
-	var pos := Records.best_position_of(me, filter)
+	var pos := Records.best_position_of(me, filter, map_filter)
 	if pos > 0:
-		_footer.text = tr("Sua melhor posição (%s): #%d de %d") % [me, pos, list.size()]
+		_footer.text = tr("Sua melhor posição (%s): %s, entre %d partidas") % [me, Records.ordinal(pos), list.size()]
 	else:
 		_footer.text = tr("%s ainda não tem partidas nesta categoria.") % me
 
 
 func _row(cells: Array, color: Color, bg: Variant) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", UiTheme.flat(bg if bg != null else Color.TRANSPARENT, Color.TRANSPARENT, 0, 6.0))
+	panel.add_theme_stylebox_override("panel", UiTheme.flat(bg if bg != null else Color.TRANSPARENT, Color.TRANSPARENT, 0, 5.0))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	panel.add_child(row)
 	for i in cells.size():
-		var l := UiTheme.label(str(cells[i]), 16, color)
+		var l := UiTheme.label(str(cells[i]), 15, color)
 		l.custom_minimum_size.x = COLUMNS[i]
 		l.clip_text = true
 		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -110,12 +123,10 @@ func _row(cells: Array, color: Color, bg: Variant) -> Control:
 
 
 func _rules_text() -> String:
-	var per_kill := []
-	for kind: String in ["mist", "brute", "leviathan"]:
-		per_kill.append(str(Balance.ENEMIES[kind]["score"]))
 	var mults := []
 	for id: String in Balance.DIFFICULTY_ORDER:
 		mults.append("%s ×%s" % [difficulty_name(id), DifficultyScreen._mult_text(Balance.DIFFICULTIES[id]["score"])])
-	return tr("Pontuação: criaturas queimadas (%s pontos cada, conforme o tipo) + %d por segundo sobrevivido + %s pela vitória + até %s pela vida restante ao amanhecer, multiplicado pela dificuldade (%s).") % [
-		" / ".join(per_kill), Balance.SCORE_PER_SECOND, Records.format_number(Balance.SCORE_VICTORY),
+	return tr("Pontuação = criaturas queimadas (%s a %s pontos cada) + %d por segundo sobrevivido + %s por chefe + %s pela vitória + até %s pela vida restante, vezes a dificuldade (%s). Empate: maior nível, depois quem fez primeiro.") % [
+		Balance.ENEMIES["basic"]["score"], Balance.ENEMIES["brute"]["score"], Balance.SCORE_PER_SECOND,
+		Records.format_number(Balance.SCORE_PER_BOSS), Records.format_number(Balance.SCORE_VICTORY),
 		Records.format_number(Balance.SCORE_HEALTH_BONUS), " · ".join(mults)] + "\n" + tr("Ranking deste computador. O ranking online chega com a versão da Steam.")

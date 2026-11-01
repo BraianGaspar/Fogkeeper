@@ -71,3 +71,18 @@ static func apply(id: String, lh: Lighthouse) -> void:
 			lh.heal(30.0)
 		_:
 			push_warning("Upgrade desconhecido: %s" % id)
+
+
+## Relíquia deixada por um chefe derrotado (Balance.RELICS).
+static func apply_relic(boss_id: String, lh: Lighthouse) -> void:
+	match boss_id:
+		"leviathan":
+			lh.max_hp += 40.0
+			lh.heal(lh.max_hp)
+		"kraken":
+			lh.beam_range *= 1.2
+		"jotunn":
+			lh.lit_slow *= 0.7
+		"fenrir":
+			lh.turn_speed *= 1.3
+			lh.beam_dps *= 1.15

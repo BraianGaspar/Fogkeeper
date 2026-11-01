@@ -8,7 +8,9 @@ signal collected(value: int)
 var value := 1
 var lighthouse: Lighthouse
 
-var _life := Balance.EMBER_LIFETIME
+var lifetime := Balance.EMBER_LIFETIME ## A dificuldade pode encurtar.
+
+var _life := 0.0
 var _attracted := false
 var _vel := Vector2.ZERO
 var _time := 0.0
@@ -19,6 +21,7 @@ func _ready() -> void:
 	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	material = mat
 	z_index = 2
+	_life = lifetime
 	_vel = Vector2.from_angle(randf() * TAU) * 30.0
 
 

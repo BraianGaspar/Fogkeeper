@@ -1,9 +1,10 @@
 class_name Hud
 extends CanvasLayer
-## HUD da partida (vida, relógio do amanhecer, pontos, barra de XP, avisos)
-## e a troca entre as telas de menu (scripts/ui/screens/).
+## HUD da partida (vida, relógio da noite, pontos, chefe, habilidades, XP),
+## avisos em fila numa camada própria (nunca ficam atrás de menus), registro
+## de eventos e a troca entre as telas (scripts/ui/screens/).
 
-signal start_requested(difficulty: String)
+signal start_requested(map_id: String, keeper_id: String, difficulty: String)
 signal restart_pressed
 signal resume_pressed
 signal menu_pressed
@@ -12,6 +13,16 @@ signal upgrade_chosen(id: String)
 
 const DIM_TITLE := 0.15
 const DIM_MENU := 0.6
+const ALERT_TIME := 3.0
+const LOG_SIZE := 30
+const LOG_VISIBLE := 3
+const LOG_FADE := 12.0
+
+var abilities: Abilities:
+	set(value):
+		abilities = value
+		if _ability_bar:
+			_ability_bar.abilities = value
 
 var _play_ui: Control
 var _hp_caption: Label
@@ -21,8 +32,21 @@ var _clock: DawnClock
 var _score_label: Label
 var _score_caption: Label
 var _kills_label: Label
-var _announce: Label
-var _announce_tween: Tween
+var _boss_box: VBoxContainer
+var _boss_name: Label
+var _boss_bar: OrnateBar
+var _boss: Boss
+var _ability_bar: AbilityBar
+var _log_box: VBoxContainer
+var _alerts: CanvasLayer
+var _alert_label: Label
+var _alert_banner: PanelContainer
+var _alert_queue: Array[Dictionary] = []
+var _alert_left := 0.0
+var _alert_big_since := -100.0
+var _clock_time := 0.0
+var _log_timer := 0.0
+var _events: Array[Dictionary] = [] # {"time": "02:47", "text": ..., "at": tempo real}
 var _overlay: ColorRect
 var _screen: MenuScreen
 var _last_level := 1
@@ -30,6 +54,8 @@ var _settings_from_pause := false
 var _pause_summary := ""
 var _pause_upgrades: Array = []
 var _last_run_id := ""
+var _pending_map := "bay"
+var _pending_keeper := "classic"
 
 
 func _ready() -> void:
@@ -42,6 +68,7 @@ func _ready() -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	_overlay.visible = false
 	add_child(_overlay)
+	_build_alerts()
 
 
 # --- HUD da partida -----------------------------------------------------------
@@ -52,29 +79,51 @@ func _build_play_ui() -> void:
 	_play_ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_play_ui)
 
-	# Vida, no canto superior esquerdo.
-	var hp_box := VBoxContainer.new()
-	hp_box.position = Vector2(22, 16)
-	hp_box.add_theme_constant_override("separation", 0)
+	# Vida e registro de eventos, no canto superior esquerdo.
+	var left := VBoxContainer.new()
+	left.position = Vector2(22, 16)
+	left.add_theme_constant_override("separation", 2)
 	_hp_caption = UiTheme.label("", 15, UiTheme.TEXT, true)
-	hp_box.add_child(_hp_caption)
+	left.add_child(_hp_caption)
 	_hp_bar = OrnateBar.new()
 	_hp_bar.fill_color = UiTheme.HP
 	_hp_bar.trail_color = Color(1.0, 0.85, 0.6, 0.85)
 	_hp_bar.bar_height = 16.0
 	_hp_bar.custom_minimum_size = Vector2(290, 28)
-	hp_box.add_child(_hp_bar)
-	_play_ui.add_child(hp_box)
+	left.add_child(_hp_bar)
+	_log_box = VBoxContainer.new()
+	_log_box.add_theme_constant_override("separation", 0)
+	_log_box.custom_minimum_size.x = 330
+	left.add_child(_log_box)
+	_play_ui.add_child(left)
 
-	# Relógio do amanhecer, no topo central.
+	# Relógio da noite e barra do chefe, no topo central.
+	var top := VBoxContainer.new()
+	top.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	top.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	top.offset_left = -270
+	top.offset_right = 270
+	top.offset_top = 12
+	top.alignment = BoxContainer.ALIGNMENT_BEGIN
+	top.add_theme_constant_override("separation", 2)
 	_clock = DawnClock.new()
-	_clock.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_clock.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_clock.custom_minimum_size = Vector2(380, 62)
-	_clock.offset_left = -190
-	_clock.offset_right = 190
-	_clock.offset_top = 12
-	_play_ui.add_child(_clock)
+	_clock.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	top.add_child(_clock)
+	_boss_box = VBoxContainer.new()
+	_boss_box.add_theme_constant_override("separation", -2)
+	_boss_name = UiTheme.label("", 17, UiTheme.DANGER, true)
+	_boss_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_boss_box.add_child(_boss_name)
+	_boss_bar = OrnateBar.new()
+	_boss_bar.fill_color = Color(0.75, 0.15, 0.2)
+	_boss_bar.segments = 10
+	_boss_bar.bar_height = 14.0
+	_boss_bar.text_size = 12
+	_boss_bar.custom_minimum_size = Vector2(540, 26)
+	_boss_box.add_child(_boss_bar)
+	_boss_box.visible = false
+	top.add_child(_boss_box)
+	_play_ui.add_child(top)
 
 	# Pontos e criaturas, no canto superior direito.
 	var right := VBoxContainer.new()
@@ -90,6 +139,18 @@ func _build_play_ui() -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		right.add_child(l)
 	_play_ui.add_child(right)
+
+	# Habilidades, acima da barra de XP.
+	_ability_bar = AbilityBar.new()
+	_ability_bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_ability_bar.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_ability_bar.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var w := AbilityBar.SLOT * 3 + AbilityBar.GAP * 2
+	_ability_bar.offset_left = -w / 2.0
+	_ability_bar.offset_right = w / 2.0
+	_ability_bar.offset_top = -150
+	_ability_bar.offset_bottom = -70
+	_play_ui.add_child(_ability_bar)
 
 	# Barra de XP no rodapé, no estilo das barras de experiência dos RPGs.
 	_xp_bar = OrnateBar.new()
@@ -107,18 +168,42 @@ func _build_play_ui() -> void:
 	_xp_bar.offset_bottom = -14
 	_play_ui.add_child(_xp_bar)
 
-	_announce = UiTheme.label("", 30, UiTheme.GOLD, true)
-	_announce.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_announce.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_announce.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_announce.offset_left = -500
-	_announce.offset_right = 500
-	_announce.offset_top = 110
-	_announce.modulate.a = 0.0
-	_play_ui.add_child(_announce)
+
+## Avisos ficam numa camada acima de tudo, inclusive da escolha de melhoria.
+func _build_alerts() -> void:
+	_alerts = CanvasLayer.new()
+	_alerts.layer = 20
+	add_child(_alerts)
+	_alert_banner = PanelContainer.new()
+	_alert_banner.add_theme_stylebox_override("panel", UiTheme.flat(Color(0.25, 0.03, 0.05, 0.85), UiTheme.DANGER, 2, 14.0))
+	_alert_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_alert_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_alert_banner.offset_top = 128
+	_alert_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_alert_banner.modulate.a = 0.0
+	_alerts.add_child(_alert_banner)
+	_alert_label = UiTheme.label("", 28, UiTheme.GOLD, true)
+	_alert_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_alert_banner.add_child(_alert_label)
+
+
+func _process(delta: float) -> void:
+	if is_instance_valid(_boss) and not _boss.dying:
+		_boss_bar.set_values(maxf(0.0, _boss.hp), _boss.max_hp)
+		_boss_bar.text = "%d / %d" % [ceili(maxf(0.0, _boss.hp)), ceili(_boss.max_hp)]
+		_boss_name.text = "%s — %s%s" % [tr(Maps.CREATURE_NAMES[_boss.kind]), tr(Maps.BOSS_TITLES[_boss.kind]),
+			("   " + tr("(ENFURECIDO)")) if _boss.enraged else ""]
+	elif _boss_box.visible:
+		_boss_box.visible = false
+	_process_alerts(delta)
+	_log_timer -= delta
+	if _log_timer <= 0.0:
+		_log_timer = 0.25
+		_refresh_log()
 
 
 func update_stats(hp: float, max_hp: float, xp: int, xp_needed: int, level: int, elapsed: float, kills: int, score: int) -> void:
+	_clock_time = elapsed
 	_hp_caption.text = tr("Farol")
 	_hp_bar.set_values(hp, max_hp)
 	_hp_bar.text = "%d / %d" % [ceili(hp), int(max_hp)]
@@ -131,30 +216,96 @@ func update_stats(hp: float, max_hp: float, xp: int, xp_needed: int, level: int,
 	_xp_bar.badge = str(level)
 	_xp_bar.text = tr("%d / %d XP   (%d%%)   —   próximo nível: %d") % [xp, xp_needed, int(100.0 * xp / maxf(1.0, xp_needed)), level + 1]
 	_clock.progress = elapsed / Balance.RUN_DURATION
-	_clock.time_text = Records.format_time(elapsed)
-	_clock.caption = tr("Amanhecer em %s") % Records.format_time(maxf(0.0, Balance.RUN_DURATION - elapsed))
+	_clock.time_text = DayCycle.clock_text(elapsed)
+	_clock.caption = tr("%s de partida   •   amanhecer em %s") % [Records.format_time(elapsed), Records.format_time(maxf(0.0, Balance.RUN_DURATION - elapsed))]
 	_score_label.text = Records.format_number(score)
 	_score_caption.text = tr("pontos")
 	_kills_label.text = tr("%s criaturas queimadas") % Records.format_number(kills)
+
+
+## Some com os avisos na tela e na fila (fim de partida, volta ao menu).
+func clear_alerts() -> void:
+	_alert_queue.clear()
+	_alert_left = 0.0
+	_alert_banner.modulate.a = 0.0
 
 
 func reset_level(level: int) -> void:
 	_last_level = level
 	_xp_bar.set_values(0, 1)
 	_xp_bar.snap()
+	_events.clear()
+	_alert_queue.clear()
+	_alert_left = 0.0
+	_alert_banner.modulate.a = 0.0
+	set_boss(null)
 
 
-## Aviso grande que aparece e some no topo da tela.
-func announce(text: String, color: Color = UiTheme.GOLD) -> void:
-	_announce.text = text
-	_announce.add_theme_color_override("font_color", color)
-	if _announce_tween:
-		_announce_tween.kill()
-	_announce.modulate.a = 0.0
-	_announce_tween = create_tween()
-	_announce_tween.tween_property(_announce, "modulate:a", 1.0, 0.3)
-	_announce_tween.tween_interval(2.6)
-	_announce_tween.tween_property(_announce, "modulate:a", 0.0, 0.8)
+func set_boss(boss: Boss) -> void:
+	_boss = boss
+	_boss_box.visible = boss != null
+	if boss:
+		_boss_bar.set_values(boss.hp, boss.max_hp)
+		_boss_bar.snap()
+
+
+# --- Avisos e registro ----------------------------------------------------------
+
+## Aviso no topo da tela. `big` = aviso de chefe (faixa vermelha, mais tempo).
+## Avisos que chegam juntos entram numa fila e aparecem um depois do outro.
+func announce(text: String, color: Color = UiTheme.GOLD, big: bool = false) -> void:
+	_events.push_front({"time": DayCycle.clock_text(_clock_time), "text": text, "at": Time.get_ticks_msec() / 1000.0})
+	if _events.size() > LOG_SIZE:
+		_events.pop_back()
+	_alert_queue.append({"text": text, "color": color, "big": big})
+
+
+## Verdadeiro logo depois de um aviso de chefe aparecer: Main espera antes
+## de abrir a escolha de melhoria, para o jogador ler o aviso primeiro.
+func alert_blocking() -> bool:
+	return Time.get_ticks_msec() / 1000.0 - _alert_big_since < 2.0
+
+
+func events() -> Array[Dictionary]:
+	return _events
+
+
+func _process_alerts(delta: float) -> void:
+	if _alert_left > 0.0:
+		_alert_left -= delta
+		var shown := ALERT_TIME + 1.0 - _alert_left
+		_alert_banner.modulate.a = clampf(minf(shown / 0.25, _alert_left / 0.6), 0.0, 1.0)
+		return
+	if _alert_queue.is_empty():
+		_alert_banner.modulate.a = 0.0
+		return
+	var a: Dictionary = _alert_queue.pop_front()
+	var big: bool = a["big"]
+	_alert_label.text = a["text"]
+	_alert_label.add_theme_color_override("font_color", a["color"])
+	_alert_label.add_theme_font_size_override("font_size", 32 if big else 26)
+	_alert_banner.add_theme_stylebox_override("panel", UiTheme.flat(Color(0.25, 0.03, 0.05, 0.88), UiTheme.DANGER, 2, 14.0) if big
+		else UiTheme.flat(Color(0.03, 0.04, 0.08, 0.75), Color(UiTheme.GOLD_DARK, 0.8), 1, 12.0))
+	_alert_left = ALERT_TIME + (1.0 if big else 0.0)
+	if big:
+		_alert_big_since = Time.get_ticks_msec() / 1000.0
+
+
+func _refresh_log() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	var shown := 0
+	for c in _log_box.get_children():
+		c.queue_free()
+	for e in _events:
+		var age := now - float(e["at"])
+		if age > LOG_FADE or shown >= LOG_VISIBLE:
+			break
+		var l := UiTheme.label("%s  %s" % [e["time"], e["text"]], 13, UiTheme.TEXT_DIM)
+		l.modulate.a = clampf((LOG_FADE - age) / 3.0, 0.0, 1.0)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.custom_minimum_size.x = 330
+		_log_box.add_child(l)
+		shown += 1
 
 
 # --- Telas ------------------------------------------------------------------
@@ -176,6 +327,10 @@ func _set_screen(screen: MenuScreen, dim: float, show_hud: bool) -> void:
 func _on_back(screen: MenuScreen) -> void:
 	if screen is SettingsScreen and _settings_from_pause:
 		_show_pause_again()
+	elif screen is DifficultyScreen:
+		show_keeper_select()
+	elif screen is KeeperScreen:
+		show_map_select()
 	else:
 		menu_pressed.emit()
 
@@ -194,8 +349,9 @@ func show_playing() -> void:
 
 
 func show_title() -> void:
+	clear_alerts()
 	var s := TitleScreen.new()
-	s.play_pressed.connect(show_difficulty)
+	s.play_pressed.connect(show_map_select)
 	s.history_pressed.connect(show_history)
 	s.ranking_pressed.connect(show_ranking)
 	s.settings_pressed.connect(show_settings.bind(false))
@@ -203,9 +359,30 @@ func show_title() -> void:
 	_set_screen(s, DIM_TITLE, false)
 
 
+## Preparação da partida: mapa → farol → dificuldade.
+func show_map_select() -> void:
+	var s := MapScreen.new()
+	s.chosen.connect(func(id: String) -> void:
+		_pending_map = id
+		Settings.map = id
+		show_keeper_select()
+	)
+	_set_screen(s, DIM_MENU, false)
+
+
+func show_keeper_select() -> void:
+	var s := KeeperScreen.new()
+	s.chosen.connect(func(id: String) -> void:
+		_pending_keeper = id
+		Settings.keeper = id
+		show_difficulty()
+	)
+	_set_screen(s, DIM_MENU, false)
+
+
 func show_difficulty() -> void:
 	var s := DifficultyScreen.new()
-	s.start.connect(func(d: String) -> void: start_requested.emit(d))
+	s.start.connect(func(d: String) -> void: start_requested.emit(_pending_map, _pending_keeper, d))
 	_set_screen(s, DIM_MENU, false)
 
 
@@ -221,9 +398,10 @@ func show_history() -> void:
 	_set_screen(HistoryScreen.new(), DIM_MENU, false)
 
 
-func show_ranking(difficulty: String = "") -> void:
+func show_ranking(difficulty: String = "", map_id: String = "") -> void:
 	var s := RankingScreen.new()
 	s.filter = difficulty
+	s.map_filter = map_id
 	s.highlight_id = _last_run_id
 	_set_screen(s, DIM_MENU, false)
 
@@ -238,6 +416,7 @@ func _show_pause_again() -> void:
 	var s := PauseScreen.new()
 	s.summary = _pause_summary
 	s.upgrades = _pause_upgrades
+	s.events = _events
 	s.resume_pressed.connect(func() -> void: resume_pressed.emit())
 	s.settings_pressed.connect(show_settings.bind(true))
 	s.restart_pressed.connect(func() -> void: restart_pressed.emit())
@@ -255,11 +434,13 @@ func show_level_up(level: int, choices: Array, levels: Dictionary) -> void:
 	_set_screen(s, 0.5, true)
 
 
-func show_end(run: Dictionary) -> void:
+func show_end(run: Dictionary, context: Dictionary) -> void:
+	clear_alerts()
 	_last_run_id = run["id"]
 	var s := EndScreen.new()
 	s.run = run
+	s.context = context
 	s.restart_pressed.connect(func() -> void: restart_pressed.emit())
-	s.ranking_pressed.connect(func() -> void: show_ranking(run["difficulty"]))
+	s.ranking_pressed.connect(func() -> void: show_ranking(run["difficulty"], run["map"]))
 	s.menu_pressed.connect(func() -> void: menu_pressed.emit())
 	_set_screen(s, 0.35 if run["victory"] else 0.6, false)

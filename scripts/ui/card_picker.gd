@@ -7,8 +7,9 @@ extends Control
 ## Emite `chosen(index)` depois de uma breve animação de confirmação.
 
 signal chosen(index: int)
+signal selection_changed(index: int)
 
-const GAP := 30.0
+var gap := 30.0
 
 var index := 0
 
@@ -20,13 +21,13 @@ var _done := false
 ## `delay` impede escolher sem querer logo que a tela abre (no meio da ação).
 func setup(cards: Array[ChoiceCard], start_index: int = 0, delay: float = 0.0) -> void:
 	_cards = cards
-	var w := ChoiceCard.SIZE.x
-	custom_minimum_size = Vector2(cards.size() * w + (cards.size() - 1) * GAP, ChoiceCard.SIZE.y + 30.0)
+	var w := cards[0].card_size.x if not cards.is_empty() else ChoiceCard.SIZE.x
+	custom_minimum_size = Vector2(cards.size() * w + (cards.size() - 1) * gap, (cards[0].card_size.y if not cards.is_empty() else 0.0) + 30.0)
 	for i in cards.size():
 		var card := cards[i]
 		card.hotkey = str(i + 1)
 		add_child(card)
-		card.position = Vector2(i * (w + GAP), 60.0)
+		card.position = Vector2(i * (w + gap), 60.0)
 		card.modulate.a = 0.0
 		var tw := card.create_tween().set_parallel()
 		tw.tween_property(card, "position:y", 15.0, 0.35).set_delay(i * 0.07).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -47,6 +48,7 @@ func select(i: int, with_sound: bool = true) -> void:
 	if with_sound and i != index:
 		Sfx.play(&"hover")
 	index = i
+	selection_changed.emit(index)
 	for j in _cards.size():
 		_cards[j].selected = j == index
 

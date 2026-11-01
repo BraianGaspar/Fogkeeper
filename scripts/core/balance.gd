@@ -27,57 +27,127 @@ const PULSE_DAMAGE := 18.0
 
 # --- Brasas (XP) ---
 const MAGNET_RADIUS := 90.0
-const EMBER_LIFETIME := 14.0
+const EMBER_LIFETIME := 14.0 ## Base; a dificuldade pode encurtar.
 const EMBER_PULL_SPEED := 520.0
 
-# --- Inimigos ---
-## "score" é quanto cada criatura queimada vale na pontuação.
+# --- Criaturas comuns ---
+## Estatísticas por papel; cada mapa dá aparência e nome próprios a cada papel
+## (ver Maps). "score" é quanto cada criatura queimada vale.
 const ENEMIES := {
-	"mist": {"hp": 14.0, "speed": 54.0, "radius": 12.0, "damage": 4.0, "xp": 1, "score": 10, "color": Color(0.32, 0.22, 0.45)},
-	"runner": {"hp": 9.0, "speed": 110.0, "radius": 9.0, "damage": 3.0, "xp": 1, "score": 12, "color": Color(0.2, 0.3, 0.46)},
-	"brute": {"hp": 55.0, "speed": 28.0, "radius": 20.0, "damage": 10.0, "xp": 4, "score": 40, "color": Color(0.42, 0.18, 0.3)},
-	"leviathan": {"hp": 650.0, "speed": 20.0, "radius": 38.0, "damage": 10.0, "boss": true, "xp": 30, "score": 750, "color": Color(0.26, 0.12, 0.36)},
+	"basic": {"hp": 14.0, "speed": 54.0, "radius": 12.0, "damage": 4.0, "xp": 1, "score": 10},
+	"fast": {"hp": 9.0, "speed": 110.0, "radius": 9.0, "damage": 3.0, "xp": 1, "score": 12},
+	"brute": {"hp": 55.0, "speed": 28.0, "radius": 20.0, "damage": 10.0, "xp": 4, "score": 40},
+	# Lacaios criados por chefes.
+	"tentacle": {"hp": 26.0, "speed": 70.0, "radius": 10.0, "damage": 7.0, "xp": 1, "score": 15},
+	"boulder": {"hp": 20.0, "speed": 135.0, "radius": 13.0, "damage": 12.0, "xp": 0, "score": 5},
 }
-const BOSS_TIMES := [300.0, 540.0] ## Momentos em que um Leviatã aparece.
+
+## Criaturas de elite (Médio em diante): mais fortes e valiosas.
+const ELITE := {"hp": 3.0, "damage": 1.5, "radius": 1.3, "xp": 4, "score": 3}
+
+# --- Chefes ---
+## Vida e recompensas; os números de cada mecânica ficam junto do chefe.
+const BOSSES := {
+	"leviathan": {"hp": 650.0, "speed": 0.32, "radius": 30.0, "damage": 10.0, "xp": 30,
+		"dive_every": 9.0, "dive_time": 2.6, "start_radius": 430.0},
+	"kraken": {"hp": 900.0, "speed": 40.0, "radius": 46.0, "damage": 10.0, "xp": 40,
+		"stand": 310.0, "spawn_every": 3.0, "ink_every": 11.0, "ink_time": 3.5, "ink_range": 0.55},
+	"jotunn": {"hp": 760.0, "speed": 22.0, "radius": 36.0, "damage": 14.0, "xp": 30,
+		"stand": 250.0, "throw_every": 3.2, "advance": 18.0},
+	"fenrir": {"hp": 820.0, "speed": 0.9, "radius": 30.0, "damage": 18.0, "xp": 40,
+		"circle": 270.0, "charge_every": 6.5, "telegraph": 1.1, "dash_speed": 520.0, "dodge_after": 0.6, "dodge_cooldown": 2.5},
+}
+const BOSS_TIMES := [300.0, 540.0] ## Momentos dos chefes (o mapa diz quem aparece).
+const BOSS_WARNING := 8.0 ## Segundos de aviso antes de um chefe surgir.
+const BOSS_HEAL := 25.0 ## Vida recuperada ao derrotar um chefe.
+const ENRAGE_AT := 0.5 ## Fração de vida em que chefes enfurecem (dificuldades com "enrage").
+const ENRAGE_SPEED := 1.4 ## Multiplicador de velocidade e ritmo dos chefes enfurecidos.
+
+## Relíquia deixada por cada chefe (aplicada em Upgrades.apply_relic).
+const RELICS := {
+	"leviathan": {"name": "Escama do Leviatã", "desc": "+40 de vida máxima e cura total."},
+	"kraken": {"name": "Olho do Kraken", "desc": "Feixe alcança 20% mais longe."},
+	"jotunn": {"name": "Coração de Gelo", "desc": "Criaturas iluminadas ficam ainda mais lentas."},
+	"fenrir": {"name": "Presa de Fenrir", "desc": "Feixe gira 30% mais rápido e causa 15% mais dano."},
+}
+
+# --- Habilidades ativas ---
+const ABILITIES := [
+	{"id": "flash", "name": "Clarão", "desc": "Explosão de luz que fere e atordoa tudo por perto.",
+		"cooldown": 24.0, "radius": 230.0, "damage": 60.0, "stun": 2.0},
+	{"id": "overcharge", "name": "Sobrecarga", "desc": "O feixe principal fica concentrado e muito mais forte por alguns segundos.",
+		"cooldown": 20.0, "duration": 5.0, "dps": 2.5, "range": 1.3, "angle": 0.6},
+	{"id": "bell", "name": "Sino da Névoa", "desc": "Puxa todas as brasas para o farol e recupera um pouco de vida.",
+		"cooldown": 30.0, "heal": 10.0},
+]
 
 # --- Dificuldade ---
-## Multiplicadores sobre os valores acima. "spawn" acelera a criação de inimigos,
-## "xp" reduz o XP necessário por nível e "score" multiplica a pontuação final.
-## "normal" é a referência do autoplay: mantenha tudo em 1.0.
+## Multiplicadores e regras. "xp" multiplica o XP necessário por nível,
+## "ember_life" é quanto as brasas duram, "elite" a chance de uma criatura vir
+## como elite, "enrage" faz chefes enfurecerem, "extra_boss" soma um chefe aos
+## 7:00 e "fog" deixa a névoa mais densa. "normal" é a referência do autoplay.
 const DIFFICULTIES := {
-	"easy": {"name": "Fácil", "desc": "Criaturas mais frágeis e menos dano. Bom para aprender a mirar.",
-		"enemy_hp": 0.7, "enemy_damage": 0.6, "spawn": 0.8, "xp": 1.2, "score": 0.5},
-	"normal": {"name": "Normal", "desc": "A noite como ela foi pensada. Exige atenção ao feixe e às brasas.",
-		"enemy_hp": 1.0, "enemy_damage": 1.0, "spawn": 1.0, "xp": 1.0, "score": 1.0},
-	"hard": {"name": "Difícil", "desc": "Mais criaturas, mais resistentes e mais agressivas. Para quem já domina a luz.",
-		"enemy_hp": 1.3, "enemy_damage": 1.35, "spawn": 1.2, "xp": 0.9, "score": 1.6},
+	"easy": {"name": "Fácil", "desc": "Criaturas frágeis, brasas duram mais e o farol é mais resistente. Para aprender a mirar.",
+		"enemy_hp": 0.8, "enemy_damage": 0.7, "enemy_speed": 0.95, "spawn": 0.9, "xp": 1.0, "ember_life": 15.0,
+		"elite": 0.0, "enrage": false, "extra_boss": false, "lighthouse_hp": 1.15, "fog": 0.85, "score": 0.5},
+	"normal": {"name": "Normal", "desc": "A noite como ela foi pensada. Mire entre queimar e recolher brasas.",
+		"enemy_hp": 1.0, "enemy_damage": 1.0, "enemy_speed": 1.0, "spawn": 1.0, "xp": 1.0, "ember_life": 14.0,
+		"elite": 0.0, "enrage": false, "extra_boss": false, "lighthouse_hp": 1.0, "fog": 1.0, "score": 1.0},
+	"medium": {"name": "Médio", "desc": "Surgem criaturas de elite e as brasas somem mais cedo.",
+		"enemy_hp": 1.1, "enemy_damage": 1.12, "enemy_speed": 1.04, "spawn": 1.08, "xp": 1.08, "ember_life": 11.0,
+		"elite": 0.04, "enrage": false, "extra_boss": false, "lighthouse_hp": 1.0, "fog": 1.1, "score": 1.3},
+	"hard": {"name": "Difícil", "desc": "Mais elites, brasas fugazes e chefes que enfurecem com metade da vida.",
+		"enemy_hp": 1.25, "enemy_damage": 1.3, "enemy_speed": 1.08, "spawn": 1.2, "xp": 1.15, "ember_life": 9.0,
+		"elite": 0.08, "enrage": true, "extra_boss": false, "lighthouse_hp": 1.0, "fog": 1.2, "score": 1.7},
+	"impossible": {"name": "Impossível", "desc": "Farol frágil, névoa densa, hordas de elite e um chefe a mais. Quase ninguém vê o amanhecer.",
+		"enemy_hp": 1.8, "enemy_damage": 2.0, "enemy_speed": 1.2, "spawn": 1.5, "xp": 1.35, "ember_life": 6.0,
+		"elite": 0.15, "enrage": true, "extra_boss": true, "lighthouse_hp": 0.75, "fog": 1.45, "score": 2.5},
 }
-const DIFFICULTY_ORDER := ["easy", "normal", "hard"]
+const DIFFICULTY_ORDER := ["easy", "normal", "medium", "hard", "impossible"]
+const EXTRA_BOSS_TIME := 420.0
+const DIFFICULTY_RAMP := 180.0 ## Segundos até os aumentos da dificuldade valerem por inteiro.
+const ELITE_START := 60.0 ## Elites só aparecem depois disto.
+
+
+## Valor de uma regra da dificuldade no tempo t. O que facilita (< 1) vale
+## desde o início; o que dificulta cresce do Normal até o valor cheio em
+## DIFFICULTY_RAMP segundos, para o começo não ser injusto.
+static func difficulty_value(difficulty: String, key: String, t: float) -> float:
+	var v: float = DIFFICULTIES[difficulty][key]
+	if key == "elite":
+		return v * clampf((t - ELITE_START) / DIFFICULTY_RAMP, 0.0, 1.0)
+	if v <= 1.0:
+		return v
+	return lerpf(1.0, v, clampf(t / DIFFICULTY_RAMP, 0.0, 1.0))
 
 # --- Pontuação ---
 const SCORE_PER_SECOND := 5
+const SCORE_PER_BOSS := 1500
 const SCORE_VICTORY := 5000
 const SCORE_HEALTH_BONUS := 2000 ## Ao amanhecer, proporcional à vida restante.
 
 
 static func xp_for_level(level: int, difficulty: String = "normal") -> int:
-	var base := 5 + level * 4 + int(level * level * 0.15)
-	return maxi(1, ceili(base / float(DIFFICULTIES[difficulty]["xp"])))
+	var base := 6 + level * 6 + int(level * level * 0.3)
+	return maxi(1, ceili(base * float(DIFFICULTIES[difficulty]["xp"])))
 
 
-## Pontuação = (criaturas + sobrevivência + vitória + vida) × dificuldade.
-static func score_breakdown(kill_points: int, seconds: float, victory: bool, hp_fraction: float, difficulty: String) -> Dictionary:
+## Pontuação em partes fáceis de ler: criaturas, tempo e bônus, depois a
+## dificuldade multiplica o subtotal.
+static func score_breakdown(kill_points: int, bosses: int, seconds: float, victory: bool, hp_fraction: float, difficulty: String) -> Dictionary:
 	var survival := int(seconds) * SCORE_PER_SECOND
+	var boss_bonus := bosses * SCORE_PER_BOSS
 	var win := SCORE_VICTORY if victory else 0
 	var health := roundi(SCORE_HEALTH_BONUS * clampf(hp_fraction, 0.0, 1.0)) if victory else 0
+	var subtotal := kill_points + survival + boss_bonus + win + health
 	var mult: float = DIFFICULTIES[difficulty]["score"]
 	return {
-		"kills": kill_points, "survival": survival, "victory": win, "health": health,
-		"multiplier": mult, "total": roundi((kill_points + survival + win + health) * mult),
+		"kills": kill_points, "survival": survival, "bosses": boss_bonus, "victory": win, "health": health,
+		"subtotal": subtotal, "multiplier": mult, "total": roundi(subtotal * mult),
 	}
 
 
-## Chefes ("boss": true) ignoram metade da escala de vida.
+## Chefes ("boss") ignoram metade da escala de vida.
 static func hp_multiplier(t: float) -> float:
 	return 1.0 + t / 300.0 + pow(t / 520.0, 2.0)
 
@@ -91,9 +161,9 @@ static func group_size(t: float) -> int:
 
 
 static func spawn_weights(t: float) -> Dictionary:
-	var w := {"mist": 10.0}
+	var w := {"basic": 10.0}
 	if t >= 45.0:
-		w["runner"] = minf(6.0, (t - 45.0) / 15.0)
+		w["fast"] = minf(6.0, (t - 45.0) / 15.0)
 	if t >= 120.0:
 		w["brute"] = minf(3.0, (t - 120.0) / 90.0)
 	return w

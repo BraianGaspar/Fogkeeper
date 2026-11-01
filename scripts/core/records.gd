@@ -3,9 +3,10 @@ extends RefCounted
 ## Histórico de partidas e ranking local, salvos em user://records.json.
 ## O ranking é deste computador; o online virá com as leaderboards da Steam.
 ##
-## Cada partida é um Dictionary com: id, date (unix), name, difficulty, victory,
-## duration, level, kills, score, breakdown (ver Balance.score_breakdown) e
-## upgrades (ids na ordem em que foram escolhidos).
+## Cada partida é um Dictionary com: id, date (unix), name, map, keeper,
+## difficulty, victory, duration, level, kills, bosses, score, breakdown (ver
+## Balance.score_breakdown), upgrades (ids na ordem em que foram escolhidos)
+## e relics (chefes derrotados, cujas relíquias foram obtidas).
 
 const PATH := "user://records.json"
 const MAX_RUNS := 500
@@ -28,19 +29,19 @@ static func add(run: Dictionary) -> void:
 	_save()
 
 
-## Partidas ordenadas da melhor para a pior. difficulty vazio = todas.
-static func ranking(difficulty: String = "") -> Array[Dictionary]:
+## Partidas da melhor para a pior. Filtros vazios = todas.
+static func ranking(difficulty: String = "", map: String = "") -> Array[Dictionary]:
 	var list: Array[Dictionary] = []
 	for r in runs():
-		if difficulty == "" or r["difficulty"] == difficulty:
+		if (difficulty == "" or r["difficulty"] == difficulty) and (map == "" or r["map"] == map):
 			list.append(r)
 	list.sort_custom(_better)
 	return list
 
 
 ## Posição (1 = primeiro) de uma partida no ranking; 0 se não estiver nele.
-static func position_of(id: String, difficulty: String = "") -> int:
-	var list := ranking(difficulty)
+static func position_of(id: String, difficulty: String = "", map: String = "") -> int:
+	var list := ranking(difficulty, map)
 	for i in list.size():
 		if list[i]["id"] == id:
 			return i + 1
@@ -48,8 +49,8 @@ static func position_of(id: String, difficulty: String = "") -> int:
 
 
 ## Melhor posição de um jogador no ranking; 0 se ele não tiver partidas.
-static func best_position_of(player: String, difficulty: String = "") -> int:
-	var list := ranking(difficulty)
+static func best_position_of(player: String, difficulty: String = "", map: String = "") -> int:
+	var list := ranking(difficulty, map)
 	for i in list.size():
 		if list[i]["name"] == player:
 			return i + 1
@@ -79,32 +80,55 @@ static func _load() -> void:
 			_runs.append(_normalize(item))
 
 
-## JSON devolve todo número como float; restaura os tipos esperados.
+## JSON devolve todo número como float; restaura os tipos e completa campos
+## de partidas antigas (antes dos mapas e faróis).
 static func _normalize(r: Dictionary) -> Dictionary:
 	var upgrades: Array[String] = []
 	for u: Variant in r.get("upgrades", []):
 		upgrades.append(str(u))
-	var breakdown: Dictionary = r.get("breakdown", {})
+	var relics: Array[String] = []
+	for u: Variant in r.get("relics", []):
+		relics.append(str(u))
+	var bd: Dictionary = r.get("breakdown", {})
+	var survival := int(bd.get("survival", 0))
+	var kills_pts := int(bd.get("kills", 0))
+	var bosses_pts := int(bd.get("bosses", 0))
+	var win := int(bd.get("victory", 0))
+	var health := int(bd.get("health", 0))
 	return {
 		"id": str(r.get("id", "")),
 		"date": int(r.get("date", 0)),
 		"name": str(r.get("name", Settings.DEFAULT_NAME)),
+		"map": str(r.get("map", "bay")),
+		"keeper": str(r.get("keeper", "classic")),
 		"difficulty": str(r.get("difficulty", "normal")),
 		"victory": bool(r.get("victory", false)),
 		"duration": float(r.get("duration", 0.0)),
 		"level": int(r.get("level", 1)),
 		"kills": int(r.get("kills", 0)),
+		"bosses": int(r.get("bosses", 0)),
 		"score": int(r.get("score", 0)),
 		"breakdown": {
-			"kills": int(breakdown.get("kills", 0)),
-			"survival": int(breakdown.get("survival", 0)),
-			"victory": int(breakdown.get("victory", 0)),
-			"health": int(breakdown.get("health", 0)),
-			"multiplier": float(breakdown.get("multiplier", 1.0)),
-			"total": int(breakdown.get("total", r.get("score", 0))),
+			"kills": kills_pts, "survival": survival, "bosses": bosses_pts, "victory": win, "health": health,
+			"subtotal": int(bd.get("subtotal", kills_pts + survival + bosses_pts + win + health)),
+			"multiplier": float(bd.get("multiplier", 1.0)),
+			"total": int(bd.get("total", r.get("score", 0))),
 		},
 		"upgrades": upgrades,
+		"relics": relics,
 	}
+
+
+## "1º lugar", "1st place", "1.º puesto".
+static func ordinal(n: int) -> String:
+	if Settings.locale == "en":
+		var suffix := "th"
+		if n % 100 < 11 or n % 100 > 13:
+			suffix = ["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"][n % 10]
+		return "%d%s place" % [n, suffix]
+	if Settings.locale == "es":
+		return "%d.º puesto" % n
+	return "%dº lugar" % n
 
 
 static func _save() -> void:

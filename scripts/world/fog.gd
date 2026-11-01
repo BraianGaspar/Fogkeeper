@@ -17,6 +17,7 @@ var _time := 0.0
 var _flash := 0.0
 var _next_flash := 3.0
 var _rng := RandomNumberGenerator.new()
+var density := 1.0 ## Névoa da dificuldade × configuração do jogador.
 
 
 func _ready() -> void:
@@ -44,11 +45,12 @@ func _process(delta: float) -> void:
 			p.x = -AREA.x * 0.5 - 200.0
 		b["pos"] = p
 	_flash = maxf(0.0, _flash - delta * 2.5)
-	if storm > 0.6:
+	# Relâmpagos só na tempestade da baía; no fiorde a tempestade é nevasca.
+	if storm > 0.6 and DayCycle.map == "bay" and Settings.weather:
 		_next_flash -= delta
 		if _next_flash <= 0.0:
 			_next_flash = _rng.randf_range(3.0, 8.0)
-			_flash = 1.0
+			_flash = 1.0 if Settings.lightning_flash else 0.0
 			var pitch := _rng.randf_range(0.85, 1.1)
 			get_tree().create_timer(_rng.randf_range(0.2, 0.7), true).timeout.connect(
 				func() -> void: Sfx.play(&"thunder", pitch))
@@ -59,8 +61,9 @@ func _draw() -> void:
 	var p := DayCycle.p
 	var q := clampi(Settings.quality, 0, 2)
 	var fog_color: Color = p["fog"]
-	var fog_a: float = p["fog_a"]
+	var fog_a: float = p["fog_a"] * density
 	var storm: float = p["storm"]
+	var rect := Background.visible_rect(self)
 
 	for i in BLOBS[q]:
 		var b: Dictionary = _blobs[i]
@@ -70,21 +73,63 @@ func _draw() -> void:
 		for j in layers:
 			draw_circle(b["pos"], r * (1.0 - j * 0.88 / layers), Color(fog_color, a))
 
-	_draw_birds(maxf(p["dusk"], p["dawn"]))
-	if storm > 0.01:
-		_draw_rain(q, storm)
+	if DayCycle.map == "fjord":
+		_draw_aurora(rect, p.get("aurora", 0.0))
+		if Settings.weather:
+			_draw_snow(q, storm)
+	else:
+		_draw_birds(maxf(p["dusk"], p["dawn"]))
+		if storm > 0.01 and Settings.weather:
+			_draw_rain(q, storm)
 
-	var rect := Background.visible_rect(self)
 	var view := rect.size
 	var edge := maxf(view.length() * 0.5, 600.0)
 	var vignette := Color(0.0, 0.0, 0.02).lerp(Color(0.12, 0.06, 0.05), p["dawn"])
-	var va: float = 0.06 * (1.0 - 0.5 * p["dawn"]) + 0.03 * storm
+	var va: float = (0.06 * (1.0 - 0.5 * p["dawn"]) + 0.03 * storm) * density
 	for i in 16:
 		draw_arc(rect.get_center(), edge + 80.0 - i * 18.0, 0.0, TAU, 128, Color(vignette, va), 20.0)
 
 	if _flash > 0.0:
 		var flicker := _flash * (0.6 + 0.4 * sin(_time * 70.0))
 		draw_rect(rect.grow(40.0), Color(0.85, 0.9, 1.0, 0.35 * flicker))
+
+
+## Cortinas de aurora no topo da tela, ondulando devagar.
+func _draw_aurora(rect: Rect2, aurora: float) -> void:
+	if aurora <= 0.02:
+		return
+	for band in 3:
+		var col := [Color(0.3, 1.0, 0.6), Color(0.55, 0.4, 1.0), Color(0.3, 0.9, 1.0)][band] as Color
+		var pts := PackedVector2Array()
+		var cols := PackedColorArray()
+		var steps := 24
+		for i in steps + 1:
+			var x := rect.position.x + rect.size.x * i / steps
+			var y := rect.position.y + 40.0 + band * 26.0 + sin(x * 0.005 + _time * (0.25 + band * 0.07) + band * 2.0) * 34.0
+			pts.append(Vector2(x, y))
+			cols.append(Color(col, 0.0))
+		for i in range(steps, -1, -1):
+			var x := rect.position.x + rect.size.x * i / steps
+			var y := rect.position.y + 40.0 + band * 26.0 + sin(x * 0.005 + _time * (0.25 + band * 0.07) + band * 2.0) * 34.0
+			var shimmer := 0.6 + 0.4 * sin(x * 0.03 + _time * 1.5 + band)
+			pts.append(Vector2(x, y + 90.0))
+			cols.append(Color(col, 0.16 * aurora * shimmer))
+		draw_polygon(pts, cols)
+
+
+## Neve sempre caindo; na nevasca ela engrossa e o vento a deita.
+func _draw_snow(q: int, storm: float) -> void:
+	var count := int(RAIN[q] * (0.4 + 0.6 * storm))
+	var wind := Vector2(-0.3 - storm * 1.2, 1.0)
+	for i in count:
+		var r := _rain[i]
+		var speed := r.z * (0.08 + storm * 0.25)
+		var y := fposmod(r.y + _time * speed + AREA.y * 0.5, AREA.y) - AREA.y * 0.5
+		var x := fposmod(r.x + wind.x * _time * speed + sin(_time + r.x) * 10.0 + AREA.x * 0.5, AREA.x) - AREA.x * 0.5
+		draw_circle(Vector2(x, y), 1.2 + fmod(r.z, 3.0) * 0.6, Color(1, 1, 1, 0.55 + 0.25 * storm))
+	if storm > 0.05:
+		var rect := Background.visible_rect(self)
+		draw_rect(rect.grow(40.0), Color(0.9, 0.94, 1.0, 0.18 * storm))
 
 
 func _draw_rain(q: int, storm: float) -> void:

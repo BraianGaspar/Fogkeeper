@@ -12,26 +12,33 @@ Survivors-like feito em **Godot 4.4** (GDScript). Visual, interface e sons são 
 3. Aperte **F5**.
 
 ## Controles
-| Ação | Teclado/mouse | Controle |
+Teclas do teclado podem ser trocadas em **Configurações → Controles**.
+
+| Ação | Teclado/mouse (padrão) | Controle |
 |---|---|---|
-| Girar o feixe | Mouse, A/D, setas ou Q/E | Analógico direito (mira) ou esquerdo (gira) |
-| Navegar nas cartas (melhoria, dificuldade) | A/D, ←/→ ou mouse | D-pad |
-| Escolher | Enter, Espaço, 1-3 ou clique | A |
-| Navegar nos menus | Setas, Tab ou mouse | D-pad + A |
+| Girar o feixe | Mouse, A/D ou ←/→ | Analógico direito (mira) ou esquerdo (gira) |
+| Clarão | Espaço ou Q | LB |
+| Sobrecarga | Shift, E ou botão direito do mouse | RB |
+| Sino da Névoa | R ou F | Y |
+| Navegar nas cartas (mapa, farol, dificuldade, melhoria) | A/D, ←/→ ou mouse | D-pad |
+| Escolher | Enter, Espaço, 1-5 ou clique | A |
 | Pausar / voltar | Esc ou P | Start / B |
 
 ## O que tem no jogo
-- Dificuldades Fácil, Normal e Difícil.
-- Uma noite em 10 minutos: crepúsculo, lua, tempestade, madrugada e amanhecer.
-- Configurações de idioma (português, inglês, espanhol), gráficos e volumes separados para música, efeitos e som de dano.
-- Histórico de partidas com detalhes e ranking local com a regra de pontuação na própria tela.
+- Dois mapas com história própria: **Baía da Névoa** (Leviatã e Kraken) e **Fiorde Congelado** (Jötunn e Fenrir), cada um com criaturas, clima e trilha diferentes.
+- Quatro faróis para escolher (só aparência).
+- Cinco dificuldades: Fácil, Normal, Médio, Difícil e Impossível, com regras próprias (elites, fúria dos chefes, chefe extra).
+- Habilidades ativas com recarga, chefes com mecânicas e relíquias, música que muda antes e durante as lutas.
+- Uma noite em 10 minutos, das 18:00 às 06:00, com tempestade ou nevasca no meio.
+- Configurações de idioma (PT/EN/ES), controles, gráficos e áudio (inclusive dispositivo de saída e sons individuais).
+- Histórico de partidas e ranking local com posição ("1º lugar") e a regra de pontuação na tela.
 
 Preferências e histórico ficam na pasta de dados do Godot (`%APPDATA%/Godot/app_userdata/Fogkeeper/` no Windows).
 
 ## Ferramentas
 ```bash
 GODOT=/caminho/do/godot tools/check.sh        # carrega o projeto, acusa erros e textos sem tradução
-GODOT=/caminho/do/godot tools/autoplay.sh 10  # 10 partidas com bot (Normal), mostra taxa de vitória
+GODOT=/caminho/do/godot tools/autoplay.sh 10 --difficulty=hard --map=fjord  # partidas com bot
 godot --path . -- --ui=levelup --screenshot=3 # abre uma tela e salva user://screenshot.png
 ```
 O bot mira no inimigo mais próximo e escolhe melhorias ao acaso; serve como termômetro de balanceamento. Outras opções de linha de comando estão no topo de `scripts/core/main.gd`.

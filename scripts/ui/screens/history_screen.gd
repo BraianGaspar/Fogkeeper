@@ -46,14 +46,14 @@ func _build() -> void:
 
 	for run: Dictionary in runs:
 		var result := tr("Vitória") if run["victory"] else tr("Derrota")
-		var label := "%s   •   %s\n%s  ·  %s  ·  %s" % [
-			Records.format_date(run["date"]), result, difficulty_name(run["difficulty"]),
+		var label := "%s   •   %s   •   %s\n%s  ·  %s  ·  %s" % [
+			Records.format_date(run["date"]), result, tr(Maps.get_map(run["map"])["name"]), difficulty_name(run["difficulty"]),
 			tr("Nível %d") % run["level"], tr("%s pts") % Records.format_number(run["score"])]
 		var b := UiTheme.small_button(label, _show.bind(run))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size = Vector2(0, 58)
 		b.add_theme_font_override("font", ThemeDB.fallback_font)
-		b.add_theme_font_size_override("font_size", 15)
+		b.add_theme_font_size_override("font_size", 14)
 		if run["victory"]:
 			b.add_theme_color_override("font_color", UiTheme.GOOD.lerp(UiTheme.TEXT, 0.4))
 		b.focus_entered.connect(_show.bind(run))
@@ -75,23 +75,35 @@ func _show(run: Dictionary) -> void:
 	stat_row(_detail, tr("Jogador"), run["name"])
 	stat_row(_detail, tr("Resultado"), tr("Vitória — amanheceu") if run["victory"] else tr("Derrota — a luz se apagou"),
 		UiTheme.GOOD if run["victory"] else UiTheme.DANGER)
+	stat_row(_detail, tr("Mapa"), tr(Maps.get_map(run["map"])["name"]))
+	stat_row(_detail, tr("Farol"), tr(Keepers.get_keeper(run["keeper"])["name"]))
 	stat_row(_detail, tr("Dificuldade"), difficulty_name(run["difficulty"]))
 	stat_row(_detail, tr("Duração"), Records.format_time(run["duration"]))
+	stat_row(_detail, tr("Horário na história"), DayCycle.clock_text(run["duration"]))
 	stat_row(_detail, tr("Nível alcançado"), str(run["level"]))
 	stat_row(_detail, tr("Criaturas queimadas"), Records.format_number(run["kills"]))
+	stat_row(_detail, tr("Chefes derrotados"), str(run["bosses"]))
 	stat_row(_detail, tr("Pontuação final"), Records.format_number(run["score"]), UiTheme.GOLD)
-	var pos := Records.position_of(run["id"], run["difficulty"])
+	var pos := Records.position_of(run["id"], run["difficulty"], run["map"])
 	if pos > 0:
-		stat_row(_detail, tr("Posição no ranking (%s)") % difficulty_name(run["difficulty"]), "#%d" % pos, UiTheme.GOLD)
+		stat_row(_detail, tr("Posição no ranking (%s)") % difficulty_name(run["difficulty"]), Records.ordinal(pos), UiTheme.GOLD)
 
 	_detail.add_child(UiTheme.label(tr("Como a pontuação foi formada"), 16, UiTheme.GOLD, true))
 	var bd: Dictionary = run["breakdown"]
-	stat_row(_detail, tr("Criaturas"), Records.format_number(bd["kills"]))
-	stat_row(_detail, tr("Sobrevivência"), Records.format_number(bd["survival"]))
-	stat_row(_detail, tr("Vitória"), Records.format_number(bd["victory"]))
-	stat_row(_detail, tr("Vida restante"), Records.format_number(bd["health"]))
+	stat_row(_detail, tr("Criaturas queimadas"), Records.format_number(bd["kills"]))
+	stat_row(_detail, tr("Tempo sobrevivido"), Records.format_number(bd["survival"]))
+	stat_row(_detail, tr("Bônus de chefes"), Records.format_number(bd["bosses"]))
+	stat_row(_detail, tr("Bônus de vitória"), Records.format_number(bd["victory"]))
+	stat_row(_detail, tr("Bônus de vida restante"), Records.format_number(bd["health"]))
+	stat_row(_detail, tr("Subtotal"), Records.format_number(bd["subtotal"]))
 	stat_row(_detail, tr("Multiplicador da dificuldade"), "×%s" % DifficultyScreen._mult_text(bd["multiplier"]))
 
 	var upgrades: Array = run["upgrades"]
-	_detail.add_child(UiTheme.label(tr("Habilidades escolhidas (%d)") % upgrades.size(), 16, UiTheme.GOLD, true))
+	_detail.add_child(UiTheme.label(tr("Habilidades adquiridas (%d)") % upgrades.size(), 16, UiTheme.GOLD, true))
 	upgrade_chips(_detail, upgrades)
+	var relics: Array = run["relics"]
+	if not relics.is_empty():
+		var names := []
+		for r: String in relics:
+			names.append(tr(Balance.RELICS[r]["name"]))
+		_detail.add_child(UiTheme.label(tr("Relíquias: %s") % ", ".join(names), 14, Color(0.7, 0.9, 1.0)))

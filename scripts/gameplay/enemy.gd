@@ -1,24 +1,29 @@
 class_name Enemy
 extends Node2D
 ## Criatura da névoa: avança até o farol e o ataca ao encostar.
-## Os atributos vêm de Balance.ENEMIES[kind].
+## Os atributos vêm de Balance.ENEMIES[role]; a aparência (`art`) vem do mapa
+## e é desenhada por CreatureArt. Chefes estendem Boss e sobrescrevem _move().
 
 signal killed(enemy: Enemy)
 
 const DEATH_TIME := 0.3
 
-var kind := "mist"
+var kind := "basic" ## Papel (basic, fast, brute...) ou id do chefe.
+var art := "wraith"
 var max_hp := 10.0
 var hp := 10.0
 var speed := 50.0
 var radius := 12.0
 var damage := 4.0
 var xp_value := 1
-var color := Color(0.3, 0.2, 0.4)
+var score_value := 0
+var elite := false
 var dying := false
+var invulnerable := false
 var lighthouse: Lighthouse
 
 var _lit := 0.0
+var _stun := 0.0
 var _attack_cd := 0.0
 var _phase := 0.0
 var _lateral := 0.0
@@ -26,24 +31,34 @@ var _death_t := 0.0
 var _time := 0.0
 
 
-func setup(enemy_kind: String, hp_mult: float, damage_mult: float, rng: RandomNumberGenerator) -> void:
-	kind = enemy_kind
-	var data: Dictionary = Balance.ENEMIES[kind]
-	if data.get("boss", false):
-		hp_mult = 1.0 + (hp_mult - 1.0) * 0.5
+func setup(role: String, art_id: String, hp_mult: float, damage_mult: float, speed_mult: float, rng: RandomNumberGenerator, is_elite: bool = false) -> void:
+	kind = role
+	art = art_id
+	elite = is_elite
+	var data: Dictionary = Balance.ENEMIES[role]
 	max_hp = float(data["hp"]) * hp_mult
-	hp = max_hp
-	speed = float(data["speed"]) * rng.randf_range(0.9, 1.1)
+	speed = float(data["speed"]) * speed_mult * rng.randf_range(0.9, 1.1)
 	radius = float(data["radius"])
 	damage = float(data["damage"]) * damage_mult
 	xp_value = int(data["xp"])
-	color = data["color"]
+	score_value = int(data["score"])
+	if elite:
+		max_hp *= Balance.ELITE["hp"]
+		damage *= Balance.ELITE["damage"]
+		radius *= Balance.ELITE["radius"]
+		xp_value *= Balance.ELITE["xp"]
+		score_value *= Balance.ELITE["score"]
+	hp = max_hp
 	_phase = rng.randf() * TAU
-	_lateral = rng.randf_range(-1.0, 1.0)
+	_lateral = 0.0 if role == "boulder" else rng.randf_range(-1.0, 1.0)
+
+
+func is_boss() -> bool:
+	return false
 
 
 func take_light(amount: float) -> void:
-	if dying:
+	if dying or invulnerable:
 		return
 	hp -= amount
 	_lit = 0.12
@@ -52,9 +67,18 @@ func take_light(amount: float) -> void:
 		killed.emit(self)
 
 
+## Paralisa por `seconds` (habilidade Clarão).
+func stun(seconds: float) -> void:
+	_stun = maxf(_stun, seconds)
+
+
 ## Some sem dar XP nem pontos (usado quando amanhece).
 func dissolve() -> void:
 	dying = true
+
+
+func reach() -> float:
+	return radius + Balance.LIGHTHOUSE_RADIUS
 
 
 func _process(delta: float) -> void:
@@ -65,49 +89,65 @@ func _process(delta: float) -> void:
 			queue_free()
 		queue_redraw()
 		return
-
 	_lit = maxf(0.0, _lit - delta)
-	var dist := position.length()
-	var reach := radius + Balance.LIGHTHOUSE_RADIUS
-	if dist > reach:
-		var dir := -position / dist
-		var side := dir.orthogonal() * sin(_time * 2.0 + _phase) * 0.4 * _lateral
-		var spd := speed * (Balance.LIT_SLOW if _lit > 0.0 else 1.0)
-		position += (dir + side).normalized() * spd * delta
-		if position.length() < reach:
-			position = position.normalized() * reach
-	else:
+	if _stun > 0.0:
+		_stun -= delta
+		queue_redraw()
+		return
+	_move(delta)
+	if _can_melee() and position.length() <= reach() + 0.5:
 		_attack_cd -= delta
 		if _attack_cd <= 0.0:
 			_attack_cd = Balance.ATTACK_INTERVAL
 			if lighthouse:
 				lighthouse.take_damage(damage)
+			if kind == "boulder":
+				dissolve() # A pedra se despedaça ao acertar.
 	queue_redraw()
+
+
+## Movimento padrão: avança até o farol, ondulando para os lados.
+func _move(delta: float) -> void:
+	var dist := position.length()
+	if dist <= reach():
+		return
+	var dir := -position / dist
+	var side := dir.orthogonal() * sin(_time * 2.0 + _phase) * 0.4 * _lateral
+	var slow := lighthouse.lit_slow if lighthouse else Balance.LIT_SLOW
+	var spd := speed * (slow if _lit > 0.0 else 1.0)
+	position += (dir + side).normalized() * spd * delta
+	if position.length() < reach():
+		position = position.normalized() * reach()
+
+
+func _can_melee() -> bool:
+	return not invulnerable
+
+
+## 0..1: quanto a criatura está "acesa" (queimando) neste instante.
+func lit_amount() -> float:
+	if dying:
+		return 1.0
+	return (0.55 + 0.25 * sin(_time * 40.0)) if _lit > 0.0 else 0.0
+
+
+func facing() -> Vector2:
+	return (-position).normalized() if position.length() > 1.0 else Vector2.RIGHT
 
 
 func _draw() -> void:
 	var t := _death_t / DEATH_TIME if dying else 0.0
+	var alpha := 1.0 - t
 	var r := radius * (1.0 + t * 0.8)
-	var a := 1.0 - t
-	var body := color
-	if _lit > 0.0 or dying:
-		body = body.lerp(Color(1.0, 0.55, 0.2), 0.55 + 0.25 * sin(_time * 40.0))
-
-	var pts := PackedVector2Array()
-	for i in 14:
-		var ang := TAU * i / 14.0
-		var wob := 1.0 + 0.12 * sin(ang * 3.0 + _time * 4.0 + _phase)
-		pts.append(Vector2.from_angle(ang) * r * wob)
-	draw_colored_polygon(pts, Color(body, 0.92 * a))
-	pts.append(pts[0])
-	draw_polyline(pts, Color(body.lightened(0.35), 0.8 * a), 1.5)
-
-	var face := (-position).normalized() if position.length() > 1.0 else Vector2.RIGHT
-	var side := face.orthogonal()
-	var eye := Color(1.0, 1.0, 0.8, a) if _lit > 0.0 else Color(0.75, 0.95, 1.0, a)
-	for s in [-1.0, 1.0]:
-		draw_circle(face * r * 0.35 + side * r * 0.3 * s, maxf(1.5, r * 0.13), eye)
-
-	if max_hp >= 60.0 and not dying and hp < max_hp:
+	if elite and not dying:
+		var pulse := 0.6 + 0.4 * sin(_time * 5.0 + _phase)
+		draw_circle(Vector2.ZERO, r * 1.9, Color(1.0, 0.35, 0.2, 0.1 * pulse))
+		draw_arc(Vector2.ZERO, r * 1.55, 0.0, TAU, 28, Color(1.0, 0.65, 0.25, 0.55 * pulse), 2.0)
+	CreatureArt.draw(self, art, r, _time, _phase, facing(), lit_amount(), alpha)
+	if _stun > 0.0 and not dying:
+		for i in 3:
+			var a := _time * 4.0 + i * TAU / 3.0
+			UiTheme.diamond(self, Vector2(cos(a) * r * 0.9, -r - 6.0 + sin(a) * 3.0), 3.0, Color(1.0, 0.95, 0.6, 0.9))
+	if max_hp >= 60.0 and not dying and hp < max_hp and not is_boss():
 		draw_rect(Rect2(-r, -r - 9.0, 2.0 * r, 3.0), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(-r, -r - 9.0, 2.0 * r * hp / max_hp, 3.0), Color(1.0, 0.6, 0.2))

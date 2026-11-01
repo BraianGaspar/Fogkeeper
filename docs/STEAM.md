@@ -16,7 +16,7 @@ Confirme valores e regras no Steamworks antes de agir: estas notas refletem o co
 - Durante o desenvolvimento, use o app id de teste 480 (Spacewar); troque pelo seu app id antes de enviar builds.
 - Conquistas sugeridas: primeira vitória, derrotar o Leviatã, vencer sem Paredes reforçadas, 5.000 criaturas queimadas no total.
 - Steam Cloud para `user://settings.cfg`, `user://records.json` e o futuro save de meta-progressão.
-- Leaderboards: uma por dificuldade (`fogkeeper_easy`, `_normal`, `_hard`), enviando `score` ao fim de cada partida em `Main._end_run()`. A pontuação já é calculada só em `Balance.score_breakdown()`, então basta enviar o total; o ranking local continua para jogo offline.
+- Leaderboards: uma por mapa e dificuldade (`fogkeeper_<mapa>_<dificuldade>`, ex. `fogkeeper_bay_hard`), enviando `score` ao fim de cada partida em `Main._end_run()`. A pontuação já é calculada só em `Balance.score_breakdown()`, então basta enviar o total; o ranking local continua para jogo offline.
 
 ## Pendente: exportar o .exe do jogo
 Hoje o jogo é aberto pelo Godot (atalho "Fogkeeper" na área de trabalho, que roda `Godot_v4.4.1-stable_win64.exe --path <pasta do projeto>`). Antes de distribuir:

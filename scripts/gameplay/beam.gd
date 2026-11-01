@@ -12,6 +12,7 @@ var half_angle := 0.25
 var dps := 10.0
 var intensity := 1.0
 var color := Color(1.0, 0.9, 0.62)
+var hot := false ## Sobrecarga: núcleo branco e mais intenso.
 
 
 func _ready() -> void:
@@ -52,13 +53,16 @@ func covers(rel: Vector2, radius: float) -> bool:
 func _draw() -> void:
 	_draw_cone(half_angle, range_px, 0.45 * intensity)
 	_draw_cone(half_angle * 0.35, range_px * 0.92, 0.3 * intensity)
+	if hot:
+		_draw_cone(half_angle * 0.5, range_px, 0.5, Color.WHITE)
 
 
-func _draw_cone(half: float, length: float, alpha: float) -> void:
+func _draw_cone(half: float, length: float, alpha: float, override: Color = Color.TRANSPARENT) -> void:
+	var tint := color if override.a == 0.0 else override
 	var pts := PackedVector2Array([Vector2.ZERO])
-	var cols := PackedColorArray([Color(color, alpha)])
+	var cols := PackedColorArray([Color(tint, alpha)])
 	for i in ARC_STEPS + 1:
 		var a := angle - half + 2.0 * half * i / ARC_STEPS
 		pts.append(Vector2.from_angle(a) * length)
-		cols.append(Color(color, 0.0))
+		cols.append(Color(tint, 0.0))
 	draw_polygon(pts, cols)

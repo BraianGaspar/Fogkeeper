@@ -56,11 +56,25 @@ static func draw(ci: CanvasItem, id: String, c: Vector2, s: float, col: Color) -
 			ci.draw_circle(c + Vector2(0, s * 0.25), s * 0.5, col)
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.46, s * 0.1), c + Vector2(0, -s * 0.85), c + Vector2(s * 0.46, s * 0.1)]), col)
 			ci.draw_circle(c + Vector2(-s * 0.15, s * 0.3), s * 0.14, Color(light, 0.7))
-		"easy", "normal", "hard":
-			var n := ["easy", "normal", "hard"].find(id) + 1
+		"flash":
+			for i in 12:
+				var a := TAU * i / 12.0
+				ci.draw_line(c + Vector2.from_angle(a) * s * 0.35, c + Vector2.from_angle(a) * s * (0.95 if i % 2 == 0 else 0.7), col, 2.5)
+			ci.draw_circle(c, s * 0.3, light)
+		"overcharge":
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(s * 0.15, -s), c + Vector2(-s * 0.45, s * 0.1), c + Vector2(-s * 0.02, s * 0.1),
+				c + Vector2(-s * 0.15, s), c + Vector2(s * 0.45, -s * 0.15), c + Vector2(s * 0.02, -s * 0.15)]), col)
+		"bell":
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-s * 0.65, s * 0.45), c + Vector2(-s * 0.45, -s * 0.35), c + Vector2(0, -s * 0.7),
+				c + Vector2(s * 0.45, -s * 0.35), c + Vector2(s * 0.65, s * 0.45)]), col)
+			ci.draw_rect(Rect2(c.x - s * 0.75, c.y + s * 0.4, s * 1.5, s * 0.15), col)
+			ci.draw_circle(c + Vector2(0, s * 0.7), s * 0.15, light)
+		"easy", "normal", "medium", "hard", "impossible":
+			var n := ["easy", "normal", "medium", "hard", "impossible"].find(id) + 1
 			for i in n:
-				var x := c.x + (i - (n - 1) / 2.0) * s * 0.75
-				_flame(ci, Vector2(x, c.y + s * 0.2), s * 0.62, col)
+				var k := minf(1.0, 3.0 / n)
+				var x := c.x + (i - (n - 1) / 2.0) * s * 0.75 * k
+				_flame(ci, Vector2(x, c.y + s * 0.2), s * 0.62 * k, col)
 		_:
 			ci.draw_circle(c, s * 0.5, col)
 

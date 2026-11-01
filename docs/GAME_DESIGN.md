@@ -1,35 +1,63 @@
 # Fogkeeper — documento de design
 
 ## Pitch
-Você é um farol numa ilha cercada de névoa. Não pode se mover: só gira o feixe. As criaturas temem a luz, mas são muitas. Sobreviva 10 minutos até o amanhecer.
+Você é um farol numa ilha cercada de névoa. Não pode se mover: só gira o feixe. Criaturas mitológicas temem a luz, mas são muitas. Sobreviva da noite (18:00) até o amanhecer (06:00), que na partida são 10 minutos.
 
 ## Pilares
-1. **Mirar é decidir.** O feixe queima e também recolhe brasas (XP). Nunca torne a coleta automática demais (o raio de atração deve continuar pequeno) para não matar essa escolha.
-2. **Imobilidade como identidade.** Nada de mover o farol. Mobilidade vem de luz: mais feixes, feixes automáticos, pulsos.
-3. **Legível no caos.** Inimigos escuros com contorno claro; tudo que é luz usa mistura aditiva e cores quentes; o jogador deve entender a tela em meio a centenas de inimigos.
+1. **Mirar é decidir.** O feixe queima e também recolhe brasas (XP). Nunca torne a coleta automática demais (o raio de atração deve continuar pequeno) para não matar essa escolha. O Sino da Névoa é a exceção controlada: forte, mas com recarga longa.
+2. **Imobilidade como identidade.** Nada de mover o farol. Mobilidade vem de luz: mais feixes, feixes automáticos, pulsos, habilidades.
+3. **Legível no caos.** Criaturas escuras com contorno claro; tudo que é luz usa mistura aditiva e cores quentes; ataques fortes de chefes são telegrafados.
 4. **Sessões curtas.** Uma partida dura no máximo 10 minutos.
-5. **A noite conta uma história.** A partida vai do crepúsculo ao amanhecer; o cenário muda junto e o relógio do topo mostra quanto falta.
+5. **Cada mapa é um lugar.** Mapa tem história, clima, criaturas e chefes próprios, inspirados numa mitologia; a noite muda de cara ao longo da partida.
 
-## Estado atual (v0.2)
-- Feixe principal controlado por mouse, teclado ou controle, com velocidade de giro limitada.
-- Inimigos: Névoa (básico), Corredor (rápido, a partir de 0:45), Colosso (resistente, a partir de 2:00), Leviatã (chefe aos 5:00 e 9:00, com aviso e trompa).
-- Inimigos iluminados ficam mais lentos. Brasas somem após 14 s se não forem recolhidas.
-- 10 melhorias + "Óleo fresco" quando tudo estiver no máximo. Escolha em cartas com ícone, níveis e navegação por mouse, A/D, setas, 1-3, Enter ou controle.
-- Dificuldades Fácil, Normal e Difícil (multiplicadores em `Balance.DIFFICULTIES`; Normal é a referência).
-- Ciclo da noite: crepúsculo → noite de lua → tempestade (≈4:30–6:30, chuva e relâmpagos; o primeiro Leviatã chega no meio dela) → madrugada → amanhecer; na vitória o sol nasce e as criaturas se desfazem.
-- Cenário: ilha com casa do faroleiro, cais e barco, rochedos com espuma, naufrágio, boias piscando, reflexos da lua, gaivotas.
-- Áudio sintetizado em código: trilha ambiente, mar, queima, brasas, dano, pulso, chefe, trovão, menus.
-- Menus: título, dificuldade, configurações (idioma PT/EN/ES, qualidade, tela cheia, VSync, tremor, volumes geral/música/efeitos/dano), pausa, fim de partida.
-- Histórico de partidas com detalhes e ranking local com pontuação explicada.
+## Mapas
+| Mapa | Mitologia | Criaturas | Chefes (5:00 / 9:00) | Clima |
+|---|---|---|---|---|
+| Baía da Névoa | Mar e lendas gregas/bíblicas | Espectro da névoa, Sereia, Caranguejo de Karkinos | Leviatã, Kraken | Tempestade com relâmpagos |
+| Fiorde Congelado | Nórdica | Draugr, Lobo de gelo, Troll de gelo | Jötunn, Fenrir | Nevasca e aurora boreal |
+
+Os papéis (comum, rápido, robusto) têm as mesmas estatísticas nos dois mapas; mudam aparência, nome, chefes e clima.
+
+## Chefes
+- **Leviatã:** serpente segmentada que circula a ilha em espiral e mergulha (invulnerável) para ressurgir adiante. Só a cabeça recebe dano. Relíquia: Escama do Leviatã (+40 de vida máxima e cura total).
+- **Kraken:** fica na borda, lança tentáculos que rastejam até o farol e cospe tinta que encurta o feixe. Relíquia: Olho do Kraken (+20% de alcance).
+- **Jötunn:** para a distância e arremessa pedras de gelo, que precisam ser queimadas no ar; avança a cada arremesso. Relíquia: Coração de Gelo (luz deixa criaturas ainda mais lentas).
+- **Fenrir:** corre em círculos, foge da luz e investe depois de marcar uma linha vermelha até o farol. Relíquia: Presa de Fenrir (giro +30%, dano +15%).
+
+Todo chefe: aviso 8 s antes (faixa vermelha, trompa, música de tensão), barra de vida própria, música de batalha, cura de 25 e bônus de pontos ao ser derrotado. No Difícil e no Impossível, enfurece com metade da vida.
+
+## Habilidades ativas
+| Habilidade | Efeito | Recarga |
+|---|---|---|
+| Clarão | Fere e atordoa tudo num raio de 230 | 24 s |
+| Sobrecarga | Feixe principal ×2,5 de dano, +30% de alcance, mais estreito, por 5 s | 20 s |
+| Sino da Névoa | Puxa todas as brasas e cura 10 | 30 s |
+
+## Dificuldades
+| Modo | O que muda além dos números |
+|---|---|
+| Fácil | Farol +20% de vida, brasas duram 16 s |
+| Normal | Referência |
+| Médio | Elites (4%), brasas duram 11 s, XP por nível +10% |
+| Difícil | Elites (8%), brasas duram 9 s, chefes enfurecem, XP +20% |
+| Impossível | Elites (15%), brasas duram 6 s, chefes enfurecem, chefe extra às 7:00, farol −25%, névoa densa, XP +35% |
+
+O XP necessário por nível subiu em todos os modos na v0.3 (a progressão estava rápida demais).
 
 ## Pontuação
-Criaturas queimadas (10 Névoa, 12 Corredor, 40 Colosso, 750 Leviatã) + 5 por segundo vivo + 5.000 pela vitória + até 2.000 pela vida restante ao amanhecer, tudo multiplicado pela dificuldade (×0,5 / ×1 / ×1,6). Empates: maior nível, depois quem fez primeiro.
+Criaturas queimadas (10 a 40 por criatura; elites valem 3×) + 5 por segundo vivo + 1.500 por chefe + 5.000 pela vitória + até 2.000 pela vida restante, e o subtotal é multiplicado pela dificuldade (×0,5 / ×1 / ×1,3 / ×1,7 / ×2,5). Empates: maior nível, depois quem fez primeiro.
+
+## Estado atual (v0.3)
+- Fluxo: título → mapa (com história) → farol (prévia) → dificuldade → partida.
+- Configurações: idioma (PT/EN/ES); controles com troca de teclas, conflito resolvido por troca e "redefinir padrão"; gráficos (qualidade, modo de tela, resolução, VSync, tremor, partículas, clima, relâmpagos, névoa); áudio (volumes, dispositivo de saída, 9 grupos de som liga/desliga).
+- Avisos em fila numa camada acima dos menus, registro de eventos no HUD e na pausa; a escolha de melhoria espera o aviso de chefe ser lido.
+- Fim de partida com horário da derrota na história, quanto faltava, próximo marco, pontuação por critério e posição ("1º lugar").
+- Histórico e ranking com mapa e farol; ranking filtrável por dificuldade e mapa.
 
 ## Próximos passos sugeridos (ordem de valor)
-1. **Playtest humano das dificuldades** e ajuste fino de Fácil/Difícil (o bot só mede o Normal).
-2. **Variedade de inimigos com mecânica:** um que se esconde da luz (recua e volta), um que se divide, um que apaga o feixe temporariamente ao morrer.
-3. **Sinergias entre melhorias** (estilo "evolução"): ex. Lente extra no máximo + Pulso → feixes disparam pulsos nas pontas.
-4. **Meta-progressão leve** entre partidas: moeda (pérolas) para desbloquear faroleiros com habilidades iniciais diferentes. Salvar com `ConfigFile` em `user://`.
-5. **Ranking online** via leaderboards da Steam (ver `docs/STEAM.md`), mantendo o local para jogo offline.
-6. **Modo infinito** depois do amanhecer, para placar.
-7. **Áudio e arte finais:** os sons sintetizados servem de base; trocar por gravações/composição melhora muito. Manter o estilo vetorial é uma opção legítima.
+1. **Playtest humano** das cinco dificuldades e dos quatro chefes (o bot não reage a telegrafias).
+2. **Mais um mapa** (ex.: deserto de sal / mitologia egípcia, ou pântano / folclore brasileiro com Boitatá e Mapinguari).
+3. **Sinergias entre melhorias** (estilo "evolução").
+4. **Meta-progressão leve:** pérolas para desbloquear faróis com habilidades iniciais diferentes (hoje eles são só visuais, de propósito).
+5. **Ranking online** via leaderboards da Steam (`docs/STEAM.md`).
+6. **Áudio e arte finais:** sons e músicas sintetizados são base; composição gravada melhora muito.
