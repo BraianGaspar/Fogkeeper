@@ -26,7 +26,7 @@ var _death_t := 0.0
 var _time := 0.0
 
 
-func setup(enemy_kind: String, hp_mult: float, rng: RandomNumberGenerator) -> void:
+func setup(enemy_kind: String, hp_mult: float, damage_mult: float, rng: RandomNumberGenerator) -> void:
 	kind = enemy_kind
 	var data: Dictionary = Balance.ENEMIES[kind]
 	if data.get("boss", false):
@@ -35,7 +35,7 @@ func setup(enemy_kind: String, hp_mult: float, rng: RandomNumberGenerator) -> vo
 	hp = max_hp
 	speed = float(data["speed"]) * rng.randf_range(0.9, 1.1)
 	radius = float(data["radius"])
-	damage = float(data["damage"])
+	damage = float(data["damage"]) * damage_mult
 	xp_value = int(data["xp"])
 	color = data["color"]
 	_phase = rng.randf() * TAU
@@ -50,6 +50,11 @@ func take_light(amount: float) -> void:
 	if hp <= 0.0:
 		dying = true
 		killed.emit(self)
+
+
+## Some sem dar XP nem pontos (usado quando amanhece).
+func dissolve() -> void:
+	dying = true
 
 
 func _process(delta: float) -> void:

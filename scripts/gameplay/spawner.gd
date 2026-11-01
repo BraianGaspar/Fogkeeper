@@ -1,7 +1,7 @@
 class_name Spawner
 extends Node
 ## Cria inimigos na borda da tela conforme o tempo de partida.
-## Ritmo e composição vêm de Balance.
+## Ritmo e composição vêm de Balance, ajustados pela dificuldade.
 
 signal enemy_spawned(enemy: Enemy)
 
@@ -9,6 +9,8 @@ var enemies_root: Node2D
 var lighthouse: Lighthouse
 var rng: RandomNumberGenerator
 var elapsed := 0.0 ## Definido pelo Main a cada quadro.
+var difficulty := "normal"
+var active := false
 
 var _timer := 0.0
 var _boss_index := 0
@@ -21,11 +23,12 @@ func reset() -> void:
 
 
 func _process(delta: float) -> void:
-	if lighthouse == null:
+	if lighthouse == null or not active:
 		return
+	var diff: Dictionary = Balance.DIFFICULTIES[difficulty]
 	_timer -= delta
 	if _timer <= 0.0:
-		_timer += Balance.spawn_interval(elapsed)
+		_timer += Balance.spawn_interval(elapsed) / float(diff["spawn"])
 		for i in Balance.group_size(elapsed):
 			spawn(_pick_kind())
 	if _boss_index < Balance.BOSS_TIMES.size() and elapsed >= Balance.BOSS_TIMES[_boss_index]:
@@ -34,8 +37,9 @@ func _process(delta: float) -> void:
 
 
 func spawn(kind: String) -> Enemy:
+	var diff: Dictionary = Balance.DIFFICULTIES[difficulty]
 	var e := Enemy.new()
-	e.setup(kind, Balance.hp_multiplier(elapsed), rng)
+	e.setup(kind, Balance.hp_multiplier(elapsed) * float(diff["enemy_hp"]), float(diff["enemy_damage"]), rng)
 	e.lighthouse = lighthouse
 	var view := get_viewport().get_visible_rect().size
 	if view.length() < 100.0:

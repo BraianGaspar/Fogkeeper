@@ -136,6 +136,7 @@ func _fire_pulse() -> void:
 	w.damage = Balance.PULSE_DAMAGE * (1.0 + 0.4 * (pulse_level - 1)) * (beam_dps / Balance.BEAM_DPS)
 	w.enemies_root = enemies_root
 	effects_root.add_child(w)
+	Sfx.play(&"pulse")
 
 
 func _draw() -> void:

@@ -10,3 +10,4 @@ if grep -qE "SCRIPT ERROR|Parse Error|ERROR:" <<<"$log"; then
   echo "$log" | grep -E "SCRIPT ERROR|Parse Error|ERROR:|at:" ; exit 1
 fi
 echo "OK: projeto carrega e roda sem erros."
+bash tools/i18n_check.sh

@@ -19,6 +19,13 @@ const LIST := [
 const FALLBACK := {"id": "fresh_oil", "name": "Óleo fresco", "desc": "Recupera 30 de vida.", "max": 999}
 
 
+static func find(id: String) -> Dictionary:
+	for u: Dictionary in LIST:
+		if u["id"] == id:
+			return u
+	return FALLBACK if id == FALLBACK["id"] else {"id": id, "name": id, "desc": "", "max": 1}
+
+
 static func roll(levels: Dictionary, rng: RandomNumberGenerator, count: int = 3) -> Array:
 	var pool: Array = []
 	for u in LIST:

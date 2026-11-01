@@ -1,40 +1,111 @@
 class_name Fog
 extends Node2D
-## Manchas de névoa que derivam lentamente sobre o mar, mais uma vinheta escura.
+## Camada acima dos inimigos: névoa que deriva, chuva e relâmpagos da
+## tempestade, gaivotas no crepúsculo e no amanhecer, e a vinheta escura.
+## Cores e intensidades seguem DayCycle.p. Puramente visual.
 
-const COUNT := 18
-const AREA := Vector2(1700, 1100)
+const AREA := Vector2(2300, 1200)
+const BLOBS := [10, 14, 18] ## Por qualidade: baixa, média, alta.
+const BLOB_LAYERS := [4, 6, 8]
+const RAIN := [60, 140, 240]
+const BIRDS := 6
 
 var _blobs: Array[Dictionary] = []
+var _rain: Array[Vector3] = [] # x, y = posição base; z = velocidade
+var _birds: Array[Vector3] = [] # x, y = posição base; z = fase
+var _time := 0.0
+var _flash := 0.0
+var _next_flash := 3.0
+var _rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
 	z_index = 3
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 11
-	for i in COUNT:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_rng.seed = 11
+	for i in BLOBS[2]:
 		_blobs.append({
-			"pos": Vector2(rng.randf_range(-AREA.x, AREA.x), rng.randf_range(-AREA.y, AREA.y)) * 0.5,
-			"vel": Vector2(rng.randf_range(6.0, 16.0), rng.randf_range(-4.0, 4.0)),
-			"r": rng.randf_range(90.0, 200.0),
+			"pos": Vector2(_rng.randf_range(-AREA.x, AREA.x), _rng.randf_range(-AREA.y, AREA.y)) * 0.5,
+			"vel": Vector2(_rng.randf_range(6.0, 16.0), _rng.randf_range(-4.0, 4.0)),
+			"r": _rng.randf_range(90.0, 200.0),
 		})
+	for i in RAIN[2]:
+		_rain.append(Vector3(_rng.randf_range(-0.5, 0.5) * AREA.x, _rng.randf_range(-0.5, 0.5) * AREA.y, _rng.randf_range(700.0, 1000.0)))
+	for i in BIRDS:
+		_birds.append(Vector3(_rng.randf_range(-0.5, 0.5) * AREA.x, _rng.randf_range(-320.0, 320.0), _rng.randf() * TAU))
 
 
 func _process(delta: float) -> void:
+	_time += delta
+	var storm: float = DayCycle.p["storm"]
 	for b in _blobs:
-		var p: Vector2 = b["pos"] + b["vel"] * delta
+		var p: Vector2 = b["pos"] + b["vel"] * delta * (1.0 + storm * 2.0)
 		if p.x > AREA.x * 0.5 + 200.0:
 			p.x = -AREA.x * 0.5 - 200.0
 		b["pos"] = p
+	_flash = maxf(0.0, _flash - delta * 2.5)
+	if storm > 0.6:
+		_next_flash -= delta
+		if _next_flash <= 0.0:
+			_next_flash = _rng.randf_range(3.0, 8.0)
+			_flash = 1.0
+			var pitch := _rng.randf_range(0.85, 1.1)
+			get_tree().create_timer(_rng.randf_range(0.2, 0.7), true).timeout.connect(
+				func() -> void: Sfx.play(&"thunder", pitch))
 	queue_redraw()
 
 
 func _draw() -> void:
-	for b in _blobs:
+	var p := DayCycle.p
+	var q := clampi(Settings.quality, 0, 2)
+	var fog_color: Color = p["fog"]
+	var fog_a: float = p["fog_a"]
+	var storm: float = p["storm"]
+
+	for i in BLOBS[q]:
+		var b: Dictionary = _blobs[i]
 		var r: float = b["r"]
-		for i in 8:
-			draw_circle(b["pos"], r * (1.0 - i * 0.11), Color(0.55, 0.5, 0.68, 0.009))
-	var view := get_viewport_rect().size
+		var layers: int = BLOB_LAYERS[q]
+		var a := 0.072 / layers * fog_a
+		for j in layers:
+			draw_circle(b["pos"], r * (1.0 - j * 0.88 / layers), Color(fog_color, a))
+
+	_draw_birds(maxf(p["dusk"], p["dawn"]))
+	if storm > 0.01:
+		_draw_rain(q, storm)
+
+	var rect := Background.visible_rect(self)
+	var view := rect.size
 	var edge := maxf(view.length() * 0.5, 600.0)
+	var vignette := Color(0.0, 0.0, 0.02).lerp(Color(0.12, 0.06, 0.05), p["dawn"])
+	var va: float = 0.06 * (1.0 - 0.5 * p["dawn"]) + 0.03 * storm
 	for i in 16:
-		draw_arc(Vector2.ZERO, edge + 80.0 - i * 18.0, 0.0, TAU, 128, Color(0.0, 0.0, 0.02, 0.06), 20.0)
+		draw_arc(rect.get_center(), edge + 80.0 - i * 18.0, 0.0, TAU, 128, Color(vignette, va), 20.0)
+
+	if _flash > 0.0:
+		var flicker := _flash * (0.6 + 0.4 * sin(_time * 70.0))
+		draw_rect(rect.grow(40.0), Color(0.85, 0.9, 1.0, 0.35 * flicker))
+
+
+func _draw_rain(q: int, storm: float) -> void:
+	var fall := Vector2(-0.25, 1.0)
+	var col := Color(0.7, 0.8, 0.95, 0.22 * storm)
+	for i in RAIN[q]:
+		var r := _rain[i]
+		var y := fposmod(r.y + _time * r.z + AREA.y * 0.5, AREA.y) - AREA.y * 0.5
+		var x := fposmod(r.x + fall.x * _time * r.z + AREA.x * 0.5, AREA.x) - AREA.x * 0.5
+		draw_line(Vector2(x, y), Vector2(x, y) + fall * 16.0, col, 1.2)
+
+
+func _draw_birds(light: float) -> void:
+	if light <= 0.05:
+		return
+	for b in _birds:
+		var x := fposmod(b.x + _time * 38.0 + AREA.x * 0.5, AREA.x) - AREA.x * 0.5
+		var pos := Vector2(x, b.y + sin(_time * 0.7 + b.z) * 14.0)
+		var flap := sin(_time * 7.0 + b.z) * 4.0
+		var shadow := pos + Vector2(14, 22)
+		for target: Array in [[shadow, Color(0, 0, 0, 0.18 * light)], [pos, Color(0.12, 0.1, 0.12, 0.85 * light)]]:
+			var c: Vector2 = target[0]
+			var col: Color = target[1]
+			draw_polyline(PackedVector2Array([c + Vector2(-9, -flap), c + Vector2(-3, 1), c, c + Vector2(3, 1), c + Vector2(9, -flap)]), col, 1.8)
