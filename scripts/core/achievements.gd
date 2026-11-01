@@ -7,7 +7,7 @@ const LIST := [
 	{"id": "first_light", "name": "Primeira luz", "desc": "Termine uma partida."},
 	{"id": "apprentice", "name": "Aprendiz de faroleiro", "desc": "Conclua o tutorial."},
 	{"id": "dawn", "name": "Amanhecer", "desc": "Veja o amanhecer em qualquer mapa."},
-	{"id": "three_seas", "name": "Guardião das três águas", "desc": "Veja o amanhecer nos três mapas."},
+	{"id": "three_seas", "name": "Guardião de todas as águas", "desc": "Veja o amanhecer em todos os mapas."},
 	{"id": "hard_dawn", "name": "Noite difícil", "desc": "Veja o amanhecer no Difícil."},
 	{"id": "impossible_dawn", "name": "O impossível", "desc": "Veja o amanhecer no Impossível."},
 	{"id": "untouched", "name": "Intocado", "desc": "Veja o amanhecer com 90% da vida ou mais."},
@@ -24,6 +24,10 @@ const LIST := [
 	{"id": "boss_iara", "name": "Ouvidos tapados", "desc": "Derrote a Iara."},
 	{"id": "boss_boitata", "name": "Fogo contra fogo", "desc": "Derrote o Boitatá."},
 	{"id": "boss_cuca", "name": "Nana, neném", "desc": "Derrote a Cuca."},
+	{"id": "boss_umibozu", "name": "Balde sem fundo", "desc": "Derrote o Umibōzu."},
+	{"id": "boss_kyubi", "name": "A verdadeira raposa", "desc": "Derrote a Kyūbi."},
+	{"id": "boss_sphinx", "name": "Enigma resolvido", "desc": "Derrote a Esfinge."},
+	{"id": "boss_apep", "name": "O sol nasce de novo", "desc": "Derrote Apep."},
 ]
 
 ## Quem mostra o aviso na tela: func(entry: Dictionary). Main define.

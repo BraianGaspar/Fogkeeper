@@ -17,6 +17,10 @@ const BOSS_SCRIPTS := {
 	"iara": preload("res://scripts/gameplay/bosses/iara.gd"),
 	"boitata": preload("res://scripts/gameplay/bosses/boitata.gd"),
 	"cuca": preload("res://scripts/gameplay/bosses/cuca.gd"),
+	"umibozu": preload("res://scripts/gameplay/bosses/umibozu.gd"),
+	"kyubi": preload("res://scripts/gameplay/bosses/kyubi.gd"),
+	"sphinx": preload("res://scripts/gameplay/bosses/sphinx.gd"),
+	"apep": preload("res://scripts/gameplay/bosses/apep.gd"),
 }
 
 var enemies_root: Node2D

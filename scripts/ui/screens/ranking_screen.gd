@@ -1,7 +1,8 @@
 class_name RankingScreen
 extends MenuScreen
 ## Ranking local: melhores pontuações, filtráveis por dificuldade e mapa,
-## com a posição do jogador ("1º lugar") e as regras de pontuação.
+## com a posição do jogador ("1º lugar"). A fórmula da pontuação fica só na
+## tela de fim de partida, linha por linha, para a tabela ficar limpa.
 
 const COLUMNS := [100, 160, 110, 60, 80, 160, 110, 150] ## Posição Jogador Pontos Nível Tempo Mapa Dificuldade Data
 const SHOWN := 50
@@ -39,7 +40,7 @@ func _build() -> void:
 	_footer = UiTheme.label("", 17, UiTheme.GOLD)
 	_footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_footer)
-	text(box, _rules_text(), 13, UiTheme.TEXT_DIM)
+	text(box, tr("Ranking deste computador. O ranking online chega com a versão da Steam."), 13, UiTheme.TEXT_DIM)
 	var back := add_button(box, tr("Voltar"), func() -> void: go_back(), &"none")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	back.custom_minimum_size.x = 220
@@ -121,12 +122,3 @@ func _row(cells: Array, color: Color, bg: Variant) -> Control:
 		row.add_child(l)
 	return panel
 
-
-func _rules_text() -> String:
-	var mults := []
-	for id: String in Balance.DIFFICULTY_ORDER:
-		mults.append("%s ×%s" % [difficulty_name(id), DifficultyScreen._mult_text(Balance.DIFFICULTIES[id]["score"])])
-	return tr("Pontuação = criaturas queimadas (%s a %s pontos cada) + %d por segundo sobrevivido + %s por chefe + %s pela vitória + até %s pela vida restante, vezes a dificuldade (%s). Empate: maior nível, depois quem fez primeiro.") % [
-		Balance.ENEMIES["basic"]["score"], Balance.ENEMIES["brute"]["score"], Balance.SCORE_PER_SECOND,
-		Records.format_number(Balance.SCORE_PER_BOSS), Records.format_number(Balance.SCORE_VICTORY),
-		Records.format_number(Balance.SCORE_HEALTH_BONUS), " · ".join(mults)] + "\n" + tr("Ranking deste computador. O ranking online chega com a versão da Steam.")

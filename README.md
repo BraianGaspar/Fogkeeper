@@ -26,16 +26,18 @@ Teclas do teclado podem ser trocadas em **Configurações → Controles**.
 | Pausar / voltar | Esc ou P | Start / B |
 
 ## O que tem no jogo
-- Três mapas com história própria, contada antes da partida: **Baía da Névoa** (Leviatã e Kraken), **Fiorde Congelado** (Jötunn e Fenrir) e **Rio Encantado**, do folclore brasileiro (Iara, Boitatá e Cuca), cada um com criaturas, clima e trilha diferentes.
+- Cinco mapas de cinco mitologias, com história contada antes da partida: **Baía da Névoa** (Leviatã e Kraken), **Fiorde Congelado** (Jötunn e Fenrir), **Rio Encantado**, do folclore brasileiro (Iara, Boitatá e Cuca), **Mar dos Yōkai** (Umibōzu e Kyūbi) e **Farol de Alexandria** (Esfinge e Apep), cada um com criaturas, clima e trilha diferentes.
 - Criaturas especiais que mexem na mira: ladras de brasas, espelhos que refletem a luz, mariposas que crescem na luz e névoas que apagam as brasas.
 - Evoluções de melhorias, troca e banimento de cartas.
 - Oficina do faroleiro: óleo ganho em toda partida compra melhorias permanentes e libera mapas, faróis e cartas.
-- Modo sem fim depois do amanhecer, 20 conquistas e um tutorial guiado.
+- Modo sem fim depois do amanhecer, 24 conquistas e um tutorial guiado.
+- Nove idiomas: português, inglês, espanhol, francês, alemão, russo, chinês simplificado, japonês e coreano.
+- Toque na tela: tocar nas habilidades e botão de pausa (base para a versão de celular).
 - Quatro faróis para escolher (só aparência; três se liberam na oficina).
 - Cinco dificuldades: Fácil, Normal, Médio, Difícil e Impossível, com regras próprias (elites, fúria dos chefes, chefe extra).
 - Habilidades ativas com recarga, chefes com mecânicas e relíquias, música que muda antes e durante as lutas.
 - Uma noite em 10 minutos, das 18:00 às 06:00, com tempestade ou nevasca no meio.
-- Configurações de idioma (PT/EN/ES), controles, gráficos e áudio (inclusive dispositivo de saída e sons individuais).
+- Configurações de idioma, controles, gráficos e áudio (inclusive dispositivo de saída e sons individuais).
 - Histórico de partidas e ranking local com posição ("1º lugar") e a regra de pontuação na tela.
 
 Preferências, histórico e progresso (`progress.json`) ficam na pasta de dados do Godot (`%APPDATA%/Godot/app_userdata/Fogkeeper/` no Windows).
@@ -45,6 +47,8 @@ Preferências, histórico e progresso (`progress.json`) ficam na pasta de dados 
 GODOT=/caminho/do/godot tools/check.sh        # carrega o projeto, acusa erros e textos sem tradução
 GODOT=/caminho/do/godot tools/autoplay.sh 10 --difficulty=hard --map=fjord  # partidas com bot
 GODOT=/caminho/do/godot tools/export.sh       # gera build/windows/Fogkeeper.exe (um arquivo só)
+godot --path . --script tools/store_art.gd     # arte da loja da Steam em docs/store/
+godot --path . --resolution 1920x1080 --fixed-fps 30 --write-movie build/trailer_en.avi -- --trailer=en  # trailer
 godot --path . -- --ui=levelup --screenshot=3 # abre uma tela e salva user://screenshot.png
 ```
 O bot mira no inimigo mais próximo e escolhe melhorias ao acaso; serve como termômetro de balanceamento. Outras opções de linha de comando estão no topo de `scripts/core/main.gd`.

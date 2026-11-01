@@ -21,6 +21,7 @@ scripts/core/
   progress.gd             Progressão entre partidas (user://progress.json): óleo, oficina, desbloqueios
   achievements.gd         Conquistas locais (unlock() é o ponto único para a Steam)
   tutorial.gd             Tutorial guiado em passos (as dicas de teclas só aparecem aqui)
+  trailer.gd              Trailer roteirizado (--trailer=en|pt com --write-movie)
   balance.gd              TODOS os números: criaturas, chefes, habilidades, dificuldades, pontuação
   maps.gd                 Mapas: nome, história, aparência de cada papel de criatura, chefes
   keepers.gd              Faróis selecionáveis (só aparência)
@@ -29,16 +30,17 @@ scripts/core/
   settings.gd             Preferências (user://settings.cfg): idioma, gráficos, áudio, teclas
   records.gd              Histórico e ranking local (user://records.json) + formatação ("1º lugar")
   day_cycle.gd            Paleta de luz por mapa (entardecer → amanhecer) e relógio 18:00–06:00
-  i18n.gd                 Traduções PT/EN/ES (chave = texto em português)
+  i18n.gd                 Traduções PT/EN/ES (chave = texto em português) e carga dos outros idiomas
+scripts/i18n/             FR, DE, RU, zh_CN, JA, KO: um arquivo por idioma (const T, mesmas chaves)
 scripts/audio/sfx.gd      Sons, trilha dinâmica (calma por mapa, tensão, batalha), grupos de som
 scripts/gameplay/
   enemy.gd                Criatura: papel + arte do mapa, elite, atordoamento e os papéis especiais
                           (thief, mirror, moth, fogbank)
   creature_art.gd         Desenho de cada criatura (espectro, draugr, saci, mapinguari...)
   bosses/                 Boss (base) e um script por chefe: leviathan, kraken, jotunn, fenrir,
-                          iara, boitata, cuca
+                          iara, boitata, cuca, umibozu, kyubi, sphinx, apep
   lighthouse.gd, lighthouse_art.gd, beam, ember, pulse_wave, spawner, abilities, burn_fx, ring_fx
-scripts/world/            background (Baía), fjord_background (Fiorde), river_background (Rio),
+scripts/world/            background (Baía), fjord_background (Fiorde), river_background (Rio), japan_background, desert_background,
                           fog (névoa, chuva, neve, aurora, vaga-lumes)
 scripts/ui/
   hud.gd                  HUD, barra do chefe, habilidades, fila de avisos, registro e troca de telas
@@ -51,12 +53,13 @@ tools/check.sh            Carrega o projeto em headless, falha se houver erro, r
 tools/i18n_check.sh       Falha se algum texto traduzível não estiver em i18n.gd
 tools/autoplay.sh         N partidas com bot: autoplay.sh 10 --difficulty=hard --map=fjord
 tools/export.sh           Gera icon.ico e exporta build/windows/Fogkeeper.exe (atalho da área de trabalho)
+tools/store_art.gd         Gera a arte da loja da Steam em docs/store/ (precisa de janela)
 ```
 
 ## Convenções
 
 - **Identificadores em inglês, textos do jogador em português.** Comentários e docstrings (`##`) em português.
-- **Todo texto visível passa por tradução.** Use `tr("texto em português")` (ou `TranslationServer.translate("...")` em função estática) com string literal e formate depois: `tr("Nível %d") % n`. Adicione `"texto": ["inglês", "espanhol"]` em `I18n.TEXTS`; textos de dados (`name`, `desc`, `story`, `tagline`, nomes de criaturas, ações e grupos de som) também. `tools/i18n_check.sh` acusa o que faltar. Labels são criados com `auto_translate_mode` desligado (via `UiTheme.label`), então traduza explicitamente.
+- **Todo texto visível passa por tradução.** Use `tr("texto em português")` (ou `TranslationServer.translate("...")` em função estática) com string literal e formate depois: `tr("Nível %d") % n`. Adicione `"texto": ["inglês", "espanhol"]` em `I18n.TEXTS`; textos de dados (`name`, `desc`, `story`, `tagline`, nomes de criaturas, ações e grupos de som) também. `tools/i18n_check.sh` acusa o que faltar. Labels são criados com `auto_translate_mode` desligado (via `UiTheme.label`), então traduza explicitamente. Texto novo também precisa entrar em cada `scripts/i18n/*.gd` (o i18n_check confere); para gerar a lista de chaves, despeje `I18n.TEXTS` em JSON e traduza por idioma.
 - **UI usa `UiTheme`.** Cores, fontes, botões e painéis saem de `UiTheme`/`OrnatePanel`. Telas novas herdam `MenuScreen`, montam o conteúdo em `_build()`, definem `default_focus` e tratam "voltar" em `go_back()`. Interações que pedem som chamam `Sfx.play(&"id")`; todo som novo entra num grupo de `Sfx.SOUND_GROUP` (o jogador pode desligá-lo).
 - **Avisos vão por `Hud.announce()`.** Eles entram numa fila, aparecem numa camada acima de qualquer menu e ficam no registro de eventos. Avisos de chefe usam `big = true`; a escolha de melhoria espera ~2 s depois deles (`Hud.alert_blocking()`).
 - **Visual segue mapa, dia e configurações.** Cenário lê `DayCycle.p` e `Settings.quality`/`particles`/`weather`/`lightning_flash`. Efeitos puramente visuais usam `randf()` global, nunca o `rng` da partida.

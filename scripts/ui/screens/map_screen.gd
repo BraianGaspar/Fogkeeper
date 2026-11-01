@@ -6,8 +6,9 @@ extends MenuScreen
 
 signal chosen(map_id: String)
 
-const CARD := Vector2(300, 330)
-const ACCENTS := {"bay": UiTheme.GOLD, "fjord": Color(0.55, 0.85, 1.0), "amazon": Color(0.55, 0.95, 0.5)}
+const CARD := Vector2(204, 330)
+const ACCENTS := {"bay": UiTheme.GOLD, "fjord": Color(0.55, 0.85, 1.0), "amazon": Color(0.55, 0.95, 0.5),
+	"japan": Color(1.0, 0.55, 0.65), "egypt": Color(1.0, 0.82, 0.4)}
 
 var _story: Label
 var _story_title: Label
@@ -15,7 +16,7 @@ var _status: Label
 
 
 func _build() -> void:
-	var box := centered_panel(1000, 20)
+	var box := centered_panel(1120, 20)
 	box.add_theme_constant_override("separation", 8)
 	title(box, tr("Escolha o mapa"), 36)
 	var cards: Array[ChoiceCard] = []
@@ -26,7 +27,7 @@ func _build() -> void:
 		var bosses := []
 		for b: String in m["bosses"]:
 			bosses.append(tr(Maps.CREATURE_NAMES[b]))
-		var card := ChoiceCard.new(tr(m["name"]), tr("Chefes: %s") % " · ".join(bosses), tr(m["tagline"]), CARD)
+		var card := ChoiceCard.new(tr(m["name"]), " · ".join(bosses), tr(m["tagline"]), CARD)
 		card.accent = ACCENTS.get(id, UiTheme.GOLD)
 		card.preview = draw_preview.bind(id)
 		card.locked = not Progress.is_unlocked(id)
@@ -36,7 +37,7 @@ func _build() -> void:
 		if id == Settings.map and not card.locked:
 			start = i
 	var picker := CardPicker.new()
-	picker.gap = 24.0
+	picker.gap = 14.0
 	picker.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	box.add_child(picker)
 
@@ -48,7 +49,7 @@ func _build() -> void:
 	story_box.add_child(_story_title)
 	_story = UiTheme.label("", 15, UiTheme.TEXT)
 	_story.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_story.custom_minimum_size = Vector2(900, 60)
+	_story.custom_minimum_size = Vector2(1040, 60)
 	story_box.add_child(_story)
 	box.add_child(story_panel)
 
@@ -96,6 +97,8 @@ static func draw_preview(ci: CanvasItem, area: Rect2, t: float, map_id: String) 
 	var c := area.get_center()
 	var fjord := map_id == "fjord"
 	var river := map_id == "amazon"
+	var japan := map_id == "japan"
+	var egypt := map_id == "egypt"
 	var top := Color(0.05, 0.08, 0.15)
 	var bottom := Color(0.02, 0.04, 0.08)
 	if fjord:
@@ -104,6 +107,12 @@ static func draw_preview(ci: CanvasItem, area: Rect2, t: float, map_id: String) 
 	elif river:
 		top = Color(0.05, 0.12, 0.09)
 		bottom = Color(0.12, 0.14, 0.08)
+	elif japan:
+		top = Color(0.06, 0.06, 0.18)
+		bottom = Color(0.03, 0.04, 0.1)
+	elif egypt:
+		top = Color(0.06, 0.1, 0.18)
+		bottom = Color(0.04, 0.06, 0.12)
 	ci.draw_polygon(PackedVector2Array([area.position, Vector2(area.end.x, area.position.y), area.end, Vector2(area.position.x, area.end.y)]),
 		PackedColorArray([top, top, bottom, bottom]))
 	if fjord:
@@ -139,6 +148,27 @@ static func draw_preview(ci: CanvasItem, area: Rect2, t: float, map_id: String) 
 			var blink := clampf(sin(t * 2.0 + i * 1.7) * 2.0, 0.0, 1.0)
 			ci.draw_circle(p, 4.0, Color(0.9, 1.0, 0.4, 0.25 * blink))
 			ci.draw_circle(p, 1.5, Color(0.95, 1.0, 0.6, blink))
+	elif japan:
+		# Lua grande, torii e lanternas do Obon.
+		ci.draw_circle(area.position + Vector2(area.size.x * 0.2, area.size.y * 0.3), 22.0, Color(1.0, 0.95, 0.85, 0.35))
+		var tg := area.position + Vector2(area.size.x * 0.78, area.size.y * 0.3)
+		ci.draw_rect(Rect2(tg + Vector2(-20, -4), Vector2(40, 6)), Color(0.82, 0.18, 0.12))
+		ci.draw_rect(Rect2(tg + Vector2(-22, -7), Vector2(44, 3)), Color(0.15, 0.1, 0.1))
+		for x: float in [-12.0, 12.0]:
+			ci.draw_circle(tg + Vector2(x, 0), 3.0, Color(0.75, 0.15, 0.1))
+		for i in 7:
+			var p := Vector2(area.position.x + fposmod(i * 61.0 + t * 8.0, area.size.x), area.position.y + area.size.y * (0.55 + 0.35 * sin(i * 2.3)))
+			ci.draw_circle(p, 6.0, Color(1.0, 0.6, 0.25, 0.2))
+			ci.draw_rect(Rect2(p - Vector2(2.5, 2.5), Vector2(5, 5)), Color(1.0, 0.8, 0.45))
+	elif egypt:
+		# Areia, pirâmides e colunas afundadas.
+		var shore := area.position.x + area.size.x * 0.72
+		ci.draw_rect(Rect2(shore, area.position.y, area.end.x - shore, area.size.y), Color(0.6, 0.48, 0.32))
+		var py := Vector2(shore + (area.end.x - shore) * 0.5, area.position.y + area.size.y * 0.35)
+		ci.draw_colored_polygon(PackedVector2Array([py + Vector2(-18, 12), py + Vector2(0, -12), py + Vector2(18, 12)]), Color(0.75, 0.6, 0.38))
+		ci.draw_colored_polygon(PackedVector2Array([py + Vector2(0, -12), py + Vector2(18, 12), py + Vector2(4, 12)]), Color(0.5, 0.38, 0.24))
+		for i in 3:
+			ci.draw_circle(area.position + Vector2(area.size.x * (0.12 + i * 0.1), area.size.y * 0.75), 5.0, Color(0.78, 0.7, 0.55))
 	else:
 		for i in 8:
 			var p := Vector2(area.position.x + area.size.x * (0.06 + i * 0.12), c.y + 40.0 + sin(i * 1.7) * 35.0)
@@ -152,6 +182,12 @@ static func draw_preview(ci: CanvasItem, area: Rect2, t: float, map_id: String) 
 	elif river:
 		island = Color(0.72, 0.6, 0.42)
 		grass = Color(0.16, 0.3, 0.14)
+	elif japan:
+		island = Color(0.42, 0.4, 0.38)
+		grass = Color(0.22, 0.3, 0.2)
+	elif egypt:
+		island = Color(0.78, 0.66, 0.46)
+		grass = Color(0.68, 0.56, 0.38)
 	ci.draw_circle(c + Vector2(0, 8), 44.0, Color(1, 1, 1, 0.12))
 	ci.draw_circle(c + Vector2(0, 8), 38.0, island)
 	ci.draw_circle(c + Vector2(0, 8), 30.0, grass)
@@ -180,6 +216,18 @@ static func draw_preview(ci: CanvasItem, area: Rect2, t: float, map_id: String) 
 		var head := m + Vector2(4, sin(t * 2.5) * 6.0)
 		for s: float in [-1.0, 1.0]:
 			ci.draw_circle(head + Vector2(2, s * 4.0), 3.0, Color(1.0, 1.0, 0.85))
+	elif japan:
+		ci.draw_set_transform(m, PI)
+		CreatureArt.kyubi(ci, 11.0, t, 0.0, 0.0, 1.0)
+		ci.draw_set_transform(Vector2.ZERO)
+	elif egypt:
+		# Apep: serpente escura de anéis dourados.
+		for i in range(8, -1, -1):
+			var p := m + Vector2(-i * 10.0, sin(t * 2.2 + i * 0.7) * 6.0)
+			ci.draw_circle(p, 8.0 - i * 0.5, Color(0.16, 0.08, 0.2))
+			if i % 2 == 0:
+				ci.draw_arc(p, 6.0 - i * 0.4, 0.0, TAU, 10, Color(0.85, 0.65, 0.2), 1.5)
+		ci.draw_circle(m + Vector2(6, sin(t * 2.2) * 6.0), 3.0, Color(0.9, 0.3, 1.0))
 	else:
 		for i in 7:
 			var p := m + Vector2(-i * 11.0, sin(t * 2.0 + i * 0.8) * 6.0)

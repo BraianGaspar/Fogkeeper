@@ -6,7 +6,7 @@ extends RefCounted
 ## scripts/world/ (classe com o mesmo `scenery`), arte das criaturas em
 ## CreatureArt e textos em I18n.
 
-const ORDER := ["bay", "fjord", "amazon"]
+const ORDER := ["bay", "fjord", "amazon", "japan", "egypt"]
 
 const LIST := {
 	"bay": {
@@ -36,6 +36,24 @@ const LIST := {
 			"moth": "mula", "fogbank": "fog_amazon", "tentacle": "boto", "boulder": "wisp"},
 		"bosses": ["iara", "boitata", "cuca"],
 	},
+	"japan": {
+		"name": "Mar dos Yōkai",
+		"tagline": "Lanternas no mar, portões torii e yōkai que sobem das ondas.",
+		"story": "Você assumiu o farol diante de uma vila de pescadores na noite do Obon, quando as famílias soltam lanternas no mar para guiar os mortos de volta. Os mais velhos avisaram: nessa noite os yōkai sobem das águas, o monge do mar pede um balde para afundar os barcos e uma raposa de nove caudas engana quem se perde na névoa.",
+		"scenery": "japan",
+		"creatures": {"basic": "funayurei", "fast": "kitsune", "brute": "oni", "thief": "tengu", "mirror": "kappa",
+			"moth": "chochin", "fogbank": "fog_japan", "tentacle": "hitodama", "boulder": "wave", "decoy": "kyubi"},
+		"bosses": ["umibozu", "kyubi"],
+	},
+	"egypt": {
+		"name": "Farol de Alexandria",
+		"tagline": "Ruínas de Faros, dunas e a serpente que tenta engolir o sol.",
+		"story": "Dizem que o primeiro farol do mundo ficava aqui, na ilha de Faros. Você reacendeu a chama sobre as ruínas para guiar os barcos que descem o Nilo à noite. Mas a luz acordou o que dormia sob as areias: múmias, os chacais de Anúbis, a Esfinge e seus enigmas, e Apep, a serpente que toda noite tenta engolir o sol.",
+		"scenery": "desert",
+		"creatures": {"basic": "mummy", "fast": "jackal", "brute": "sobek", "thief": "ibis", "mirror": "scarab",
+			"moth": "ba", "fogbank": "fog_egypt", "tentacle": "cobra", "boulder": "sandstone"},
+		"bosses": ["sphinx", "apep"],
+	},
 }
 
 ## Nome visível de cada criatura (arte), traduzido via I18n.
@@ -47,9 +65,14 @@ const CREATURE_NAMES := {
 	"corpo_seco": "Corpo-seco", "curupira": "Curupira", "mapinguari": "Mapinguari",
 	"saci": "Saci", "jabuti": "Jabuti encantado", "mula": "Mula sem cabeça", "fog_amazon": "Névoa da Matinta",
 	"boto": "Boto encantado", "wisp": "Fogo-fátuo",
+	"funayurei": "Funayūrei", "kitsune": "Kitsune", "oni": "Oni", "tengu": "Karasu-tengu", "kappa": "Kappa",
+	"chochin": "Chōchin-obake", "fog_japan": "Névoa dos afogados", "hitodama": "Hitodama", "wave": "Onda", "kyubi": "Kyūbi",
+	"mummy": "Múmia", "jackal": "Chacal de Anúbis", "sobek": "Crocodilo de Sobek", "ibis": "Íbis de Thoth", "scarab": "Escaravelho de ouro",
+	"ba": "Alma Ba", "fog_egypt": "Tempestade de areia", "cobra": "Naja de Apep", "sandstone": "Pedra de arenito",
 	"tentacle": "Tentáculo", "boulder": "Pedra de gelo",
 	"leviathan": "Leviatã", "kraken": "Kraken", "jotunn": "Jötunn", "fenrir": "Fenrir",
 	"iara": "Iara", "boitata": "Boitatá", "cuca": "Cuca",
+	"umibozu": "Umibōzu", "sphinx": "Esfinge", "apep": "Apep",
 }
 
 ## Subtítulo dos chefes na barra de vida.
@@ -57,6 +80,8 @@ const BOSS_TITLES := {
 	"leviathan": "Serpente das profundezas", "kraken": "Terror dos abismos",
 	"jotunn": "Gigante do gelo", "fenrir": "O lobo do fim do mundo",
 	"iara": "A mãe d'água", "boitata": "A cobra de fogo", "cuca": "A bruxa da mata",
+	"umibozu": "O monge do mar", "kyubi": "A raposa de nove caudas",
+	"sphinx": "A guardiã dos enigmas", "apep": "A serpente do caos",
 }
 
 

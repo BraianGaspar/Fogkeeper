@@ -5,7 +5,18 @@ extends RefCounted
 ## (ou TranslationServer.translate em funções estáticas) e adicione a linha
 ## aqui. Textos de dados (melhorias, dificuldades, eventos) também entram.
 
-const LANGUAGE_NAMES := {"pt_BR": "Português", "en": "English", "es": "Español"}
+const LANGUAGE_NAMES := {
+	"pt_BR": "Português", "en": "English", "es": "Español", "fr": "Français", "de": "Deutsch",
+	"ru": "Русский", "zh_CN": "简体中文", "ja": "日本語", "ko": "한국어",
+}
+
+## Outros idiomas: um arquivo por idioma em scripts/i18n/, com
+## `const T := {"texto em português": "tradução"}`. O que faltar cai no inglês.
+const EXTRA := {
+	"fr": preload("res://scripts/i18n/fr.gd"), "de": preload("res://scripts/i18n/de.gd"),
+	"ru": preload("res://scripts/i18n/ru.gd"), "zh_CN": preload("res://scripts/i18n/zh_CN.gd"),
+	"ja": preload("res://scripts/i18n/ja.gd"), "ko": preload("res://scripts/i18n/ko.gd"),
+}
 
 const TEXTS := {
 	# Menu principal e navegação
@@ -249,9 +260,6 @@ const TEXTS := {
 	# Ranking
 	"Posição": ["Position", "Posición"],
 	"Sua melhor posição (%s): %s, entre %d partidas": ["Your best position (%s): %s, out of %d matches", "Tu mejor posición (%s): %s, entre %d partidas"],
-	"Pontuação = criaturas queimadas (%s a %s pontos cada) + %d por segundo sobrevivido + %s por chefe + %s pela vitória + até %s pela vida restante, vezes a dificuldade (%s). Empate: maior nível, depois quem fez primeiro.": [
-		"Score = creatures burned (%s to %s points each) + %d per second survived + %s per boss + %s for victory + up to %s for remaining health, times difficulty (%s). Ties: higher level, then whoever did it first.",
-		"Puntuación = criaturas quemadas (%s a %s puntos cada una) + %d por segundo sobrevivido + %s por jefe + %s por la victoria + hasta %s por la vida restante, por la dificultad (%s). Empate: mayor nivel, luego quien lo hizo primero."],
 	# Configurações
 	"Controles": ["Controls", "Controles"],
 	"Ação": ["Action", "Acción"],
@@ -294,6 +302,59 @@ const TEXTS := {
 	"Avisos": ["Alerts", "Avisos"],
 	"Mar e vento": ["Sea and wind", "Mar y viento"],
 	"Espaço": ["Space", "Espacio"],
+	# v0.5: Mar dos Yōkai e Farol de Alexandria
+	"Mar dos Yōkai": ["Sea of Yōkai", "Mar de los Yōkai"],
+	"Lanternas no mar, portões torii e yōkai que sobem das ondas.": ["Lanterns on the sea, torii gates and yōkai rising from the waves.", "Linternas en el mar, puertas torii y yōkai que surgen de las olas."],
+	"Você assumiu o farol diante de uma vila de pescadores na noite do Obon, quando as famílias soltam lanternas no mar para guiar os mortos de volta. Os mais velhos avisaram: nessa noite os yōkai sobem das águas, o monge do mar pede um balde para afundar os barcos e uma raposa de nove caudas engana quem se perde na névoa.": ["You took over the lighthouse facing a fishing village on the night of Obon, when families float lanterns on the sea to guide the dead back home. The elders warned you: on this night the yōkai rise from the water, the sea monk asks for a bucket to sink the boats, and a nine-tailed fox tricks anyone lost in the fog.", "Tomaste el faro frente a una aldea de pescadores en la noche del Obon, cuando las familias sueltan linternas en el mar para guiar a los muertos de vuelta. Los mayores te advirtieron: esa noche los yōkai suben de las aguas, el monje del mar pide un balde para hundir los barcos y una zorra de nueve colas engaña a quien se pierde en la niebla."],
+	"O vento muda de repente: um tufão se aproxima...": ["The wind suddenly shifts: a typhoon is coming...", "El viento cambia de repente: se acerca un tifón..."],
+	"Farol de Alexandria": ["Lighthouse of Alexandria", "Faro de Alejandría"],
+	"Ruínas de Faros, dunas e a serpente que tenta engolir o sol.": ["Ruins of Pharos, dunes and the serpent that tries to swallow the sun.", "Ruinas de Faros, dunas y la serpiente que intenta tragarse el sol."],
+	"Dizem que o primeiro farol do mundo ficava aqui, na ilha de Faros. Você reacendeu a chama sobre as ruínas para guiar os barcos que descem o Nilo à noite. Mas a luz acordou o que dormia sob as areias: múmias, os chacais de Anúbis, a Esfinge e seus enigmas, e Apep, a serpente que toda noite tenta engolir o sol.": ["They say the world's first lighthouse stood here, on the island of Pharos. You relit the flame over the ruins to guide the boats sailing down the Nile at night. But the light woke what slept beneath the sands: mummies, the jackals of Anubis, the Sphinx and her riddles, and Apep, the serpent who tries to swallow the sun every night.", "Dicen que el primer faro del mundo estaba aquí, en la isla de Faros. Volviste a encender la llama sobre las ruinas para guiar los barcos que bajan por el Nilo de noche. Pero la luz despertó lo que dormía bajo la arena: momias, los chacales de Anubis, la Esfinge y sus enigmas, y Apep, la serpiente que cada noche intenta tragarse el sol."],
+	"O vento do deserto levanta uma tempestade de areia...": ["The desert wind raises a sandstorm...", "El viento del desierto levanta una tormenta de arena..."],
+	"Funayūrei": ["Funayūrei", "Funayūrei"],
+	"Kitsune": ["Kitsune", "Kitsune"],
+	"Oni": ["Oni", "Oni"],
+	"Karasu-tengu": ["Karasu-tengu", "Karasu-tengu"],
+	"Kappa": ["Kappa", "Kappa"],
+	"Chōchin-obake": ["Chōchin-obake", "Chōchin-obake"],
+	"Névoa dos afogados": ["Fog of the drowned", "Niebla de los ahogados"],
+	"Hitodama": ["Hitodama", "Hitodama"],
+	"Onda": ["Wave", "Ola"],
+	"Kyūbi": ["Kyūbi", "Kyūbi"],
+	"Umibōzu": ["Umibōzu", "Umibōzu"],
+	"O monge do mar": ["The sea monk", "El monje del mar"],
+	"A raposa de nove caudas": ["The nine-tailed fox", "La zorra de nueve colas"],
+	"Múmia": ["Mummy", "Momia"],
+	"Chacal de Anúbis": ["Jackal of Anubis", "Chacal de Anubis"],
+	"Crocodilo de Sobek": ["Crocodile of Sobek", "Cocodrilo de Sobek"],
+	"Íbis de Thoth": ["Ibis of Thoth", "Ibis de Thot"],
+	"Escaravelho de ouro": ["Golden scarab", "Escarabajo de oro"],
+	"Alma Ba": ["Ba soul", "Alma Ba"],
+	"Tempestade de areia": ["Sandstorm", "Tormenta de arena"],
+	"Naja de Apep": ["Cobra of Apep", "Cobra de Apep"],
+	"Pedra de arenito": ["Sandstone boulder", "Piedra de arenisca"],
+	"Esfinge": ["Sphinx", "Esfinge"],
+	"Apep": ["Apep", "Apep"],
+	"A guardiã dos enigmas": ["Keeper of riddles", "La guardiana de los enigmas"],
+	"A serpente do caos": ["The serpent of chaos", "La serpiente del caos"],
+	"Balde sem fundo": ["Bottomless bucket", "Balde sin fondo"],
+	"Ganha mais um feixe ao redor do farol.": ["Gain one more beam around the lighthouse.", "Gana un haz más alrededor del faro."],
+	"Hoshi no tama": ["Hoshi no tama", "Hoshi no tama"],
+	"A luz causa 20% mais dano e gira 15% mais rápido.": ["The light deals 20% more damage and turns 15% faster.", "La luz causa un 20% más de daño y gira un 15% más rápido."],
+	"Olho de Hórus": ["Eye of Horus", "Ojo de Horus"],
+	"Ganha um nível de Pulso de luz.": ["Gain a level of Light pulse.", "Gana un nivel de Pulso de luz."],
+	"Escama de Apep": ["Scale of Apep", "Escama de Apep"],
+	"Criaturas iluminadas ficam 25% mais lentas e o feixe alcança 10% mais longe.": ["Lit creatures are 25% slower and the beam reaches 10% farther.", "Las criaturas iluminadas van un 25% más lentas y el haz llega un 10% más lejos."],
+	"Veja o amanhecer no Médio ou acima": ["See the dawn on Medium or higher", "Ve el amanecer en Medio o más"],
+	"Guardião de todas as águas": ["Keeper of all waters", "Guardián de todas las aguas"],
+	"Veja o amanhecer em todos os mapas.": ["See the dawn on every map.", "Ve el amanecer en todos los mapas."],
+	"A verdadeira raposa": ["The real fox", "La zorra verdadera"],
+	"Derrote a Kyūbi.": ["Defeat the Kyūbi.", "Derrota a la Kyūbi."],
+	"Derrote o Umibōzu.": ["Defeat the Umibōzu.", "Derrota al Umibōzu."],
+	"Enigma resolvido": ["Riddle solved", "Enigma resuelto"],
+	"Derrote a Esfinge.": ["Defeat the Sphinx.", "Derrota a la Esfinge."],
+	"O sol nasce de novo": ["The sun rises again", "El sol sale de nuevo"],
+	"Derrote Apep.": ["Defeat Apep.", "Derrota a Apep."],
 	# v0.4: Rio Encantado, criaturas especiais e chefes do folclore
 	"Rio Encantado": ["Enchanted River", "Río Encantado"],
 	"Igarapés, mata fechada e as lendas que acordam quando a luz se acende.": ["Jungle creeks, dense forest and the legends that wake when the light comes on.", "Igarapés, selva cerrada y las leyendas que despiertan cuando se enciende la luz."],
@@ -505,3 +566,10 @@ static func setup() -> void:
 		es.add_message(key, TEXTS[key][1])
 	for t in [pt, en, es]:
 		TranslationServer.add_translation(t)
+	for locale: String in EXTRA:
+		var table: Dictionary = (EXTRA[locale] as GDScript).get_script_constant_map()["T"]
+		var tr_extra := Translation.new()
+		tr_extra.locale = locale
+		for key: String in TEXTS:
+			tr_extra.add_message(key, table.get(key, TEXTS[key][0]))
+		TranslationServer.add_translation(tr_extra)

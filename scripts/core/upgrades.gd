@@ -155,6 +155,17 @@ static func apply_relic(boss_id: String, lh: Lighthouse) -> void:
 			lh.beam_dps *= 1.25
 		"cuca":
 			lh.ability_cooldown *= 0.7
+		"umibozu":
+			lh.lens_count += 1
+			lh.rebuild_beams()
+		"kyubi":
+			lh.beam_dps *= 1.2
+			lh.turn_speed *= 1.15
+		"sphinx":
+			lh.pulse_level += 1
+		"apep":
+			lh.lit_slow *= 0.75
+			lh.beam_range *= 1.1
 
 
 ## Melhorias permanentes da oficina, aplicadas no começo de cada partida.

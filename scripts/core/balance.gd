@@ -45,6 +45,7 @@ const ENEMIES := {
 	# Lacaios criados por chefes.
 	"tentacle": {"hp": 26.0, "speed": 70.0, "radius": 10.0, "damage": 7.0, "xp": 1, "score": 15},
 	"boulder": {"hp": 20.0, "speed": 135.0, "radius": 13.0, "damage": 12.0, "xp": 0, "score": 5},
+	"decoy": {"hp": 30.0, "speed": 0.38, "radius": 26.0, "damage": 8.0, "xp": 0, "score": 5}, ## Ilusões da Kyūbi.
 }
 
 ## Criaturas de elite (Médio em diante): mais fortes e valiosas.
@@ -79,6 +80,15 @@ const BOSSES := {
 		"start_radius": 430.0, "blaze_time": 6.5, "dim_time": 3.5, "wisp_every": 1.8, "dim_damage": 1.6, "approach": 12.0},
 	"cuca": {"hp": 850.0, "speed": 40.0, "radius": 30.0, "damage": 0.0, "xp": 40,
 		"stand": 290.0, "cast_every": 7.0, "cast_time": 2.4, "interrupt": 0.08, "sleep_time": 4.5, "sleep_power": 0.35},
+	"umibozu": {"hp": 760.0, "speed": 18.0, "radius": 44.0, "damage": 18.0, "xp": 30,
+		"stand": 320.0, "reveal": 0.8, "wave_every": 4.0, "advance": 14.0},
+	"kyubi": {"hp": 760.0, "speed": 0.38, "radius": 28.0, "damage": 0.0, "xp": 40,
+		"stand": 290.0, "illusion_every": 10.0, "decoys": 3, "fire_every": 2.6},
+	"sphinx": {"hp": 820.0, "speed": 30.0, "radius": 40.0, "damage": 0.0, "xp": 30,
+		"stand": 300.0, "riddle_every": 9.0, "riddle_time": 6.0, "answer": 1.1, "weak_time": 5.0,
+		"weak_damage": 2.0, "strong_damage": 0.5, "punish_stones": 4},
+	"apep": {"hp": 900.0, "speed": 0.36, "radius": 30.0, "damage": 16.0, "xp": 40,
+		"start_radius": 430.0, "approach": 11.0, "eat_range": 0.4, "spawn_every": 2.8},
 }
 const BOSS_TIMES := [300.0, 540.0] ## Momentos dos chefes (o mapa diz quem aparece).
 const BOSS_WARNING := 8.0 ## Segundos de aviso antes de um chefe surgir.
@@ -95,6 +105,10 @@ const RELICS := {
 	"iara": {"name": "Pérola da Iara", "desc": "Brasas são puxadas de 50% mais longe e o farol regenera 0,5 de vida por segundo."},
 	"boitata": {"name": "Olho do Boitatá", "desc": "Toda a luz causa 25% mais dano."},
 	"cuca": {"name": "Caldeirão da Cuca", "desc": "Habilidades recarregam 30% mais rápido."},
+	"umibozu": {"name": "Balde sem fundo", "desc": "Ganha mais um feixe ao redor do farol."},
+	"kyubi": {"name": "Hoshi no tama", "desc": "A luz causa 20% mais dano e gira 15% mais rápido."},
+	"sphinx": {"name": "Olho de Hórus", "desc": "Ganha um nível de Pulso de luz."},
+	"apep": {"name": "Escama de Apep", "desc": "Criaturas iluminadas ficam 25% mais lentas e o feixe alcança 10% mais longe."},
 }
 
 # --- Habilidades ativas ---
@@ -188,10 +202,12 @@ const BASE_BANISHES := 0
 
 ## Desbloqueios: por óleo, ou de graça ao cumprir a meta ("goal").
 ## Metas: "midnight" (sobreviver até a meia-noite), "boss" (derrotar um
-## chefe), "dawn" (ver o amanhecer).
+## chefe), "dawn" (ver o amanhecer), "dawn_medium" (amanhecer no Médio ou acima).
 const UNLOCKS := [
 	{"id": "fjord", "kind": "map", "cost": 150, "goal": "midnight"},
 	{"id": "amazon", "kind": "map", "cost": 300, "goal": "boss"},
+	{"id": "japan", "kind": "map", "cost": 400, "goal": "dawn"},
+	{"id": "egypt", "kind": "map", "cost": 500, "goal": "dawn_medium"},
 	{"id": "stone", "kind": "keeper", "cost": 80, "goal": ""},
 	{"id": "iron", "kind": "keeper", "cost": 160, "goal": ""},
 	{"id": "crystal", "kind": "keeper", "cost": 240, "goal": "dawn"},

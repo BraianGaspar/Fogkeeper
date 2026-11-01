@@ -45,8 +45,8 @@ func _process(delta: float) -> void:
 			p.x = -AREA.x * 0.5 - 200.0
 		b["pos"] = p
 	_flash = maxf(0.0, _flash - delta * 2.5)
-	# Relâmpagos na tempestade da baía e no temporal do rio; no fiorde é nevasca.
-	if storm > 0.6 and DayCycle.map != "fjord" and Settings.weather:
+	# Relâmpagos na tempestade, no temporal e no tufão; no fiorde é nevasca, no Egito é areia.
+	if storm > 0.6 and DayCycle.map in ["bay", "amazon", "japan"] and Settings.weather:
 		_next_flash -= delta
 		if _next_flash <= 0.0:
 			_next_flash = _rng.randf_range(3.0, 8.0)
@@ -77,6 +77,13 @@ func _draw() -> void:
 		_draw_aurora(rect, p.get("aurora", 0.0))
 		if Settings.weather:
 			_draw_snow(q, storm)
+	elif DayCycle.map == "japan":
+		_draw_petals(q)
+		if storm > 0.01 and Settings.weather:
+			_draw_rain(q, storm)
+	elif DayCycle.map == "egypt":
+		if Settings.weather:
+			_draw_sand(q, storm)
 	elif DayCycle.map == "amazon":
 		_draw_fireflies(q, p["night"] * (1.0 - 0.7 * storm))
 		if storm > 0.01 and Settings.weather:
@@ -144,6 +151,33 @@ func _draw_rain(q: int, storm: float) -> void:
 		var y := fposmod(r.y + _time * r.z + AREA.y * 0.5, AREA.y) - AREA.y * 0.5
 		var x := fposmod(r.x + fall.x * _time * r.z + AREA.x * 0.5, AREA.x) - AREA.x * 0.5
 		draw_line(Vector2(x, y), Vector2(x, y) + fall * 16.0, col, 1.2)
+
+
+## Pétalas de cerejeira levadas pelo vento.
+func _draw_petals(q: int) -> void:
+	if not Settings.particles:
+		return
+	for i in [14, 30, 50][q]:
+		var r := _rain[i]
+		var y := fposmod(r.y + _time * (25.0 + fmod(r.z, 20.0)) + AREA.y * 0.5, AREA.y) - AREA.y * 0.5
+		var x := fposmod(r.x + _time * 30.0 + sin(_time * 1.3 + r.z) * 30.0 + AREA.x * 0.5, AREA.x) - AREA.x * 0.5
+		var spin := _time * 2.0 + r.z
+		draw_set_transform(Vector2(x, y), spin)
+		draw_rect(Rect2(-3, -1.5, 6, 3), Color(1.0, 0.75, 0.85, 0.75))
+	draw_set_transform(Vector2.ZERO)
+
+
+## Areia do deserto: poeira leve e, na tempestade, rajadas que tingem tudo.
+func _draw_sand(q: int, storm: float) -> void:
+	var count := int(RAIN[q] * (0.15 + 0.85 * storm))
+	for i in count:
+		var r := _rain[i]
+		var speed := r.z * (0.15 + storm * 0.6)
+		var x := fposmod(r.x - _time * speed + AREA.x * 0.5, AREA.x) - AREA.x * 0.5
+		var y := r.y + sin(_time * 2.0 + r.x) * 12.0
+		draw_line(Vector2(x, y), Vector2(x + 6.0 + storm * 14.0, y), Color(0.95, 0.8, 0.55, 0.25 + 0.3 * storm), 1.5)
+	if storm > 0.05:
+		draw_rect(Background.visible_rect(self).grow(40.0), Color(0.85, 0.65, 0.4, 0.2 * storm))
 
 
 ## Vaga-lumes piscando sobre a água e a mata do rio.

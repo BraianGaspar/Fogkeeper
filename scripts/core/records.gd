@@ -130,16 +130,34 @@ static func _normalize(r: Dictionary) -> Dictionary:
 	}
 
 
-## "1º lugar", "1st place", "1.º puesto".
+## "1º lugar", "1st place", "1.º puesto", "1er rang", "1. Platz"...
 static func ordinal(n: int) -> String:
-	if Settings.locale == "en":
-		var suffix := "th"
-		if n % 100 < 11 or n % 100 > 13:
-			suffix = ["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"][n % 10]
-		return "%d%s place" % [n, suffix]
-	if Settings.locale == "es":
-		return "%d.º puesto" % n
+	match Settings.locale:
+		"en":
+			var suffix := "th"
+			if n % 100 < 11 or n % 100 > 13:
+				suffix = ["th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"][n % 10]
+			return "%d%s place" % [n, suffix]
+		"es":
+			return "%d.º puesto" % n
+		"fr":
+			return "%d%s place" % [n, "re" if n == 1 else "e"]
+		"de":
+			return "%d. Platz" % n
+		"ru":
+			return "%d-е место" % n
+		"zh_CN":
+			return "第%d名" % n
+		"ja":
+			return "%d位" % n
+		"ko":
+			return "%d위" % n
 	return "%dº lugar" % n
+
+
+## Idiomas que escrevem números e datas no estilo asiático/inglês.
+static func _dot_decimal() -> bool:
+	return Settings.locale in ["en", "zh_CN", "ja", "ko"]
 
 
 static func _save() -> void:
@@ -155,13 +173,19 @@ static func _save() -> void:
 static func format_date(unix: int) -> String:
 	var bias := int(Time.get_time_zone_from_system().get("bias", 0))
 	var d := Time.get_datetime_dict_from_unix_time(unix + bias * 60)
-	if Settings.locale == "en":
+	if _dot_decimal():
 		return "%04d-%02d-%02d %02d:%02d" % [d["year"], d["month"], d["day"], d["hour"], d["minute"]]
+	if Settings.locale == "de" or Settings.locale == "ru":
+		return "%02d.%02d.%04d %02d:%02d" % [d["day"], d["month"], d["year"], d["hour"], d["minute"]]
 	return "%02d/%02d/%04d %02d:%02d" % [d["day"], d["month"], d["year"], d["hour"], d["minute"]]
 
 
 static func format_number(n: int) -> String:
-	var sep := "," if Settings.locale == "en" else "."
+	var sep := "."
+	if _dot_decimal():
+		sep = ","
+	elif Settings.locale == "fr" or Settings.locale == "ru":
+		sep = " "
 	var digits := str(absi(n))
 	var out := ""
 	for i in digits.length():

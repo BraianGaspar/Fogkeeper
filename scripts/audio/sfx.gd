@@ -38,6 +38,7 @@ const SOUND_GROUP := {
 }
 
 static var _instance: Sfx
+static var synchronous := false ## Gera os sons antes do primeiro quadro (gravação do trailer).
 
 var _streams: Dictionary = {}
 var _voices: Array[AudioStreamPlayer] = []
@@ -64,6 +65,11 @@ static func music(state: StringName) -> void:
 	if _instance and _instance._music_state != state:
 		_instance._music_state = state
 		_instance._apply_music()
+
+
+## Sons e músicas já sintetizados (o trailer espera por isso).
+static func is_ready() -> bool:
+	return _instance != null and not _instance._streams.is_empty()
 
 
 ## Escolhe a trilha calma do mapa.
@@ -118,7 +124,11 @@ func _ready() -> void:
 	_sea.volume_db = SEA_DB
 	add_child(_sea)
 	if DisplayServer.get_name() != "headless":
-		_task = WorkerThreadPool.add_task(_synthesize_all, false, "Sfx")
+		if synchronous:
+			_synthesize_all()
+			_use_synthesized.call_deferred()
+		else:
+			_task = WorkerThreadPool.add_task(_synthesize_all, false, "Sfx")
 
 
 func _exit_tree() -> void:
@@ -135,6 +145,10 @@ func _process(_delta: float) -> void:
 		return
 	WorkerThreadPool.wait_for_task_completion(_task)
 	_task = -1
+	_use_synthesized()
+
+
+func _use_synthesized() -> void:
 	_streams = _pending
 	_set_calm_stream()
 	_tracks[&"tension"].stream = _streams.get(&"music_tension")
@@ -233,6 +247,14 @@ func _synthesize_all() -> void:
 		[[146.8, 185.0, 220.0], [130.8, 164.8, 196.0], [174.6, 220.0, 261.6], [146.8, 185.0, 220.0],
 		[196.0, 246.9, 293.7], [130.8, 164.8, 196.0], [164.8, 207.7, 246.9], [146.8, 185.0, 220.0]],
 		[587.3, 659.3, 740.0, 880.0, 987.8, 1174.7], 47, 3.0)
+	s[&"music_japan"] = _render_music(
+		[[164.8, 220.0, 329.6], [174.6, 220.0, 261.6], [164.8, 246.9, 329.6], [110.0, 164.8, 220.0],
+		[164.8, 220.0, 329.6], [174.6, 220.0, 349.2], [123.5, 164.8, 246.9], [164.8, 220.0, 329.6]],
+		[659.3, 698.5, 880.0, 987.8, 1046.5, 1318.5], 59, 1.6)
+	s[&"music_egypt"] = _render_music(
+		[[146.8, 185.0, 220.0], [155.6, 196.0, 233.1], [146.8, 185.0, 220.0], [130.8, 155.6, 196.0],
+		[146.8, 185.0, 220.0], [196.0, 233.1, 293.7], [155.6, 196.0, 233.1], [146.8, 185.0, 220.0]],
+		[587.3, 622.3, 740.0, 784.0, 880.0, 932.3], 83, 2.0)
 	s[&"music_tension"] = _render_tension()
 	s[&"music_boss"] = _render_boss_music()
 	_pending = s

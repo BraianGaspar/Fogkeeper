@@ -185,6 +185,8 @@ static func check_goals(run: Dictionary) -> Array[String]:
 				met = int(run["bosses"]) > 0
 			"dawn":
 				met = bool(run["victory"])
+			"dawn_medium":
+				met = bool(run["victory"]) and run["difficulty"] in ["medium", "hard", "impossible"]
 		if met:
 			unlocked.append(id)
 			out.append(id)
@@ -200,6 +202,8 @@ static func goal_text(id: String) -> String:
 			return TranslationServer.translate("Derrote um chefe em qualquer mapa")
 		"dawn":
 			return TranslationServer.translate("Veja o amanhecer em qualquer mapa")
+		"dawn_medium":
+			return TranslationServer.translate("Veja o amanhecer no Médio ou acima")
 	return ""
 
 

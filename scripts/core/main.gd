@@ -16,6 +16,8 @@ extends Node2D
 ##                    pause, levelup, end, victory, boss, endless, tutorial
 ##   --cycle=T        fixa a hora do dia (segundos de partida) no cenário
 ##   --no-save        não grava progresso (testes que abrem o jogo normalmente)
+##   --locale=L       idioma só nesta execução (pt_BR, en, es, fr, de, ru, zh_CN, ja, ko)
+##   --trailer=L      grava o trailer (en ou pt); use com --write-movie (ver Trailer)
 ##   --tutorial       com --autoplay: o bot faz o tutorial inteiro (teste dos passos)
 
 enum State { TITLE, STORY, PLAYING, LEVEL_UP, PAUSED, GAME_OVER, VICTORY }
@@ -84,6 +86,8 @@ var _arg_keeper := ""
 var _arg_difficulty := ""
 var _no_save := false
 var _arg_tutorial := false
+var _arg_locale := ""
+var _trailer := ""
 
 
 func _ready() -> void:
@@ -104,13 +108,24 @@ func _ready() -> void:
 	Settings.map = map_id
 	Settings.keeper = keeper
 	Settings.difficulty = difficulty
+	if _arg_locale != "":
+		Settings.locale = _arg_locale
+	Sfx.synchronous = _trailer != ""
 	add_child(Sfx.new())
 	Settings.apply()
 	_build_world()
 	_build_hud()
 	_set_map(map_id)
 	Achievements.listener = _on_achievement
-	if autoplay and _arg_tutorial:
+	if _trailer != "":
+		Settings.locale = "en" if _trailer == "en" else "pt_BR"
+		Settings.apply()
+		var tr_node := Trailer.new()
+		tr_node.main = self
+		tr_node.lang = "en" if _trailer == "en" else "pt"
+		add_child(tr_node)
+		trailer_title()
+	elif autoplay and _arg_tutorial:
 		start_tutorial()
 	elif autoplay:
 		start_run(map_id, keeper, difficulty)
@@ -137,6 +152,11 @@ func _parse_args() -> void:
 			_screenshot_at = float(arg.get_slice("=", 1))
 		elif arg.begins_with("--ui="):
 			_ui_arg = arg.get_slice("=", 1)
+		elif arg.begins_with("--trailer="):
+			_trailer = arg.get_slice("=", 1)
+			autoplay = true
+		elif arg.begins_with("--locale="):
+			_arg_locale = arg.get_slice("=", 1)
 		elif arg == "--tutorial":
 			_arg_tutorial = true
 		elif arg == "--no-save":
@@ -220,6 +240,10 @@ func _build_hud() -> void:
 	hud.story_finished.connect(_begin_night)
 	hud.endless_pressed.connect(continue_endless)
 	hud.tutorial_requested.connect(start_tutorial)
+	hud.pause_requested.connect(func() -> void:
+		if state == State.PLAYING:
+			_set_paused(true)
+	)
 
 
 ## Troca cenário, paleta e trilha calma para o mapa.
@@ -228,7 +252,7 @@ func _set_map(id: String) -> void:
 	DayCycle.set_map(id)
 	Sfx.set_map(id)
 	var scenery: String = Maps.get_map(id)["scenery"]
-	var want: Script = {"fjord": FjordBackground, "river": RiverBackground}.get(scenery, Background)
+	var want: Script = {"fjord": FjordBackground, "river": RiverBackground, "japan": JapanBackground, "desert": DesertBackground}.get(scenery, Background)
 	if background.get_script() != want:
 		background.queue_free()
 		background = want.new()
@@ -427,7 +451,7 @@ func _process(delta: float) -> void:
 	if _ember_timer <= 0.0:
 		_ember_streak = 0
 	# No menu principal a câmera desliza para a esquerda e o farol fica à direita.
-	var cam_target := TITLE_CAMERA if state == State.TITLE else Vector2.ZERO
+	var cam_target := TITLE_CAMERA if state == State.TITLE and _trailer == "" else Vector2.ZERO
 	camera.position = camera.position.lerp(cam_target, 1.0 - exp(-delta * 4.0))
 
 	match state:
@@ -443,7 +467,7 @@ func _process(delta: float) -> void:
 	if _cycle_arg >= 0.0:
 		DayCycle.update(_cycle_arg)
 
-	var shot_clock := elapsed if autoplay else _clock
+	var shot_clock := elapsed if autoplay and _trailer == "" else _clock
 	if _screenshot_at > 0.0 and shot_clock >= _screenshot_at:
 		_screenshot_at = -1.0
 		_take_screenshot()
@@ -495,6 +519,11 @@ func _night_survived() -> void:
 
 func _update_aim() -> void:
 	if autoplay:
+		# Diante de um enigma da Esfinge, o bot responde (como um jogador atento).
+		for node in enemies_root.get_children():
+			if node is Sphinx and (node as Sphinx).riddling():
+				lighthouse.target_angle = (node as Sphinx).answer_angle()
+				return
 		var target := _closest_enemy()
 		if target:
 			lighthouse.target_angle = target.position.angle()
@@ -518,8 +547,10 @@ func _update_aim() -> void:
 	if mouse_screen.distance_to(_last_mouse) > 2.0:
 		_using_mouse = true
 		_last_mouse = mouse_screen
-	if _using_mouse:
+	if _using_mouse and not hud.pointer_on_controls():
 		lighthouse.target_angle = (get_global_mouse_position() - camera.offset).angle()
+	elif _using_mouse:
+		lighthouse.target_angle = lighthouse.aim_angle
 	else:
 		lighthouse.target_angle = lighthouse.aim_angle
 
@@ -801,7 +832,7 @@ func _on_ability_used(i: int) -> void:
 # --- Efeitos ------------------------------------------------------------------
 
 func _ring_fx(at: Vector2, radius: float, color: Color, duration: float, width: float) -> void:
-	if not Settings.particles or autoplay:
+	if not Settings.particles or (autoplay and _trailer == ""):
 		return
 	var fx := RingFx.new()
 	fx.position = at
@@ -814,7 +845,7 @@ func _ring_fx(at: Vector2, radius: float, color: Color, duration: float, width: 
 
 ## Congela a ação por um instante nos golpes fortes (pode ser desligado).
 func _hit_stop(seconds: float) -> void:
-	if not Settings.hit_stop or autoplay or Engine.time_scale < 1.0:
+	if not Settings.hit_stop or (autoplay and _trailer == "") or Engine.time_scale < 1.0:
 		return
 	Engine.time_scale = 0.08
 	get_tree().create_timer(seconds, true, false, true).timeout.connect(func() -> void: Engine.time_scale = 1.0)
@@ -829,7 +860,7 @@ func _on_lighthouse_damaged(amount: float) -> void:
 
 
 func _on_lighthouse_died() -> void:
-	if tutorial:
+	if tutorial or _trailer != "":
 		lighthouse.revive()
 		hud.announce(tr("O farol foi reacendido. Tente de novo!"))
 		return
@@ -910,15 +941,16 @@ func _end_run(victory: bool) -> void:
 		get_tree().quit()
 		return
 	var was_endless := endless
+	var cycle := _cycle_time()
 	var rewards := _record_run(run)
 	endless = false
 	var context := {
-		"clock": DayCycle.clock_text(_cycle_time()),
-		"hours_left": DayCycle.hours_left_text(_cycle_time()),
-		"time_left": Records.format_time(maxf(0.0, Balance.RUN_DURATION - _cycle_time())),
+		"clock": DayCycle.clock_text(cycle),
+		"hours_left": DayCycle.hours_left_text(cycle),
+		"time_left": Records.format_time(maxf(0.0, Balance.RUN_DURATION - cycle)),
 		"next": "",
 		"endless": was_endless,
-		"nights": nights + 1,
+		"nights": nights + 2,
 		"can_continue": victory and not was_endless,
 	}
 	context.merge(rewards)
@@ -951,7 +983,7 @@ func _take_screenshot() -> void:
 	var path := ProjectSettings.globalize_path("user://screenshot.png")
 	get_viewport().get_texture().get_image().save_png(path)
 	print("[screenshot] salvo em ", path)
-	if _ui_arg != "" or _cycle_arg >= 0.0:
+	if _ui_arg != "" or _cycle_arg >= 0.0 or _trailer != "":
 		get_tree().quit()
 
 
@@ -1032,3 +1064,37 @@ func _apply_upgrade_silently(id: String) -> void:
 	upgrade_levels[id] = int(upgrade_levels.get(id, 0)) + 1
 	upgrade_order.append(id)
 	Upgrades.apply(id, lighthouse)
+
+
+# --- Trailer (--trailer=) -------------------------------------------------
+
+## Abertura e encerramento: o farol girando sozinho, sem interface.
+func trailer_title() -> void:
+	_set_map("bay")
+	_clear_world()
+	state = State.TITLE
+	get_tree().paused = false
+	Sfx.music(&"calm")
+	hud.show_playing()
+	hud.set_hud_visible(false)
+
+
+## Uma cena do trailer: o mapa em plena noite, cheio de criaturas e, se
+## pedido, com o chefe já em campo. O bot mira; o farol não morre.
+func trailer_shot(map: String, at: float, boss: int) -> void:
+	start_run(map, "classic", "normal")
+	hud.set_hud_visible(true)
+	elapsed = at
+	spawner.elapsed = at
+	level = 12
+	for id: String in ["wide_lens", "wide_lens", "intense_flame", "intense_flame", "twin_lens", "pulse", "pulse", "sweeper", "walls"]:
+		_apply_upgrade_silently(id)
+	lighthouse.regen = 40.0
+	var roles := ["basic", "fast", "brute", "basic", "thief", "mirror", "moth", "fast"]
+	for i in 26:
+		spawner.spawn(roles[i % roles.size()]).position *= rng.randf_range(0.4, 0.95)
+	if boss >= 0:
+		var b := spawner.spawn_boss(Maps.boss_at(map, boss))
+		b.position = b.position.normalized() * 330.0
+	DayCycle.update(at)
+	_update_hud()

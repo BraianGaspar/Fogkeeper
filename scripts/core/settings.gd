@@ -153,7 +153,9 @@ static func _system_locale() -> String:
 	match OS.get_locale_language():
 		"pt":
 			return "pt_BR"
-		"es":
-			return "es"
+		"zh":
+			return "zh_CN"
+		"es", "fr", "de", "ru", "ja", "ko":
+			return OS.get_locale_language()
 		_:
 			return "en"

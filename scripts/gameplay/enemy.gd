@@ -184,6 +184,9 @@ func _move(delta: float) -> void:
 	match kind:
 		"thief":
 			_move_thief(delta)
+		"decoy":
+			# Ilusão da Kyūbi: circula como ela, sem se aproximar.
+			position = Vector2.from_angle(position.angle() + speed * delta) * position.length()
 		"fogbank":
 			position += _drift * speed * delta
 			if position.length() > ESCAPE_DIST and position.dot(_drift) > 0.0:
@@ -254,7 +257,7 @@ func _nearest_ember() -> Ember:
 
 
 func _can_melee() -> bool:
-	return not invulnerable and kind != "thief" and kind != "fogbank"
+	return not invulnerable and kind not in ["thief", "fogbank", "decoy"]
 
 
 ## 0..1: quanto a criatura está "acesa" (queimando) neste instante.
@@ -271,6 +274,8 @@ func facing() -> Vector2:
 		return position.normalized()
 	if kind == "fogbank":
 		return _drift if _drift != Vector2.ZERO else Vector2.RIGHT
+	if kind == "decoy":
+		return Vector2.from_angle(position.angle() + PI / 2.0)
 	return (-position).normalized() if position.length() > 1.0 else Vector2.RIGHT
 
 

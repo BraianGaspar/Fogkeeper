@@ -15,6 +15,7 @@ signal banish_pressed(id: String)
 signal story_finished
 signal endless_pressed
 signal tutorial_requested
+signal pause_requested
 
 const DIM_TITLE := 0.15
 const DIM_MENU := 0.6
@@ -42,6 +43,7 @@ var _boss_name: Label
 var _boss_bar: OrnateBar
 var _boss: Boss
 var _ability_bar: AbilityBar
+var _pause_button: Button
 var _log_box: VBoxContainer
 var _alerts: CanvasLayer
 var _alert_label: Label
@@ -150,6 +152,12 @@ func _build_play_ui() -> void:
 	for l in [_score_label, _score_caption, _kills_label]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		right.add_child(l)
+	# Botão de pausa para telas de toque (no teclado, Esc).
+	_pause_button = UiTheme.small_button("II", func() -> void: pause_requested.emit())
+	_pause_button.focus_mode = Control.FOCUS_NONE
+	_pause_button.custom_minimum_size = Vector2(44, 36)
+	_pause_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	right.add_child(_pause_button)
 	_play_ui.add_child(right)
 
 	# Habilidades, acima da barra de XP.
@@ -596,3 +604,18 @@ func show_end(run: Dictionary, context: Dictionary) -> void:
 	s.menu_pressed.connect(func() -> void: menu_pressed.emit())
 	s.endless_pressed.connect(func() -> void: endless_pressed.emit())
 	_set_screen(s, 0.35 if context.get("can_continue", false) else 0.6, false)
+
+
+## O ponteiro está sobre um controle do HUD (habilidades, pausa): a mira não
+## deve segui-lo, senão tocar numa habilidade giraria o feixe para baixo.
+func pointer_on_controls() -> bool:
+	if not _play_ui.visible:
+		return false
+	var p := get_viewport().get_mouse_position()
+	return _ability_bar.get_global_rect().has_point(p) or _pause_button.get_global_rect().has_point(p)
+
+
+## Trailer: esconde ou mostra a interface da partida.
+func set_hud_visible(on: bool) -> void:
+	_play_ui.visible = on
+	clear_alerts()

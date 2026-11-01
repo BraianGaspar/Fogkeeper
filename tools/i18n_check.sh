@@ -16,4 +16,12 @@ missing=$(comm -23 <(echo "$used") <(echo "$keys"))
 if [ -n "$missing" ]; then
   echo "Textos sem tradução em scripts/core/i18n.gd:"; echo "$missing"; exit 1
 fi
+# Os outros idiomas (scripts/i18n/*.gd) precisam ter todas as chaves de I18n.TEXTS.
+for f in scripts/i18n/*.gd; do
+  have=$(grep -oE '^\s*"([^"\]|\\.)*": "' "$f" | sed -E 's/^\s*"(.*)": "$/\1/' | sort -u)
+  gap=$(comm -23 <(echo "$keys") <(echo "$have"))
+  if [ -n "$gap" ]; then
+    echo "Faltam $(echo "$gap" | wc -l) textos em $f, por exemplo:"; echo "$gap" | head -5; exit 1
+  fi
+done
 echo "OK: todos os textos têm tradução."

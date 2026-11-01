@@ -2,6 +2,7 @@ class_name AbilityBar
 extends Control
 ## Três espaços das habilidades ativas: ícone, tecla configurada, varredura
 ## de recarga com segundos restantes e brilho quando a habilidade fica pronta.
+## Tocar ou clicar num espaço usa a habilidade (telas de toque).
 
 const SLOT := 58.0
 const GAP := 14.0
@@ -14,8 +15,18 @@ var _ready_flash: Array[float] = [0.0, 0.0, 0.0]
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mouse_filter = Control.MOUSE_FILTER_STOP
 	custom_minimum_size = Vector2(SLOT * 3 + GAP * 2, SLOT + 22)
+
+
+func _gui_input(event: InputEvent) -> void:
+	var mb := event as InputEventMouseButton
+	if abilities == null or mb == null or not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
+		return
+	var i := int(mb.position.x / (SLOT + GAP))
+	if i >= 0 and i < 3 and mb.position.x - i * (SLOT + GAP) <= SLOT and mb.position.y <= SLOT:
+		abilities.use(i)
+		accept_event()
 
 
 func _process(delta: float) -> void:

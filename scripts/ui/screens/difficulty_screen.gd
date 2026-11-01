@@ -76,4 +76,4 @@ static func rules_text(id: String) -> String:
 
 static func _mult_text(m: float) -> String:
 	var s := ("%.2f" % m).rstrip("0").rstrip(".")
-	return s.replace(".", ",") if Settings.locale != "en" else s
+	return s if Records._dot_decimal() else s.replace(".", ",")
