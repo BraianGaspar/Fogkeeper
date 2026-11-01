@@ -19,8 +19,16 @@ Você é um farol numa ilha cercada de névoa. Não pode se mover: só gira o fe
 | Rio Encantado | Folclore brasileiro | Corpo-seco, Curupira, Mapinguari | Iara, Boitatá, Cuca (extra no Impossível e no modo sem fim) | Temporal tropical e vaga-lumes |
 | Mar dos Yōkai | Japonesa | Funayūrei, Kitsune, Oni | Umibōzu, Kyūbi | Tufão, pétalas de cerejeira e lanternas do Obon |
 | Farol de Alexandria | Egípcia | Múmia, Chacal de Anúbis, Crocodilo de Sobek | Esfinge, Apep | Tempestade de areia |
+| Mar Egeu | Grega | Sombra do Hades, Cão do Hades, Minotauro | Cila, Medusa | Raios de Zeus |
+| Costa Celta | Irlandesa e escocesa | Banshee, Kelpie, Fomoriano | Balor, Cailleach | Chuva do Atlântico e luzes das fadas |
 
-Os papéis têm as mesmas estatísticas em todos os mapas; mudam aparência, nome, chefes e clima. A Baía é sempre liberada; o Fiorde libera ao sobreviver até a meia-noite (ou por 150 de óleo), o Rio ao derrotar um chefe (300), o Japão ao ver o amanhecer (400) e o Egito ao ver o amanhecer no Médio ou acima (500).
+Os papéis têm as mesmas estatísticas em todos os mapas; mudam aparência, nome, chefes e clima. A Baía é sempre liberada; o Fiorde libera ao sobreviver até a meia-noite (ou por 150 de óleo), o Rio ao derrotar um chefe (300), o Japão ao ver o amanhecer (400), e o Egito, o Mar Egeu e a Costa Celta ao ver o amanhecer no Médio ou acima (500, 600 e 700).
+
+Chefes dos mapas novos:
+- **Cila:** presa ao rochedo, estica seis cabeças contra o farol, uma de cada vez; segurar o feixe numa cabeça que avança a faz recuar e fere Cila (o corpo quase não sente a luz). Cabeça que chega à ilha morde.
+- **Medusa:** circula soltando serpentes; quando os olhos acendem, vem o olhar: se o feixe principal tocar nela, o farol vira pedra e quase não gira por alguns segundos. É preciso desviar a luz.
+- **Balor:** de olho fechado quase não se fere; quando a pálpebra se ergue, a luz o fere muito, e o olhar dele queima o farol e encurta o feixe enquanto o feixe principal não estiver nele.
+- **Cailleach:** faz rolar pedras de ogham e chama tempestades de inverno que sopram as brasas soltas para longe da ilha.
 
 ## Criaturas especiais
 Aparecem com o passar da noite em todos os mapas e mexem na escolha entre queimar e recolher:
@@ -88,10 +96,10 @@ O jogador leva três habilidades, escolhidas na oficina entre seis: Clarão, Sob
 
 ## Desafio diário e Modo Chefões
 - **Desafio diário:** a data vira a semente; mapa, faroleiro e maré (1 a 3) são sorteados por ela e iguais para todos. Ranking próprio do dia (e leaderboard da Steam quando integrada).
-- **Modo Chefões:** os 11 chefes, mapa por mapa, com 6 melhorias escolhidas no começo; as criaturas comuns ficam mais fortes a cada chefe. Pontua mais quem termina mais rápido.
+- **Modo Chefões:** os 15 chefes, mapa por mapa, com 6 melhorias escolhidas no começo; as criaturas comuns ficam mais fortes a cada chefe. Pontua mais quem termina mais rápido.
 
 ## Bestiário e resumo
-54 fichas com a lenda real de cada criatura e chefe, abertas na primeira vez que são queimados. O fim de partida mostra de onde veio o dano (feixe, lentes, farolete, pulso, habilidades, combustão) e quantas brasas foram recolhidas e perdidas.
+76 fichas com a lenda real de cada criatura e chefe, abertas na primeira vez que são queimados. O fim de partida mostra de onde veio o dano (feixe, lentes, farolete, pulso, habilidades, combustão) e quantas brasas foram recolhidas e perdidas.
 
 ## Acessibilidade
 Filtro para daltonismo (protanopia, deuteranopia, tritanopia), tamanho do texto (100/112/125%) e "Reduzir efeitos piscantes".

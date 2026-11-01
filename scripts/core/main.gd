@@ -275,7 +275,8 @@ func _set_map(id: String) -> void:
 	DayCycle.set_map(id)
 	Sfx.set_map(id)
 	var scenery: String = Maps.get_map(id)["scenery"]
-	var want: Script = {"fjord": FjordBackground, "river": RiverBackground, "japan": JapanBackground, "desert": DesertBackground}.get(scenery, Background)
+	var want: Script = {"fjord": FjordBackground, "river": RiverBackground, "japan": JapanBackground, "desert": DesertBackground,
+		"greece": GreeceBackground, "celtic": CelticBackground}.get(scenery, Background)
 	if background.get_script() != want:
 		background.queue_free()
 		background = want.new()
@@ -644,6 +645,13 @@ func _update_aim() -> void:
 			if node is Sphinx and (node as Sphinx).riddling():
 				lighthouse.target_angle = (node as Sphinx).answer_angle()
 				return
+			# Também encara o olho aberto de Balor e repele as cabeças de Cila.
+			if node is Balor and (node as Balor).eye_open():
+				lighthouse.target_angle = (node as Balor).position.angle()
+				return
+			if node is Scylla and not is_nan((node as Scylla).threat_angle()):
+				lighthouse.target_angle = (node as Scylla).threat_angle()
+				return
 		var target := _closest_enemy()
 		if target:
 			lighthouse.target_angle = target.position.angle()
@@ -714,6 +722,12 @@ func _closest_enemy() -> Enemy:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and state == State.PLAYING and not autoplay:
 		_set_paused(true)
+
+
+## Dicas de teclas trocam para botões quando o jogador pega o controle.
+func _input(event: InputEvent) -> void:
+	if GameInput.track_device(event) and tutorial:
+		tutorial.refresh()
 
 
 func _unhandled_input(event: InputEvent) -> void:

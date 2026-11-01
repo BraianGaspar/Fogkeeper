@@ -52,6 +52,8 @@ var _charm_angle := 0.0
 var _charm_pull := 0.0
 var _sleep_t := 0.0
 var _sleep_power := 1.0
+var _stone_t := 0.0
+var _stone_turn := 1.0
 var _mirror_t := 0.0
 var _mirror_beam: Beam = null
 var _beacon_t := 0.0
@@ -91,6 +93,7 @@ func reset() -> void:
 	_overcharge_t = 0.0
 	_charm_t = 0.0
 	_sleep_t = 0.0
+	_stone_t = 0.0
 	_mirror_t = 0.0
 	_beacon_t = 0.0
 	if _mirror_beam:
@@ -171,6 +174,16 @@ func sleep(seconds: float, power: float) -> void:
 	_sleep_power = power
 
 
+## Olhar da Medusa: o farol vira pedra e o feixe quase não gira por alguns segundos.
+func petrify(seconds: float, turn_factor: float) -> void:
+	_stone_t = seconds
+	_stone_turn = turn_factor
+
+
+func petrified() -> bool:
+	return _stone_t > 0.0
+
+
 ## Habilidade Espelho: um feixe extra aponta para o lado oposto ao principal.
 func start_mirror(seconds: float) -> void:
 	_mirror_t = seconds
@@ -223,7 +236,9 @@ func _process(delta: float) -> void:
 	_overcharge_t = maxf(0.0, _overcharge_t - delta)
 	_charm_t = maxf(0.0, _charm_t - delta)
 	_sleep_t = maxf(0.0, _sleep_t - delta)
-	aim_angle = wrapf(rotate_toward(aim_angle, target_angle, turn_speed * delta), -PI, PI)
+	_stone_t = maxf(0.0, _stone_t - delta)
+	var turn := turn_speed * (_stone_turn if petrified() else 1.0)
+	aim_angle = wrapf(rotate_toward(aim_angle, target_angle, turn * delta), -PI, PI)
 	if charmed():
 		aim_angle = wrapf(rotate_toward(aim_angle, _charm_angle, _charm_pull * delta), -PI, PI)
 
@@ -309,6 +324,13 @@ func _draw() -> void:
 		for i in 3:
 			var f := fmod(_time * 0.6 + i / 3.0, 1.0)
 			UiTheme.draw_text(self, "z", Vector2(18.0 + f * 22.0, -26.0 - f * 30.0), 14 + i * 3, Color(0.8, 0.65, 1.0, k * (1.0 - f)))
+	if petrified():
+		# Pedra cinzenta rachando sobre a torre.
+		var k := minf(1.0, _stone_t * 2.0)
+		draw_circle(Vector2.ZERO, 34.0, Color(0.55, 0.55, 0.5, 0.45 * k))
+		for i in 5:
+			var a := TAU * i / 5.0 + 0.4
+			draw_line(Vector2.from_angle(a) * 8.0, Vector2.from_angle(a + 0.3) * 30.0, Color(0.2, 0.2, 0.18, 0.7 * k), 1.5)
 	if _hurt_flash > 0.0 and not Settings.reduce_flashes:
 		draw_circle(Vector2.ZERO, 30.0, Color(1.0, 0.2, 0.1, _hurt_flash * 1.6))
 

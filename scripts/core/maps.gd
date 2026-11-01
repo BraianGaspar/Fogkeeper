@@ -6,7 +6,7 @@ extends RefCounted
 ## scripts/world/ (classe com o mesmo `scenery`), arte das criaturas em
 ## CreatureArt e textos em I18n.
 
-const ORDER := ["bay", "fjord", "amazon", "japan", "egypt"]
+const ORDER := ["bay", "fjord", "amazon", "japan", "egypt", "greece", "celtic"]
 
 const LIST := {
 	"bay": {
@@ -54,6 +54,24 @@ const LIST := {
 			"moth": "ba", "fogbank": "fog_egypt", "tentacle": "cobra", "boulder": "sandstone"},
 		"bosses": ["sphinx", "apep"],
 	},
+	"greece": {
+		"name": "Mar Egeu",
+		"tagline": "Ilhas de mármore, templos em ruínas e monstros que nenhum herói venceu.",
+		"story": "Um velho pescador de Ítaca pediu que alguém acendesse o farol do estreito, onde os navios somem entre dois rochedos. Você chegou de barco ao entardecer, passando por colunas de templos meio afundadas. Ninguém avisou que, à noite, as sombras sobem do Hades, as harpias descem dos penhascos e Cila acorda na sua caverna.",
+		"scenery": "greece",
+		"creatures": {"basic": "shade", "fast": "hellhound", "brute": "minotaur", "thief": "harpy", "mirror": "bronze_shield",
+			"moth": "lampad", "fogbank": "fog_greece", "tentacle": "gorgon_snake", "boulder": "marble"},
+		"bosses": ["scylla", "medusa"],
+	},
+	"celtic": {
+		"name": "Costa Celta",
+		"tagline": "Penhascos verdes, círculos de pedra e a noite em que o Outro Mundo se abre.",
+		"story": "Você veio cuidar do farol de uma ilha das Hébridas na noite de Samhain, quando o véu entre os mundos fica fino. Os moradores trancaram as portas, deixaram comida para as fadas e pediram que a luz não se apagasse: dizem que o olho de Balor se abre no mar e que a velha do inverno caminha sobre as ondas.",
+		"scenery": "celtic",
+		"creatures": {"basic": "banshee", "fast": "kelpie", "brute": "fomorian", "thief": "pooka", "mirror": "selkie",
+			"moth": "fairy", "fogbank": "fog_celtic", "tentacle": "peist", "boulder": "ogham"},
+		"bosses": ["balor", "cailleach"],
+	},
 }
 
 ## Nome visível de cada criatura (arte), traduzido via I18n.
@@ -69,10 +87,15 @@ const CREATURE_NAMES := {
 	"chochin": "Chōchin-obake", "fog_japan": "Névoa dos afogados", "hitodama": "Hitodama", "wave": "Onda", "kyubi": "Kyūbi",
 	"mummy": "Múmia", "jackal": "Chacal de Anúbis", "sobek": "Crocodilo de Sobek", "ibis": "Íbis de Thoth", "scarab": "Escaravelho de ouro",
 	"ba": "Alma Ba", "fog_egypt": "Tempestade de areia", "cobra": "Naja de Apep", "sandstone": "Pedra de arenito",
+	"shade": "Sombra do Hades", "hellhound": "Cão do Hades", "minotaur": "Minotauro", "harpy": "Harpia",
+	"bronze_shield": "Escudo de bronze", "lampad": "Lâmpade", "fog_greece": "Névoa do Estige", "gorgon_snake": "Serpente da górgona", "marble": "Bloco de mármore",
+	"banshee": "Banshee", "kelpie": "Kelpie", "fomorian": "Fomoriano", "pooka": "Púca", "selkie": "Selkie",
+	"fairy": "Fada luminosa", "fog_celtic": "Névoa do Outro Mundo", "peist": "Péist", "ogham": "Pedra de ogham",
 	"tentacle": "Tentáculo", "boulder": "Pedra de gelo",
 	"leviathan": "Leviatã", "kraken": "Kraken", "jotunn": "Jötunn", "fenrir": "Fenrir",
 	"iara": "Iara", "boitata": "Boitatá", "cuca": "Cuca",
 	"umibozu": "Umibōzu", "sphinx": "Esfinge", "apep": "Apep",
+	"scylla": "Cila", "medusa": "Medusa", "balor": "Balor", "cailleach": "Cailleach",
 }
 
 ## Subtítulo dos chefes na barra de vida.
@@ -82,6 +105,8 @@ const BOSS_TITLES := {
 	"iara": "A mãe d'água", "boitata": "A cobra de fogo", "cuca": "A bruxa da mata",
 	"umibozu": "O monge do mar", "kyubi": "A raposa de nove caudas",
 	"sphinx": "A guardiã dos enigmas", "apep": "A serpente do caos",
+	"scylla": "O terror do estreito", "medusa": "A górgona do olhar de pedra",
+	"balor": "O rei do olho maligno", "cailleach": "A velha do inverno",
 }
 
 

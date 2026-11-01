@@ -15,9 +15,11 @@ func _build() -> void:
 	title(box, tr("Bestiário"), 36)
 	var c := Bestiary.count()
 	text(box, tr("%d de %d fichas abertas") % [c.x, c.y], 16, UiTheme.GOLD)
-	var tabs := HBoxContainer.new()
-	tabs.alignment = BoxContainer.ALIGNMENT_CENTER
-	tabs.add_theme_constant_override("separation", 6)
+	# Abas dos mapas quebram em duas linhas quando não cabem numa só.
+	var tabs := HFlowContainer.new()
+	tabs.alignment = FlowContainer.ALIGNMENT_CENTER
+	tabs.add_theme_constant_override("h_separation", 6)
+	tabs.add_theme_constant_override("v_separation", 6)
 	box.add_child(tabs)
 	var group := ButtonGroup.new()
 	for id: String in Maps.ORDER:
@@ -29,7 +31,7 @@ func _build() -> void:
 		if id == map_id:
 			default_focus = b
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 400)
+	scroll.custom_minimum_size = Vector2(0, 360)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	box.add_child(scroll)
 	_grid = GridContainer.new()

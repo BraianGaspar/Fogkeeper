@@ -22,6 +22,23 @@ var _banishing := false
 var _banish_button: Button
 var _cards: Array[ChoiceCard] = []
 var _evolution_notes: Array[String] = []
+var _hint: Label
+var _hint_pad := false
+
+
+func _process(_delta: float) -> void:
+	if _hint and _hint_pad != GameInput.using_pad:
+		_update_hint()
+
+
+## Dica de teclas ou de botões, conforme o aparelho em uso.
+func _update_hint() -> void:
+	_hint_pad = GameInput.using_pad
+	if _hint_pad:
+		_hint.text = tr("Direcional para navegar   •   %s para escolher   •   %s troca   •   %s bane") % [
+			GameInput.label("menu_confirm"), GameInput.label("reroll"), GameInput.label("banish")]
+	else:
+		_hint.text = tr("A/D ou ←/→ para navegar   •   Enter, Espaço, 1-3 ou clique para escolher")
 
 
 func _build() -> void:
@@ -95,9 +112,10 @@ func _build() -> void:
 	actions.add_child(_banish_button)
 
 	if show_hints:
-		var hint := UiTheme.label(tr("A/D ou ←/→ para navegar   •   Enter, Espaço, 1-3 ou clique para escolher"), 14, UiTheme.TEXT_DIM)
-		hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		root.add_child(hint)
+		_hint = UiTheme.label("", 14, UiTheme.TEXT_DIM)
+		_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		root.add_child(_hint)
+		_update_hint()
 	Sfx.play(&"level_up")
 
 

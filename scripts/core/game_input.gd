@@ -26,6 +26,16 @@ const ACTION_NAMES := {
 ## Teclas que não podem ser usadas em ações configuráveis.
 const RESERVED := [KEY_ESCAPE, KEY_P, KEY_ENTER, KEY_KP_ENTER, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_T, KEY_B]
 
+## Botão do controle de cada ação, para as dicas: [Xbox/Steam Deck, PlayStation].
+const PAD_LABELS := {
+	"ability_1": ["LB", "L1"], "ability_2": ["RB", "R1"], "ability_3": ["Y", "△"],
+	"menu_confirm": ["A", "✕"], "menu_back": ["B", "○"], "reroll": ["X", "□"],
+	"banish": ["View", "Share"], "pause": ["Menu", "Options"],
+}
+
+## Verdadeiro quando o último comando veio do controle: as dicas mostram botões.
+static var using_pad := false
+
 
 static func setup() -> void:
 	_keys(&"pause", [KEY_ESCAPE, KEY_P])
@@ -86,6 +96,45 @@ static func apply_controls(controls: Dictionary) -> void:
 				var ev := InputEventKey.new()
 				ev.physical_keycode = int(k) as Key
 				InputMap.action_add_event(name, ev)
+
+
+## Atualiza using_pad com o evento recebido; retorna true se o aparelho mudou.
+static func track_device(event: InputEvent) -> bool:
+	var pad := using_pad
+	if event is InputEventJoypadButton and event.is_pressed():
+		pad = true
+	elif event is InputEventJoypadMotion and absf((event as InputEventJoypadMotion).axis_value) > 0.5:
+		pad = true
+	elif (event is InputEventKey and event.is_pressed()) or (event is InputEventMouseButton and event.is_pressed()):
+		pad = false
+	elif event is InputEventMouseMotion and (event as InputEventMouseMotion).relative.length() > 4.0:
+		pad = false
+	if pad == using_pad:
+		return false
+	using_pad = pad
+	return true
+
+
+## Nome da tecla ou do botão de uma ação, conforme o aparelho em uso.
+## `slot` escolhe entre a tecla principal e a alternativa das configuráveis.
+static func label(action: String, slot: int = 0) -> String:
+	if using_pad and PAD_LABELS.has(action):
+		return PAD_LABELS[action][1 if _is_playstation() else 0]
+	if REBINDABLE.has(action):
+		var keys: Array = Settings.controls.get(action, REBINDABLE[action])
+		return key_name(int(keys[slot]))
+	for ev in InputMap.action_get_events(StringName(action)):
+		if ev is InputEventKey:
+			return key_name((ev as InputEventKey).physical_keycode)
+	return "—"
+
+
+static func _is_playstation() -> bool:
+	var pads := Input.get_connected_joypads()
+	if pads.is_empty():
+		return false
+	var n := Input.get_joy_name(pads[0]).to_lower()
+	return n.contains("ps") or n.contains("playstation") or n.contains("dualsense") or n.contains("dualshock") or n.contains("sony")
 
 
 static func key_name(keycode: int) -> String:

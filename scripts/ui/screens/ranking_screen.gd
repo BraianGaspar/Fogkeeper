@@ -33,7 +33,7 @@ func _build() -> void:
 
 	box.add_child(_row([tr("Posição"), tr("Jogador"), tr("Pontos"), tr("Nível"), tr("Tempo"), tr("Mapa"), tr("Dificuldade"), tr("Data")], UiTheme.GOLD, null))
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 250)
+	scroll.custom_minimum_size = Vector2(0, 210)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	box.add_child(scroll)
 	_table = VBoxContainer.new()
@@ -52,9 +52,11 @@ func _build() -> void:
 
 
 func _filter_row(values: Array, current: String, on_pick: Callable, label_of: Callable) -> Control:
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 6)
+	# Quebra em mais de uma linha quando os filtros não cabem (muitos mapas).
+	var row := HFlowContainer.new()
+	row.alignment = FlowContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("h_separation", 6)
+	row.add_theme_constant_override("v_separation", 6)
 	var group := ButtonGroup.new()
 	for v: String in values:
 		var b := UiTheme.small_button(label_of.call(v), on_pick.bind(v), true)

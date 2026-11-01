@@ -63,6 +63,5 @@ func _draw() -> void:
 		draw_rect(r, border, false, 2.0)
 		if _ready_flash[i] > 0.0:
 			draw_rect(r.grow(6.0 * (1.0 - _ready_flash[i])), Color(1.0, 0.95, 0.7, _ready_flash[i]), false, 3.0)
-		var keys: Array = Settings.controls.get("ability_%d" % (i + 1), GameInput.REBINDABLE["ability_%d" % (i + 1)])
-		UiTheme.draw_text(self, GameInput.key_name(int(keys[0])), Vector2(c.x, r.end.y + 11.0), 12, UiTheme.TEXT_DIM)
+		UiTheme.draw_text(self, GameInput.label("ability_%d" % (i + 1)), Vector2(c.x, r.end.y + 11.0), 12, UiTheme.TEXT_DIM)
 

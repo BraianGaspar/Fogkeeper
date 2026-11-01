@@ -140,7 +140,58 @@ const EGYPT_KEYS := [
 		"fog": Color(1.0, 0.95, 0.85), "fog_a": 0.1, "moon": 0.0, "dusk": 0.0, "dawn": 0.7, "storm": 0.0, "night": 0.0},
 ]
 
-const PALETTES := {"bay": BAY_KEYS, "fjord": FJORD_KEYS, "amazon": AMAZON_KEYS, "japan": JAPAN_KEYS, "egypt": EGYPT_KEYS}
+## No Mar Egeu o mar é de um azul fundo, o pôr do sol é dourado e a
+## tempestade de Zeus vem com raios.
+const GREECE_KEYS := [
+	{"at": 0.0, "sea": Color(0.2, 0.18, 0.3), "wave": Color(1.0, 0.75, 0.5), "land": Color(1.0, 0.82, 0.68),
+		"fog": Color(0.9, 0.7, 0.6), "fog_a": 0.6, "moon": 0.0, "dusk": 1.0, "dawn": 0.0, "storm": 0.0, "night": 0.15},
+	{"at": 0.1, "sea": Color(0.03, 0.07, 0.17), "wave": Color(0.35, 0.5, 0.8), "land": Color(0.62, 0.66, 0.82),
+		"fog": Color(0.5, 0.55, 0.75), "fog_a": 0.95, "moon": 0.5, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.3, "sea": Color(0.04, 0.09, 0.2), "wave": Color(0.45, 0.62, 0.9), "land": Color(0.7, 0.74, 0.9),
+		"fog": Color(0.52, 0.58, 0.78), "fog_a": 0.95, "moon": 1.0, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.44, "sea": Color(0.03, 0.06, 0.13), "wave": Color(0.38, 0.48, 0.68), "land": Color(0.52, 0.56, 0.7),
+		"fog": Color(0.45, 0.48, 0.65), "fog_a": 1.1, "moon": 0.3, "dusk": 0.0, "dawn": 0.0, "storm": 0.3, "night": 1.0},
+	{"at": 0.5, "sea": Color(0.02, 0.04, 0.09), "wave": Color(0.42, 0.5, 0.68), "land": Color(0.45, 0.48, 0.6),
+		"fog": Color(0.4, 0.44, 0.6), "fog_a": 1.25, "moon": 0.0, "dusk": 0.0, "dawn": 0.0, "storm": 1.0, "night": 1.0},
+	{"at": 0.58, "sea": Color(0.02, 0.04, 0.09), "wave": Color(0.42, 0.5, 0.68), "land": Color(0.45, 0.48, 0.6),
+		"fog": Color(0.4, 0.44, 0.6), "fog_a": 1.25, "moon": 0.0, "dusk": 0.0, "dawn": 0.0, "storm": 1.0, "night": 1.0},
+	{"at": 0.66, "sea": Color(0.04, 0.09, 0.2), "wave": Color(0.45, 0.6, 0.88), "land": Color(0.66, 0.7, 0.88),
+		"fog": Color(0.52, 0.56, 0.76), "fog_a": 0.95, "moon": 0.8, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.85, "sea": Color(0.06, 0.09, 0.2), "wave": Color(0.55, 0.58, 0.85), "land": Color(0.72, 0.68, 0.84),
+		"fog": Color(0.68, 0.6, 0.78), "fog_a": 0.9, "moon": 0.3, "dusk": 0.0, "dawn": 0.1, "storm": 0.0, "night": 0.9},
+	{"at": 1.0, "sea": Color(0.25, 0.25, 0.4), "wave": Color(1.0, 0.82, 0.7), "land": Color(1.0, 0.88, 0.8),
+		"fog": Color(1.0, 0.82, 0.75), "fog_a": 0.5, "moon": 0.0, "dusk": 0.0, "dawn": 1.0, "storm": 0.0, "night": 0.1},
+	{"at": 1.1, "sea": Color(0.1, 0.38, 0.6), "wave": Color(1.0, 0.97, 0.92), "land": Color(1.0, 0.98, 0.95),
+		"fog": Color(1.0, 0.96, 0.92), "fog_a": 0.1, "moon": 0.0, "dusk": 0.0, "dawn": 0.7, "storm": 0.0, "night": 0.0},
+]
+
+## Na Costa Celta a noite é verde-acinzentada e enevoada; a tempestade é de
+## chuva fria vinda do Atlântico.
+const CELTIC_KEYS := [
+	{"at": 0.0, "sea": Color(0.18, 0.16, 0.22), "wave": Color(0.95, 0.7, 0.55), "land": Color(0.95, 0.8, 0.7),
+		"fog": Color(0.8, 0.7, 0.68), "fog_a": 0.75, "moon": 0.0, "dusk": 0.8, "dawn": 0.0, "storm": 0.0, "night": 0.2},
+	{"at": 0.1, "sea": Color(0.04, 0.08, 0.1), "wave": Color(0.35, 0.5, 0.55), "land": Color(0.55, 0.65, 0.66),
+		"fog": Color(0.5, 0.6, 0.6), "fog_a": 1.1, "moon": 0.3, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.3, "sea": Color(0.05, 0.1, 0.12), "wave": Color(0.45, 0.6, 0.65), "land": Color(0.6, 0.7, 0.72),
+		"fog": Color(0.55, 0.65, 0.66), "fog_a": 1.15, "moon": 0.9, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.44, "sea": Color(0.03, 0.06, 0.08), "wave": Color(0.38, 0.48, 0.52), "land": Color(0.48, 0.55, 0.56),
+		"fog": Color(0.45, 0.52, 0.54), "fog_a": 1.2, "moon": 0.2, "dusk": 0.0, "dawn": 0.0, "storm": 0.3, "night": 1.0},
+	{"at": 0.5, "sea": Color(0.025, 0.045, 0.06), "wave": Color(0.4, 0.5, 0.55), "land": Color(0.42, 0.48, 0.5),
+		"fog": Color(0.42, 0.48, 0.5), "fog_a": 1.3, "moon": 0.0, "dusk": 0.0, "dawn": 0.0, "storm": 1.0, "night": 1.0},
+	{"at": 0.58, "sea": Color(0.025, 0.045, 0.06), "wave": Color(0.4, 0.5, 0.55), "land": Color(0.42, 0.48, 0.5),
+		"fog": Color(0.42, 0.48, 0.5), "fog_a": 1.3, "moon": 0.0, "dusk": 0.0, "dawn": 0.0, "storm": 1.0, "night": 1.0},
+	{"at": 0.66, "sea": Color(0.05, 0.1, 0.12), "wave": Color(0.45, 0.6, 0.64), "land": Color(0.58, 0.68, 0.7),
+		"fog": Color(0.55, 0.64, 0.64), "fog_a": 1.1, "moon": 0.7, "dusk": 0.0, "dawn": 0.0, "storm": 0.0, "night": 1.0},
+	{"at": 0.85, "sea": Color(0.07, 0.09, 0.13), "wave": Color(0.55, 0.58, 0.7), "land": Color(0.66, 0.68, 0.74),
+		"fog": Color(0.66, 0.64, 0.7), "fog_a": 1.0, "moon": 0.3, "dusk": 0.0, "dawn": 0.1, "storm": 0.0, "night": 0.9},
+	{"at": 1.0, "sea": Color(0.25, 0.22, 0.3), "wave": Color(1.0, 0.8, 0.7), "land": Color(1.0, 0.86, 0.8),
+		"fog": Color(0.95, 0.82, 0.8), "fog_a": 0.6, "moon": 0.0, "dusk": 0.0, "dawn": 1.0, "storm": 0.0, "night": 0.1},
+	{"at": 1.1, "sea": Color(0.18, 0.34, 0.4), "wave": Color(0.95, 0.97, 0.95), "land": Color(0.95, 1.0, 0.95),
+		"fog": Color(0.92, 0.95, 0.94), "fog_a": 0.15, "moon": 0.0, "dusk": 0.0, "dawn": 0.7, "storm": 0.0, "night": 0.0},
+]
+
+const PALETTES := {"bay": BAY_KEYS, "fjord": FJORD_KEYS, "amazon": AMAZON_KEYS, "japan": JAPAN_KEYS, "egypt": EGYPT_KEYS,
+	"greece": GREECE_KEYS, "celtic": CELTIC_KEYS}
 
 ## Avisos mostrados no HUD quando a partida passa por estes pontos.
 const EVENTS := {
@@ -162,6 +213,14 @@ const EVENTS := {
 	],
 	"egypt": [
 		{"at": 0.42, "text": "O vento do deserto levanta uma tempestade de areia..."},
+		{"at": 0.88, "text": "O céu começa a clarear. Aguente firme!"},
+	],
+	"greece": [
+		{"at": 0.42, "text": "Raios cortam o céu: Zeus anda irritado esta noite..."},
+		{"at": 0.88, "text": "O céu começa a clarear. Aguente firme!"},
+	],
+	"celtic": [
+		{"at": 0.42, "text": "Uma chuva fria chega do Atlântico..."},
 		{"at": 0.88, "text": "O céu começa a clarear. Aguente firme!"},
 	],
 }

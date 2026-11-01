@@ -20,7 +20,7 @@ Confirme valores e regras no Steamworks antes de agir: estas notas refletem o co
 6. **Lançamento** com 10–20% de desconto na primeira semana.
 
 ## Preço
-- **US$ 4,99** com o conteúdo atual (5 mapas, 14 chefes, oficina, evoluções, modo sem fim). Abaixo de US$ 2,99 parece descartável; acima de US$ 6,99 compete diretamente com *Vampire Survivors* e *Brotato*.
+- **US$ 4,99** com o conteúdo atual (7 mapas, 15 chefes, oficina, evoluções, modo sem fim). Abaixo de US$ 2,99 parece descartável; acima de US$ 6,99 compete diretamente com *Vampire Survivors* e *Brotato*.
 - **Preços regionais:** use os recomendados pelo Steamworks (a ferramenta converte o preço base pelo poder de compra de cada região). Ordem de grandeza para US$ 4,99: € 4,99, £ 4,29, Brasil ~R$ 20–25. Argentina, Turquia e parte da América Latina e do Oriente Médio compram em dólar, numa faixa regional mais barata. No Brasil, ficar no recomendado ou um pouco abaixo ajuda as avaliações em português.
 - **Países:** todos (padrão da Steam). Não há motivo para restringir.
 

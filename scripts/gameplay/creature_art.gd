@@ -88,6 +88,44 @@ static func draw(ci: CanvasItem, art: String, r: float, t: float, phase: float, 
 			_cobra(ci, r, t, phase, lit, alpha)
 		"sandstone":
 			boulder(ci, r, t, phase, lit, alpha, Color(0.75, 0.6, 0.38), Color(0.95, 0.85, 0.6), Color(0.45, 0.33, 0.2))
+		# Mar Egeu.
+		"shade":
+			_shade(ci, r, t, phase, lit, alpha)
+		"hellhound":
+			wolf(ci, r, t, phase, lit, alpha, Color(0.16, 0.12, 0.12), Color(0.35, 0.1, 0.06), Color(1.0, 0.4, 0.15))
+		"minotaur":
+			_minotaur(ci, r, t, phase, lit, alpha)
+		"harpy":
+			_harpy(ci, r, t, phase, lit, alpha, extra)
+		"bronze_shield":
+			_bronze_shield(ci, r, t, phase, lit, alpha, extra)
+		"lampad":
+			_lampad(ci, r, t, phase, lit, alpha, extra)
+		"fog_greece":
+			fogbank(ci, r, t, phase, lit, alpha, extra, Color(0.12, 0.14, 0.2), Color(0.6, 1.0, 0.75))
+		"gorgon_snake":
+			_gorgon_snake(ci, r, t, phase, lit, alpha)
+		"marble":
+			boulder(ci, r, t, phase, lit, alpha, Color(0.88, 0.86, 0.82), Color(1.0, 1.0, 0.98), Color(0.55, 0.55, 0.6))
+		# Costa Celta.
+		"banshee":
+			_banshee(ci, r, t, phase, lit, alpha)
+		"kelpie":
+			_kelpie(ci, r, t, phase, lit, alpha)
+		"fomorian":
+			_fomorian(ci, r, t, phase, lit, alpha)
+		"pooka":
+			_pooka(ci, r, t, phase, lit, alpha, extra)
+		"selkie":
+			_selkie(ci, r, t, phase, lit, alpha, extra)
+		"fairy":
+			moth(ci, r, t, phase, lit, alpha, extra, Color(0.75, 1.0, 0.8, 0.8), Color(0.95, 0.8, 0.3), Color(0.6, 1.0, 0.7))
+		"fog_celtic":
+			fogbank(ci, r, t, phase, lit, alpha, extra, Color(0.12, 0.2, 0.18), Color(0.55, 1.0, 0.85))
+		"peist":
+			_peist(ci, r, t, phase, lit, alpha)
+		"ogham":
+			_ogham(ci, r, t, phase, lit, alpha)
 		"wraith":
 			_wraith(ci, r, t, phase, lit, alpha)
 		"siren":
@@ -760,3 +798,234 @@ static func _cobra(ci: CanvasItem, r: float, t: float, phase: float, lit: float,
 	ci.draw_circle(Vector2(r * 0.1, 0), r * 0.3, c(Color(0.9, 0.75, 0.3), lit, alpha))
 	ci.draw_circle(Vector2(r * 0.55, 0), r * 0.3, skin)
 	eyes(ci, Vector2(r * 0.65, 0), r * 0.13, maxf(1.2, r * 0.07), Color(1.0, 0.3, 0.2), lit, alpha)
+
+
+# --- Mar Egeu -----------------------------------------------------------------------
+
+## Sombra do Hades: alma cinzenta com a moeda do barqueiro na mão.
+static func _shade(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var body := c(Color(0.42, 0.48, 0.55, 0.8), lit, alpha)
+	tail(ci, -r * 0.2, r * 2.4, r * 0.7, t * 0.9, phase, r * 0.5, Color(body, body.a * 0.55))
+	ci.draw_circle(Vector2.ZERO, r * 1.3, Color(body, 0.12 * alpha))
+	ci.draw_circle(Vector2.ZERO, r * 0.95, body)
+	# Manto com capuz e o óbolo dourado estendido.
+	ci.draw_arc(Vector2(r * 0.05, 0), r * 0.7, PI * 0.55, PI * 1.45, 12, c(Color(0.22, 0.25, 0.3), lit, alpha), maxf(2.0, r * 0.3))
+	var hand := Vector2(r * 0.95, r * 0.35 + sin(t * 3.0 + phase) * r * 0.1)
+	ci.draw_line(Vector2(r * 0.3, r * 0.4), hand, body, maxf(1.5, r * 0.14))
+	ci.draw_circle(hand, r * 0.16, c(Color(0.95, 0.78, 0.3), lit, alpha))
+	eyes(ci, Vector2(r * 0.4, 0), r * 0.22, maxf(1.3, r * 0.1), Color(0.7, 0.85, 1.0), lit, alpha)
+
+
+## Minotauro: corpo largo, cabeça de touro de chifres longos e um machado duplo.
+static func _minotaur(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var hide := c(Color(0.42, 0.26, 0.16), lit, alpha)
+	var dark := c(Color(0.25, 0.15, 0.09), lit, alpha)
+	var swing := sin(t * 2.4 + phase) * 0.35
+	# Lábris (machado de duas lâminas).
+	var grip := Vector2(r * 0.2, r * 0.85)
+	var head_axe := grip + Vector2(r * 0.9, r * 0.25).rotated(swing)
+	ci.draw_line(grip, head_axe, c(Color(0.35, 0.25, 0.15), lit, alpha), maxf(2.0, r * 0.14))
+	for s: float in [-1.0, 1.0]:
+		var side := Vector2(r * 0.4, 0).rotated(swing + PI / 2.0) * s
+		ci.draw_colored_polygon(PackedVector2Array([head_axe, head_axe + side + Vector2(r * 0.15, 0), head_axe + side - Vector2(r * 0.15, 0)]), c(Color(0.75, 0.68, 0.5), lit, alpha))
+	ci.draw_circle(Vector2.ZERO, r, hide)
+	ci.draw_circle(Vector2(-r * 0.3, 0), r * 0.7, dark)
+	ci.draw_line(Vector2(0, -r * 0.85), Vector2(r * 0.85, -r * 0.8), hide, maxf(2.0, r * 0.26))
+	var head := Vector2(r * 0.65, 0)
+	ci.draw_circle(head, r * 0.45, hide)
+	ci.draw_circle(head + Vector2(r * 0.35, 0), r * 0.25, c(Color(0.55, 0.38, 0.28), lit, alpha))
+	ci.draw_arc(head + Vector2(r * 0.5, 0), r * 0.12, -1.2, 1.2, 8, c(Color(0.85, 0.75, 0.3), lit, alpha), 2.0)
+	for s: float in [-1.0, 1.0]:
+		ci.draw_polyline(PackedVector2Array([head + Vector2(0, s * r * 0.3), head + Vector2(-r * 0.05, s * r * 0.75), head + Vector2(r * 0.3, s * r * 0.95)]),
+			c(Color(0.92, 0.88, 0.75), lit, alpha), maxf(2.0, r * 0.13))
+	eyes(ci, head + Vector2(r * 0.2, 0), r * 0.2, maxf(1.3, r * 0.08), Color(1.0, 0.3, 0.15), lit, alpha)
+
+
+## Harpia: ave de rapina de rosto humano e garras, que rouba as brasas.
+static func _harpy(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, carried: float) -> void:
+	bird(ci, r, t, phase, lit, alpha, Color(0.45, 0.35, 0.3), Color(0.3, 0.22, 0.18), Color(0.8, 0.7, 0.55), Color(1.0, 0.75, 0.3), 0.0, 0.0)
+	# Rosto pálido e cabelo escuro sobre a cabeça da ave.
+	ci.draw_circle(Vector2(r * 0.7, 0), r * 0.3, c(Color(0.85, 0.75, 0.68), lit, alpha))
+	tail(ci, r * 0.55, r * 0.9, r * 0.35, t * 2.0, phase, r * 0.25, c(Color(0.12, 0.08, 0.08), lit, alpha), 5)
+	eyes(ci, Vector2(r * 0.85, 0), r * 0.13, maxf(1.2, r * 0.07), Color(1.0, 0.4, 0.2), lit, alpha)
+	for s: float in [-1.0, 1.0]:
+		ci.draw_line(Vector2(r * 0.3, s * r * 0.25), Vector2(r * 0.95, s * r * 0.45), c(Color(0.75, 0.65, 0.3), lit, alpha), 1.5)
+	if carried > 0.0:
+		_ember_glow(ci, Vector2(r * 1.0, r * 0.45), r * 0.28, t, alpha)
+
+
+## Escudo de bronze: hoplita agachado atrás do escudo redondo, que espelha a luz.
+static func _bronze_shield(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, open: float) -> void:
+	var bronze := c(Color(0.75, 0.55, 0.25), lit, alpha)
+	var shine := c(Color(1.0, 0.85, 0.5), lit, alpha)
+	# Guerreiro atrás: capacete de crista e lança, aparece quando o escudo baixa.
+	var behind := Vector2(-r * 0.4 * (1.0 - open), 0)
+	ci.draw_circle(behind, r * 0.6, c(Color(0.5, 0.38, 0.25), lit, alpha))
+	ci.draw_line(behind + Vector2(-r * 0.5, 0), behind + Vector2(r * 0.2, 0), c(Color(0.75, 0.15, 0.12), lit, alpha), maxf(2.0, r * 0.25))
+	ci.draw_line(behind + Vector2(-r * 0.3, r * 0.5), behind + Vector2(r * 1.6, r * 0.5), c(Color(0.4, 0.3, 0.2), lit, alpha), 1.8)
+	if open > 0.3:
+		eyes(ci, behind + Vector2(r * 0.35, 0), r * 0.15, maxf(1.2, r * 0.07), Color(1.0, 0.9, 0.5), lit, alpha)
+	# O escudo gira de lado quando abre.
+	var sx := lerpf(0.35, 0.12, open)
+	var center := Vector2(r * (0.55 + 0.25 * open), -r * 0.45 * open)
+	var pts := PackedVector2Array()
+	for i in 20:
+		var a := TAU * i / 20.0
+		pts.append(center + Vector2(cos(a) * r * sx * 2.0, sin(a) * r * 1.05))
+	ci.draw_colored_polygon(pts, bronze)
+	var ring := PackedVector2Array(pts)
+	ring.append(pts[0])
+	ci.draw_polyline(ring, shine, 1.5)
+	ci.draw_circle(center, r * 0.22 * (1.0 - open * 0.5), shine)
+	if open < 0.6:
+		var k := (1.0 - open / 0.6) * (0.6 + 0.4 * sin(t * 3.0 + phase))
+		ci.draw_arc(Vector2.ZERO, r * 1.2, 0.0, TAU, 28, Color(1, 0.95, 0.8, 0.35 * k * alpha), 2.0)
+		ci.draw_line(center + Vector2(-r * 0.1, -r * 0.7), center + Vector2(r * 0.1, -r * 0.1), Color(1, 1, 1, 0.6 * k * alpha), 2.5)
+
+
+## Lâmpade: ninfa do submundo de manto roxo e tocha; a luz aviva a chama.
+static func _lampad(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, g: float) -> void:
+	ci.draw_circle(Vector2.ZERO, r * (1.5 + 0.7 * g), Color(1.0, 0.6, 0.3, (0.06 + 0.15 * g) * alpha))
+	var robe := c(Color(0.5, 0.4, 0.68, 0.85), lit, alpha)
+	tail(ci, -r * 0.1, r * 1.8, r * 0.6, t * 1.2, phase, r * 0.45, Color(robe, robe.a * 0.6), 7)
+	ci.draw_circle(Vector2.ZERO, r * 0.7, robe)
+	tail(ci, r * 0.2, r * 1.1, r * 0.4, t * 2.0, phase + 1.0, r * 0.3, c(Color(0.12, 0.08, 0.15), lit, alpha), 5)
+	ci.draw_circle(Vector2(r * 0.45, 0), r * 0.36, c(Color(0.85, 0.82, 0.75), lit, alpha))
+	# Tocha cuja chama cresce com a luz.
+	var torch := Vector2(r * 0.9, r * 0.55)
+	ci.draw_line(Vector2(r * 0.3, r * 0.4), torch, c(Color(0.45, 0.32, 0.2), lit, alpha), 2.0)
+	var flame := r * (0.3 + 0.35 * g) * (0.85 + 0.15 * sin(t * 12.0 + phase))
+	ci.draw_circle(torch + Vector2(r * 0.15, 0), flame * 1.6, Color(1.0, 0.55, 0.2, 0.25 * alpha))
+	ci.draw_circle(torch + Vector2(r * 0.15, 0), flame, Color(1.0, 0.85, 0.5, alpha))
+	eyes(ci, Vector2(r * 0.6, 0), r * 0.13, maxf(1.2, r * 0.07), Color(1.0, 0.7, 0.3), lit, alpha)
+
+
+## Serpente da górgona: cobra verde de escamas claras, solta dos cabelos da Medusa.
+static func _gorgon_snake(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var skin := c(Color(0.3, 0.5, 0.25), lit, alpha)
+	var spine := tail(ci, -r * 0.1, r * 2.8, r * 0.38, t * 1.8, phase, r * 0.8, skin, 10)
+	for i in range(1, spine.size(), 2):
+		ci.draw_circle(spine[i], maxf(1.0, r * 0.1), c(Color(0.75, 0.85, 0.45), lit, alpha))
+	ci.draw_circle(Vector2(r * 0.25, 0), r * 0.42, skin)
+	ci.draw_line(Vector2(r * 0.6, 0), Vector2(r * 0.95, 0), Color(0.85, 0.15, 0.2, alpha), 1.5)
+	eyes(ci, Vector2(r * 0.4, 0), r * 0.18, maxf(1.2, r * 0.08), Color(1.0, 0.9, 0.3), lit, alpha)
+
+
+# --- Costa Celta --------------------------------------------------------------------
+
+## Banshee: mulher pálida de cabelo longo, que lamenta de boca aberta.
+static func _banshee(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var body := c(Color(0.78, 0.85, 0.82, 0.75), lit, alpha)
+	tail(ci, -r * 0.2, r * 2.6, r * 0.75, t * 1.1, phase, r * 0.6, Color(body, body.a * 0.5))
+	ci.draw_circle(Vector2.ZERO, r * 1.35, Color(0.6, 0.9, 0.8, 0.1 * alpha))
+	ci.draw_circle(Vector2.ZERO, r * 0.9, body)
+	# Cabelo branco esvoaçando e o grito em anéis.
+	tail(ci, r * 0.2, r * 1.9, r * 0.65, t * 2.2, phase + 1.0, r * 0.5, c(Color(0.92, 0.95, 0.95, 0.85), lit, alpha), 7)
+	ci.draw_circle(Vector2(r * 0.4, 0), r * 0.42, c(Color(0.85, 0.9, 0.88), lit, alpha))
+	ci.draw_circle(Vector2(r * 0.7, 0), r * 0.14, Color(0.05, 0.08, 0.1, 0.85 * alpha))
+	for k in 2:
+		var rr := r * (1.0 + fmod(t * 1.5 + phase + k * 0.5, 1.0) * 0.8)
+		ci.draw_arc(Vector2(r * 0.6, 0), rr, -0.6, 0.6, 8, Color(0.7, 1.0, 0.9, 0.3 * alpha), 1.5)
+	eyes(ci, Vector2(r * 0.5, 0), r * 0.16, maxf(1.2, r * 0.08), Color(0.5, 1.0, 0.85), lit, alpha)
+
+
+## Kelpie: cavalo da água, escuro, de crina de algas e sempre molhado.
+static func _kelpie(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	wolf(ci, r, t, phase, lit, alpha, Color(0.16, 0.22, 0.24), Color(0.08, 0.12, 0.14), Color(0.6, 1.0, 0.9))
+	# Crina de algas ao longo do pescoço e gotas que pingam.
+	for i in 5:
+		var at := Vector2(r * (0.95 - i * 0.28), 0)
+		ci.draw_line(at, at + Vector2(-r * 0.3, sin(t * 6.0 + phase + i) * r * 0.35), c(Color(0.2, 0.45, 0.3), lit, alpha), maxf(1.5, r * 0.12))
+	for i in 3:
+		var k := fmod(t * 1.3 + i / 3.0 + phase, 1.0)
+		ci.draw_circle(Vector2(-r * (0.4 + k * 1.2), (i - 1) * r * 0.4), r * 0.08, Color(0.6, 0.85, 1.0, 0.6 * (1.0 - k) * alpha))
+
+
+## Fomoriano: gigante do mar de um olho só, um braço só e a pele de algas.
+static func _fomorian(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var skin := c(Color(0.32, 0.42, 0.36), lit, alpha)
+	var dark := c(Color(0.18, 0.25, 0.22), lit, alpha)
+	var sway := sin(t * 2.2 + phase) * 0.2
+	# O único braço, com uma âncora velha como clava.
+	var hand := Vector2(r * 0.9, r * (0.85 + sway))
+	ci.draw_line(Vector2(r * 0.1, r * 0.75), hand, skin, maxf(2.0, r * 0.28))
+	ci.draw_line(hand, hand + Vector2(r * 0.7, 0), c(Color(0.35, 0.3, 0.28), lit, alpha), maxf(2.0, r * 0.12))
+	ci.draw_arc(hand + Vector2(r * 0.7, 0), r * 0.3, -PI / 2.0, PI / 2.0, 10, c(Color(0.4, 0.35, 0.32), lit, alpha), maxf(2.0, r * 0.12))
+	ci.draw_circle(Vector2.ZERO, r, skin)
+	ci.draw_circle(Vector2(-r * 0.25, 0), r * 0.72, dark)
+	for i in 4:
+		var a := phase + i * 1.7
+		var p := Vector2(-r * 0.3 + cos(a) * r * 0.4, sin(a) * r * 0.5)
+		ci.draw_line(p, p + Vector2(-r * 0.3, r * 0.2), c(Color(0.25, 0.5, 0.3), lit, alpha), 2.0)
+	var head := Vector2(r * 0.65, 0)
+	ci.draw_circle(head, r * 0.42, skin)
+	ci.draw_circle(head + Vector2(r * 0.2, 0), r * 0.18, Color(1.0, 0.95, 0.7, alpha))
+	ci.draw_circle(head + Vector2(r * 0.25, 0), r * 0.09, Color(0.6, 0.1, 0.05, alpha) if lit <= 0.0 else Color(1.0, 0.6, 0.2, alpha))
+
+
+## Púca: lebre negra de olhos dourados e orelhas compridas, que muda de forma e rouba.
+static func _pooka(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, carried: float) -> void:
+	var fur := c(Color(0.1, 0.09, 0.12), lit, alpha)
+	var hop := absf(sin(t * 8.0 + phase))
+	ci.draw_circle(Vector2.ZERO, r * (1.1 + 0.15 * hop), Color(0.3, 0.2, 0.45, 0.15 * alpha))
+	for s: float in [-1.0, 1.0]:
+		ci.draw_line(Vector2(-r * 0.5, s * r * 0.4), Vector2(-r * (0.9 + 0.3 * hop), s * r * 0.6), fur, maxf(2.0, r * 0.25))
+	var body := PackedVector2Array()
+	for i in 16:
+		var a := TAU * i / 16.0
+		body.append(Vector2(cos(a) * r * 0.85, sin(a) * r * 0.6))
+	ci.draw_colored_polygon(body, fur)
+	ci.draw_circle(Vector2(-r * 0.85, 0), r * 0.2, c(Color(0.3, 0.28, 0.35), lit, alpha))
+	var head := Vector2(r * 0.75, 0)
+	ci.draw_circle(head, r * 0.4, fur)
+	for s: float in [-1.0, 1.0]:
+		ci.draw_colored_polygon(PackedVector2Array([head + Vector2(-r * 0.05, s * r * 0.12), head + Vector2(-r * 0.9, s * r * (0.4 + 0.1 * hop)), head + Vector2(-r * 0.15, s * r * 0.3)]), fur)
+	eyes(ci, head + Vector2(r * 0.2, 0), r * 0.18, maxf(1.2, r * 0.09), Color(1.0, 0.8, 0.2), lit, alpha)
+	if carried > 0.0:
+		_ember_glow(ci, head + Vector2(r * 0.45, 0), r * 0.28, t, alpha)
+
+
+## Selkie: foca encolhida na pele brilhante; ao tirar a pele, mostra o rosto de gente.
+static func _selkie(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float, open: float) -> void:
+	var skin := c(Color(0.42, 0.45, 0.5), lit, alpha)
+	var spots := c(Color(0.28, 0.3, 0.35), lit, alpha)
+	if open > 0.3:
+		var face := Vector2(r * (0.4 + 0.5 * open), 0)
+		tail_at(ci, face, PI, r * 1.0, r * 0.4, t * 1.5, phase, r * 0.3, c(Color(0.2, 0.12, 0.08), lit, alpha), 5)
+		ci.draw_circle(face, r * 0.35, c(Color(0.85, 0.75, 0.65), lit, alpha))
+		eyes(ci, face + Vector2(r * 0.15, 0), r * 0.14, maxf(1.2, r * 0.07), Color(0.4, 0.8, 1.0), lit, alpha)
+	var pts := PackedVector2Array()
+	for i in 18:
+		var a := TAU * i / 18.0
+		pts.append(Vector2(cos(a) * r * (1.05 - 0.3 * open) - r * 0.2 * open, sin(a) * r * 0.75))
+	ci.draw_colored_polygon(pts, skin)
+	for i in 5:
+		ci.draw_circle(Vector2(-r * 0.5 + i * r * 0.25 - r * 0.2 * open, sin(i * 2.1 + phase) * r * 0.35), r * 0.09, spots)
+	ci.draw_colored_polygon(PackedVector2Array([Vector2(-r * 0.9, 0), Vector2(-r * 1.4, -r * 0.4), Vector2(-r * 1.25, 0), Vector2(-r * 1.4, r * 0.4)]), skin)
+	if open < 0.6:
+		var k := (1.0 - open / 0.6) * (0.6 + 0.4 * sin(t * 3.0 + phase))
+		ci.draw_circle(Vector2(r * 0.7, 0), r * 0.3, skin)
+		ci.draw_arc(Vector2.ZERO, r * 1.15, 0.0, TAU, 28, Color(0.8, 0.95, 1.0, 0.35 * k * alpha), 2.0)
+		ci.draw_line(Vector2(-r * 0.5, -r * 0.45), Vector2(r * 0.4, -r * 0.2), Color(1, 1, 1, 0.6 * k * alpha), 2.5)
+
+
+## Péist: serpente dos lagos irlandeses, de corpo grosso e barbatanas.
+static func _peist(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	var col := c(Color(0.2, 0.32, 0.3), lit, alpha)
+	var spine := tail(ci, r * 0.6, r * 3.0, r * 0.75, t * 1.3, phase, r * 0.8, col, 12)
+	for i in range(2, spine.size() - 2, 3):
+		ci.draw_colored_polygon(PackedVector2Array([spine[i] + Vector2(0, -r * 0.2), spine[i] + Vector2(-r * 0.35, -r * 0.55), spine[i] + Vector2(-r * 0.2, 0)]), c(Color(0.35, 0.55, 0.45), lit, alpha))
+	ci.draw_circle(Vector2(r * 0.65, 0), r * 0.42, col)
+	eyes(ci, Vector2(r * 0.85, 0), r * 0.2, maxf(1.2, r * 0.08), Color(0.9, 1.0, 0.5), lit, alpha)
+
+
+## Pedra de ogham: menir com entalhes, que a Cailleach faz rolar.
+static func _ogham(ci: CanvasItem, r: float, t: float, phase: float, lit: float, alpha: float) -> void:
+	ci.draw_set_transform(Vector2.ZERO, t * 3.0 + phase)
+	ci.draw_circle(Vector2.ZERO, r * 1.4, Color(0.7, 1.0, 0.85, 0.1 * alpha))
+	ci.draw_rect(Rect2(-r * 0.5, -r * 1.0, r * 1.0, r * 2.0), c(Color(0.5, 0.52, 0.5), lit, alpha))
+	ci.draw_rect(Rect2(-r * 0.5, -r * 1.0, r * 0.3, r * 2.0), c(Color(0.62, 0.65, 0.6), lit, alpha))
+	ci.draw_line(Vector2(r * 0.5, -r * 0.9), Vector2(r * 0.5, r * 0.9), c(Color(0.3, 0.32, 0.3), lit, alpha), 1.5)
+	for i in 5:
+		var y := -r * 0.7 + i * r * 0.35
+		ci.draw_line(Vector2(r * 0.5, y), Vector2(r * (0.15 if i % 2 == 0 else 0.25), y), Color(0.6, 1.0, 0.8, 0.8 * alpha), 1.5)

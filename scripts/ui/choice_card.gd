@@ -33,7 +33,9 @@ func _init(title: String, tag: String, desc: String, size_override: Vector2 = SI
 	var w := card_size.x
 	var h := card_size.y
 
-	var name_label := UiTheme.label(title, 21, UiTheme.TEXT, true)
+	# Cartas estreitas (muitos mapas numa fileira) usam letras menores.
+	var narrow := w < 180.0
+	var name_label := UiTheme.label(title, 16 if narrow else 21, UiTheme.TEXT, true)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -41,17 +43,17 @@ func _init(title: String, tag: String, desc: String, size_override: Vector2 = SI
 	name_label.size = Vector2(w - 24, 54)
 	add_child(name_label)
 
-	var tag_label := UiTheme.label(tag, 14, UiTheme.GOLD)
+	var tag_label := UiTheme.label(tag, 12 if narrow else 14, UiTheme.GOLD)
 	tag_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tag_label.position = Vector2(12, h * 0.385 + 54)
-	tag_label.size = Vector2(w - 24, 20)
+	tag_label.position = Vector2(6 if narrow else 12, h * 0.385 + 54)
+	tag_label.size = Vector2(w - (12 if narrow else 24), 20)
 	add_child(tag_label)
 
-	var desc_label := UiTheme.label(desc, 14 if w < 230.0 else 15, UiTheme.TEXT_DIM)
+	var desc_label := UiTheme.label(desc, 12 if narrow else (14 if w < 230.0 else 15), UiTheme.TEXT_DIM)
 	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_label.position = Vector2(16, _desc_top())
-	desc_label.size = Vector2(w - 32, h - _desc_top() - 10)
+	desc_label.position = Vector2(10 if narrow else 16, _desc_top())
+	desc_label.size = Vector2(w - (20 if narrow else 32), h - _desc_top() - 10)
 	add_child(desc_label)
 
 

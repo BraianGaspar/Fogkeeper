@@ -21,6 +21,10 @@ const BOSS_SCRIPTS := {
 	"kyubi": preload("res://scripts/gameplay/bosses/kyubi.gd"),
 	"sphinx": preload("res://scripts/gameplay/bosses/sphinx.gd"),
 	"apep": preload("res://scripts/gameplay/bosses/apep.gd"),
+	"scylla": preload("res://scripts/gameplay/bosses/scylla.gd"),
+	"medusa": preload("res://scripts/gameplay/bosses/medusa.gd"),
+	"balor": preload("res://scripts/gameplay/bosses/balor.gd"),
+	"cailleach": preload("res://scripts/gameplay/bosses/cailleach.gd"),
 }
 
 var enemies_root: Node2D

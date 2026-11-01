@@ -411,4 +411,9 @@ static func name_edit() -> LineEdit:
 		Settings.save()
 	)
 	e.text_submitted.connect(func(_t: String) -> void: e.release_focus())
+	# No controle não há teclado: abre o da Steam (Steam Deck) ou o do sistema.
+	e.editing_toggled.connect(func(on: bool) -> void:
+		if on and GameInput.using_pad and not SteamService.show_keyboard(e.get_global_rect()):
+			DisplayServer.virtual_keyboard_show(e.text, e.get_global_rect(), DisplayServer.KEYBOARD_TYPE_DEFAULT, e.max_length)
+	)
 	return e

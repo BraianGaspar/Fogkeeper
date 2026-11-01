@@ -166,6 +166,19 @@ static func apply_relic(boss_id: String, lh: Lighthouse) -> void:
 		"apep":
 			lh.lit_slow *= 0.75
 			lh.beam_range *= 1.1
+		"scylla":
+			lh.sweeper_level += 1
+			lh.rebuild_beams()
+		"medusa":
+			lh.max_hp += 30.0
+			lh.heal(30.0)
+			lh.lit_slow *= 0.8
+		"balor":
+			lh.beam_half_angle *= 1.15
+			lh.beam_dps *= 1.2
+		"cailleach":
+			lh.magnet_radius *= 1.3
+			lh.ability_cooldown *= 0.85
 
 
 ## Melhorias permanentes da oficina, aplicadas no começo de cada partida.

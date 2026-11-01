@@ -45,8 +45,9 @@ func _process(delta: float) -> void:
 			p.x = -AREA.x * 0.5 - 200.0
 		b["pos"] = p
 	_flash = maxf(0.0, _flash - delta * 2.5)
-	# Relâmpagos na tempestade, no temporal e no tufão; no fiorde é nevasca, no Egito é areia.
-	if storm > 0.6 and DayCycle.map in ["bay", "amazon", "japan"] and Settings.weather:
+	# Relâmpagos na tempestade, no temporal, no tufão, nos raios de Zeus e na
+	# chuva do Atlântico; no fiorde é nevasca, no Egito é areia.
+	if storm > 0.6 and DayCycle.map in ["bay", "amazon", "japan", "greece", "celtic"] and Settings.weather:
 		_next_flash -= delta
 		if _next_flash <= 0.0:
 			_next_flash = _rng.randf_range(3.0, 8.0)
@@ -84,8 +85,9 @@ func _draw() -> void:
 	elif DayCycle.map == "egypt":
 		if Settings.weather:
 			_draw_sand(q, storm)
-	elif DayCycle.map == "amazon":
-		_draw_fireflies(q, p["night"] * (1.0 - 0.7 * storm))
+	elif DayCycle.map in ["amazon", "celtic"]:
+		# Vaga-lumes na mata; na Costa Celta, as luzes das fadas na névoa.
+		_draw_fireflies(q, p["night"] * (1.0 - 0.7 * storm) * (0.6 if DayCycle.map == "celtic" else 1.0))
 		if storm > 0.01 and Settings.weather:
 			_draw_rain(q, storm)
 	else:

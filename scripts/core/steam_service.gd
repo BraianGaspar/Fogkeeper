@@ -41,6 +41,14 @@ static func achievement(id: String) -> void:
 		_steam.call("storeStats")
 
 
+## Abre o teclado virtual da Steam (Steam Deck e Big Picture) sobre um campo
+## de texto; as teclas chegam ao jogo como teclado comum. Sem Steam, retorna false.
+static func show_keyboard(field: Rect2) -> bool:
+	if not _steam:
+		return false
+	return bool(_steam.call("showFloatingGamepadTextInput", 0, int(field.position.x), int(field.position.y), int(field.size.x), int(field.size.y)))
+
+
 ## Envia a pontuação para a leaderboard do mapa e da dificuldade (ou do modo).
 static func upload_score(run: Dictionary) -> void:
 	if not _steam:

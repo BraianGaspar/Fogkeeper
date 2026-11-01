@@ -42,9 +42,10 @@ scripts/gameplay/
                           (thief, mirror, moth, fogbank)
   creature_art.gd         Desenho de cada criatura (espectro, draugr, saci, mapinguari...)
   bosses/                 Boss (base) e um script por chefe: leviathan, kraken, jotunn, fenrir,
-                          iara, boitata, cuca, umibozu, kyubi, sphinx, apep
+                          iara, boitata, cuca, umibozu, kyubi, sphinx, apep, scylla, medusa, balor, cailleach
   lighthouse.gd, lighthouse_art.gd, beam, ember, pulse_wave, spawner, abilities, burn_fx, ring_fx
 scripts/world/            background (Baía), fjord_background (Fiorde), river_background (Rio), japan_background, desert_background,
+                          greece_background (Mar Egeu), celtic_background (Costa Celta),
                           fog (névoa, chuva, neve, aurora, vaga-lumes)
 scripts/ui/
   hud.gd                  HUD, barra do chefe, habilidades, fila de avisos, registro e troca de telas

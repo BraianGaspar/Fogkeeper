@@ -89,6 +89,15 @@ const BOSSES := {
 		"weak_damage": 2.0, "strong_damage": 0.5, "punish_stones": 4},
 	"apep": {"hp": 900.0, "speed": 0.36, "radius": 30.0, "damage": 16.0, "xp": 40,
 		"start_radius": 430.0, "approach": 11.0, "eat_range": 0.4, "spawn_every": 2.8},
+	"scylla": {"hp": 820.0, "speed": 30.0, "radius": 40.0, "damage": 12.0, "xp": 30, ## damage = mordida de cada cabeça.
+		"stand": 330.0, "heads": 6, "strike_every": 1.8, "strike_time": 2.6, "head_hp": 1.0, "head_damage": 0.03, "body_damage": 0.6, "rock_every": 3.0},
+	"medusa": {"hp": 900.0, "speed": 0.34, "radius": 30.0, "damage": 0.0, "xp": 40,
+		"stand": 290.0, "gaze_every": 7.0, "gaze_warn": 1.3, "gaze_time": 3.0, "stone_time": 3.0, "stone_turn": 0.12, "snake_every": 1.0},
+	"balor": {"hp": 880.0, "speed": 26.0, "radius": 46.0, "damage": 0.0, "xp": 30,
+		"stand": 330.0, "open_every": 8.0, "open_warn": 1.5, "open_time": 4.0, "closed_damage": 0.2, "open_damage": 2.2,
+		"glare": 1.0, "glare_dps": 7.0, "glare_range": 0.6, "spawn_every": 3.2},
+	"cailleach": {"hp": 860.0, "speed": 0.3, "radius": 30.0, "damage": 0.0, "xp": 40,
+		"stand": 300.0, "storm_every": 10.0, "storm_time": 5.0, "push": 110.0, "stone_every": 1.6, "hail_every": 4.0},
 }
 const BOSS_TIMES := [300.0, 540.0] ## Momentos dos chefes (o mapa diz quem aparece).
 const BOSS_WARNING := 8.0 ## Segundos de aviso antes de um chefe surgir.
@@ -109,6 +118,10 @@ const RELICS := {
 	"kyubi": {"name": "Hoshi no tama", "desc": "A luz causa 20% mais dano e gira 15% mais rápido."},
 	"sphinx": {"name": "Olho de Hórus", "desc": "Ganha um nível de Pulso de luz."},
 	"apep": {"name": "Escama de Apep", "desc": "Criaturas iluminadas ficam 25% mais lentas e o feixe alcança 10% mais longe."},
+	"scylla": {"name": "Colar de Cila", "desc": "Ganha um nível de Farolete giratório."},
+	"medusa": {"name": "Égide", "desc": "+30 de vida máxima e criaturas iluminadas ficam 20% mais lentas."},
+	"balor": {"name": "Olho de Balor", "desc": "O feixe fica 15% mais largo e causa 20% mais dano."},
+	"cailleach": {"name": "Cajado da Cailleach", "desc": "Brasas são puxadas de 30% mais longe e habilidades recarregam 15% mais rápido."},
 }
 
 # --- Habilidades ativas ---
@@ -215,6 +228,8 @@ const UNLOCKS := [
 	{"id": "amazon", "kind": "map", "cost": 300, "goal": "boss"},
 	{"id": "japan", "kind": "map", "cost": 400, "goal": "dawn"},
 	{"id": "egypt", "kind": "map", "cost": 500, "goal": "dawn_medium"},
+	{"id": "greece", "kind": "map", "cost": 600, "goal": "dawn_medium"},
+	{"id": "celtic", "kind": "map", "cost": 700, "goal": "dawn_medium"},
 	{"id": "stone", "kind": "keeper", "cost": 80, "goal": ""},
 	{"id": "iron", "kind": "keeper", "cost": 160, "goal": ""},
 	{"id": "crystal", "kind": "keeper", "cost": 240, "goal": "dawn"},
@@ -340,5 +355,5 @@ static func tide(level: int, key: String) -> float:
 # --- Modo Chefões ---
 const BOSS_RUSH_PAUSE := 6.0 ## Segundos entre um chefe e o próximo.
 const BOSS_RUSH_START_PICKS := 6 ## Melhorias escolhidas antes do primeiro chefe.
-const BOSS_RUSH_PAR := 900.0 ## Abaixo disto, cada segundo poupado vale pontos.
+const BOSS_RUSH_PAR := 1200.0 ## Abaixo disto, cada segundo poupado vale pontos.
 const SCORE_RUSH_PER_SECOND := 10

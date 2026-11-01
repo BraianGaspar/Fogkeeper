@@ -10,6 +10,8 @@ const ENTRIES := {
 	"amazon": ["corpo_seco", "curupira", "mapinguari", "saci", "jabuti", "mula", "fog_amazon", "boto", "wisp", "iara", "boitata", "cuca"],
 	"japan": ["funayurei", "kitsune", "oni", "tengu", "kappa", "chochin", "fog_japan", "hitodama", "wave", "umibozu", "kyubi"],
 	"egypt": ["mummy", "jackal", "sobek", "ibis", "scarab", "ba", "fog_egypt", "cobra", "sandstone", "sphinx", "apep"],
+	"greece": ["shade", "hellhound", "minotaur", "harpy", "bronze_shield", "lampad", "fog_greece", "gorgon_snake", "marble", "scylla", "medusa"],
+	"celtic": ["banshee", "kelpie", "fomorian", "pooka", "selkie", "fairy", "fog_celtic", "peist", "ogham", "balor", "cailleach"],
 }
 
 const LORE := {
@@ -67,6 +69,28 @@ const LORE := {
 	"sandstone": "Blocos de arenito que a Esfinge faz rolar contra quem erra o enigma.",
 	"sphinx": "A guardiã dos enigmas: quem não responde certo não passa.",
 	"apep": "Apep, a serpente do caos que toda noite tenta engolir o barco do sol.",
+	"shade": "As almas do Hades, que vagam sem descanso quando não têm a moeda para pagar o barqueiro.",
+	"hellhound": "Os cães do mundo dos mortos, da mesma ninhada de Cérbero, que guarda os portões do Hades.",
+	"minotaur": "Meio homem, meio touro, preso no labirinto de Creta até ser vencido por Teseu.",
+	"harpy": "Aves de rosto humano que arrancavam a comida das mãos do rei Fineu.",
+	"bronze_shield": "Um hoplita de escudo polido como espelho, como o que Perseu usou para não encarar a Medusa.",
+	"lampad": "As Lâmpades, ninfas do submundo que seguem a deusa Hécate carregando tochas.",
+	"fog_greece": "A névoa do Estige, o rio que separa o mundo dos vivos do reino dos mortos.",
+	"gorgon_snake": "As serpentes que formam os cabelos da Medusa e se soltam para caçar sozinhas.",
+	"marble": "Blocos de mármore que despencam do rochedo de Cila.",
+	"scylla": "Cila, a ninfa transformada em monstro de seis cabeças que devorava marinheiros no estreito, ao lado de Caríbdis.",
+	"medusa": "A górgona cujo olhar transforma em pedra qualquer um que a encare.",
+	"banshee": "A mulher que lamenta à noite e anuncia, com seu grito, uma morte na família.",
+	"kelpie": "O cavalo d'água dos lagos escoceses, que convida os viajantes a montar e mergulha com eles.",
+	"fomorian": "Os fomorianos, gigantes do mar e da escuridão, antigos inimigos dos deuses da Irlanda.",
+	"pooka": "O púca muda de forma, de cavalo a lebre negra, e prega peças em quem anda à noite.",
+	"selkie": "Focas que tiram a pele para andar como gente; quem esconde a pele prende a selkie em terra.",
+	"fairy": "As luzes do povo das fadas, que dançam nos círculos de pedra na noite de Samhain.",
+	"fog_celtic": "A névoa que sobe quando o véu entre o nosso mundo e o Outro Mundo fica fino.",
+	"peist": "A péist, serpente dos lagos irlandeses que os santos teriam expulsado para o mar.",
+	"ogham": "Pedras marcadas com a antiga escrita ogham, que a Cailleach deixa cair do avental.",
+	"balor": "Balor, rei dos fomorianos, cujo único olho destruía tudo o que encarava quando a pálpebra se erguia.",
+	"cailleach": "A Cailleach, a velha divina do inverno, que traz as tempestades e ergueu as montanhas com pedras.",
 }
 
 

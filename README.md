@@ -26,11 +26,11 @@ Teclas do teclado podem ser trocadas em **Configurações → Controles**.
 | Pausar / voltar | Esc ou P | Start / B |
 
 ## O que tem no jogo
-- Cinco mapas de cinco mitologias, com história contada antes da partida: **Baía da Névoa** (Leviatã e Kraken), **Fiorde Congelado** (Jötunn e Fenrir), **Rio Encantado**, do folclore brasileiro (Iara, Boitatá e Cuca), **Mar dos Yōkai** (Umibōzu e Kyūbi) e **Farol de Alexandria** (Esfinge e Apep), cada um com criaturas, clima e trilha diferentes.
+- Sete mapas de sete mitologias, com história contada antes da partida: **Baía da Névoa** (Leviatã e Kraken), **Fiorde Congelado** (Jötunn e Fenrir), **Rio Encantado**, do folclore brasileiro (Iara, Boitatá e Cuca), **Mar dos Yōkai** (Umibōzu e Kyūbi), **Farol de Alexandria** (Esfinge e Apep), **Mar Egeu** (Cila e Medusa) e **Costa Celta** (Balor e Cailleach), cada um com criaturas, clima e trilha diferentes.
 - Criaturas especiais que mexem na mira: ladras de brasas, espelhos que refletem a luz, mariposas que crescem na luz e névoas que apagam as brasas.
 - Evoluções de melhorias, troca e banimento de cartas.
 - Oficina do faroleiro: óleo ganho em toda partida compra melhorias permanentes e libera mapas, faróis e cartas.
-- Modo sem fim, marés (10 níveis de desafio), desafio diário, Modo Chefões, 28 conquistas e um tutorial guiado.
+- Modo sem fim, marés (10 níveis de desafio), desafio diário, Modo Chefões, 32 conquistas e um tutorial guiado.
 - Cinco faroleiros jogáveis com regras próprias, seis habilidades ativas (três equipadas) e um bestiário com as lendas reais.
 - Acessibilidade: filtro para daltonismo, tamanho do texto e redução de efeitos piscantes.
 - Nove idiomas: português, inglês, espanhol, francês, alemão, russo, chinês simplificado, japonês e coreano.

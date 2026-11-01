@@ -34,8 +34,7 @@ func allows_level_up() -> bool:
 
 
 func _key(action: String, slot: int = 0) -> String:
-	var keys: Array = Settings.controls.get(action, GameInput.REBINDABLE[action])
-	return GameInput.key_name(int(keys[slot]))
+	return GameInput.label(action, slot)
 
 
 func _enter(s: Step) -> void:
@@ -66,19 +65,22 @@ func _enter(s: Step) -> void:
 			boss.hp = boss.max_hp
 		Step.DONE:
 			Sfx.play(&"victory")
-	_refresh()
+	refresh()
 
 
 ## Texto do passo atual no painel do tutorial.
-func _refresh() -> void:
+func refresh() -> void:
 	var t := ""
 	var body := ""
 	var progress := ""
 	match step:
 		Step.AIM:
 			t = tr("1. Gire o feixe")
-			body = tr("Mova o mouse, use %s / %s (ou %s / %s) ou o analógico para girar a luz do farol.") % [
-				_key("rotate_left"), _key("rotate_right"), _key("rotate_left", 1), _key("rotate_right", 1)]
+			if GameInput.using_pad:
+				body = tr("Use um dos analógicos para girar a luz do farol: o esquerdo gira, o direito aponta direto.")
+			else:
+				body = tr("Mova o mouse, use %s / %s (ou %s / %s) ou o analógico para girar a luz do farol.") % [
+					_key("rotate_left"), _key("rotate_right"), _key("rotate_left", 1), _key("rotate_right", 1)]
 			progress = "%d%%" % mini(100, int(_turned / (PI * 1.5) * 100.0))
 		Step.BURN:
 			t = tr("2. Queime as criaturas")
@@ -90,12 +92,20 @@ func _refresh() -> void:
 			progress = "%d / 4" % _count
 		Step.LEVEL_UP:
 			t = tr("4. Suba de nível")
-			body = tr("Com brasas suficientes, você escolhe uma melhoria. %s / %s ou as setas para navegar, Enter, Espaço, 1-3 ou clique para escolher. T troca as cartas e B bane uma.") % [
-				_key("rotate_left"), _key("rotate_right")]
+			if GameInput.using_pad:
+				body = tr("Com brasas suficientes, você escolhe uma melhoria. Use o direcional para navegar e %s para escolher. %s troca as cartas e %s bane uma.") % [
+					_key("menu_confirm"), _key("reroll"), _key("banish")]
+			else:
+				body = tr("Com brasas suficientes, você escolhe uma melhoria. %s / %s ou as setas para navegar, Enter, Espaço, 1-3 ou clique para escolher. T troca as cartas e B bane uma.") % [
+					_key("rotate_left"), _key("rotate_right")]
 		Step.ABILITIES:
 			t = tr("5. Use as habilidades")
-			body = tr("%s: Clarão (fere e atordoa em volta)   •   %s ou botão direito: Sobrecarga (feixe concentrado)   •   %s: Sino da Névoa (puxa as brasas e cura). Use as três.") % [
-				_key("ability_1"), _key("ability_2"), _key("ability_3")]
+			if GameInput.using_pad:
+				body = tr("%s: Clarão (fere e atordoa em volta)   •   %s: Sobrecarga (feixe concentrado)   •   %s: Sino da Névoa (puxa as brasas e cura). Use as três.") % [
+					_key("ability_1"), _key("ability_2"), _key("ability_3")]
+			else:
+				body = tr("%s: Clarão (fere e atordoa em volta)   •   %s ou botão direito: Sobrecarga (feixe concentrado)   •   %s: Sino da Névoa (puxa as brasas e cura). Use as três.") % [
+					_key("ability_1"), _key("ability_2"), _key("ability_3")]
 			progress = "%d / 3" % _used.size()
 		Step.THIEF:
 			t = tr("6. Cuidado com a ladra")
@@ -108,7 +118,7 @@ func _refresh() -> void:
 			body = tr("À meia-noite e às 3h surgem chefes, sempre com um aviso vermelho antes. Cada um tem uma mecânica própria. Derrote este Leviatã enfraquecido: só a cabeça recebe dano, e ele mergulha de vez em quando.")
 		Step.DONE:
 			t = tr("Pronto!")
-			body = tr("Na partida de verdade, resista até o amanhecer (06:00). Esc pausa o jogo. Boa sorte, faroleiro.")
+			body = tr("Na partida de verdade, resista até o amanhecer (06:00). %s pausa o jogo. Boa sorte, faroleiro.") % ("Esc" if not GameInput.using_pad else _key("pause"))
 	main.hud.set_tutorial(t, body, progress)
 
 
@@ -119,7 +129,7 @@ func tick(delta: float) -> void:
 			var aim: float = main.lighthouse.aim_angle
 			_turned += absf(angle_difference(_last_aim, aim))
 			_last_aim = aim
-			_refresh()
+			refresh()
 			if _turned >= PI * 1.5:
 				_enter(Step.BURN)
 		Step.BURN, Step.EMBERS, Step.ABILITIES:
@@ -147,7 +157,7 @@ func on_kill(enemy: Enemy) -> void:
 	match step:
 		Step.BURN:
 			_count += 1
-			_refresh()
+			refresh()
 			if _count >= 3:
 				_enter(Step.EMBERS)
 		Step.THIEF:
@@ -164,7 +174,7 @@ func on_kill(enemy: Enemy) -> void:
 func on_ember() -> void:
 	if step == Step.EMBERS:
 		_count += 1
-		_refresh()
+		refresh()
 		if _count >= 4:
 			_enter(Step.LEVEL_UP)
 
@@ -177,7 +187,7 @@ func on_upgrade() -> void:
 func on_ability(i: int) -> void:
 	if step == Step.ABILITIES:
 		_used[i] = true
-		_refresh()
+		refresh()
 		if _used.size() >= 3:
 			_enter(Step.THIEF)
 
