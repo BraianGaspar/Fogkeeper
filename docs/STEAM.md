@@ -2,6 +2,10 @@
 
 Confirme valores e regras no Steamworks antes de agir: estas notas refletem o conhecimento até meados de 2026.
 
+## Nome
+- Nome principal na loja: **Fogkeeper** (inglês alcança mais público). Use o nome localizado da Steam para mostrar **Farol** na loja em português.
+- Antes de abrir a página: busque o nome na Steam e no Google, confira domínio e redes sociais, e consulte o INPI (e o USPTO, se for vender nos EUA).
+
 ## Conta e taxa
 - Conta no Steamworks com dados fiscais e bancários.
 - Taxa do Steam Direct: US$ 100 por jogo, recuperável após US$ 1.000 de receita bruta. Também vale para jogos gratuitos.

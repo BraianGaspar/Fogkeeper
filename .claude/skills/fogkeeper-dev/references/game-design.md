@@ -1,4 +1,4 @@
-# Farol — documento de design
+# Fogkeeper — documento de design
 
 ## Pitch
 Você é um farol numa ilha cercada de névoa. Não pode se mover: só gira o feixe. As criaturas temem a luz, mas são muitas. Sobreviva 10 minutos até o amanhecer.

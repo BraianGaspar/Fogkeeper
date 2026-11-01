@@ -180,7 +180,7 @@ func _open_panel() -> void:
 func show_title() -> void:
 	_play_ui.visible = false
 	_open_panel()
-	var title := _make_label("FAROL", 72, ACCENT)
+	var title := _make_label("FOGKEEPER", 72, ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_panel_box.add_child(title)
 	_add_text("As criaturas da névoa temem a luz.\nGire o feixe e resista até o amanhecer.", 20, true)

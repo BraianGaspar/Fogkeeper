@@ -3,7 +3,7 @@ config_version=5
 
 [application]
 
-config/name="Farol"
+config/name="Fogkeeper"
 config/description="Um farol fixo contra as criaturas da névoa. Gire o feixe e sobreviva até o amanhecer."
 config/version="0.1.0"
 run/main_scene="res://scenes/main.tscn"

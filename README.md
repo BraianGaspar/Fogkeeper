@@ -1,4 +1,4 @@
-# Farol
+# Fogkeeper
 
 Um farol fixo numa ilha cercada de névoa. Gire o feixe, queime as criaturas e resista até o amanhecer.
 
@@ -26,7 +26,7 @@ O bot mira no inimigo mais próximo e escolhe melhorias ao acaso; serve como ter
 ## Documentação
 - `docs/GAME_DESIGN.md`: pilares, estado atual e próximos passos.
 - `docs/STEAM.md`: roteiro de publicação.
-- `.claude/skills/farol-dev/`: skill com as orientações do projeto para o Claude (Claude Code carrega automaticamente).
+- `.claude/skills/fogkeeper-dev/`: skill com as orientações do projeto para o Claude (Claude Code carrega automaticamente).
 
 ## Licença
 Defina uma licença antes de tornar o repositório público. Para um jogo comercial, o mais comum é manter o código fechado ("todos os direitos reservados").
