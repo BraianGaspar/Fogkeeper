@@ -11,10 +11,11 @@ extends CanvasLayer
 const SHOTS := [
 	{"map": "bay", "at": 140.0, "boss": -1, "time": 5.0, "en": "You are the lighthouse.", "pt": "Você é o farol."},
 	{"map": "bay", "at": 230.0, "boss": 0, "time": 5.0, "en": "The light burns what hides in the fog.", "pt": "A luz queima o que se esconde na névoa."},
-	{"map": "fjord", "at": 260.0, "boss": 1, "time": 5.0, "en": "Gods and monsters from five mythologies.", "pt": "Deuses e monstros de cinco mitologias."},
-	{"map": "amazon", "at": 280.0, "boss": 1, "time": 5.0, "en": "Brazilian folklore. Japanese yōkai. Egyptian gods.", "pt": "Folclore brasileiro. Yōkai japoneses. Deuses do Egito."},
+	{"map": "fjord", "at": 260.0, "boss": 1, "time": 5.0, "en": "Gods and monsters from seven mythologies.", "pt": "Deuses e monstros de sete mitologias."},
+	{"map": "amazon", "at": 280.0, "boss": 1, "time": 5.0, "en": "Brazilian folklore. Japanese yōkai.", "pt": "Folclore brasileiro. Yōkai japoneses."},
+	{"map": "greece", "at": 300.0, "boss": 1, "time": 5.0, "en": "Greek monsters. Celtic legends. Egyptian gods.", "pt": "Monstros gregos. Lendas celtas. Deuses do Egito."},
 	{"map": "japan", "at": 300.0, "boss": 1, "time": 5.0, "en": "Every boss plays by its own rules.", "pt": "Cada chefe tem as próprias regras."},
-	{"map": "egypt", "at": 320.0, "boss": 0, "time": 5.5, "en": "Collect embers. Evolve your light.", "pt": "Recolha brasas. Evolua sua luz."},
+	{"map": "celtic", "at": 320.0, "boss": 0, "time": 5.5, "en": "Collect embers. Evolve your light.", "pt": "Recolha brasas. Evolua sua luz."},
 	{"map": "egypt", "at": 380.0, "boss": 1, "time": 5.0, "en": "Hold on until dawn.", "pt": "Resista até o amanhecer."},
 ]
 const INTRO := 3.0

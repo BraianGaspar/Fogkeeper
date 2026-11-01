@@ -1261,6 +1261,7 @@ func trailer_shot(map: String, at: float, boss: int) -> void:
 	hud.set_hud_visible(true)
 	elapsed = at
 	spawner.elapsed = at
+	spawner.clear_schedule() # Só o chefe da cena aparece, não o do horário.
 	level = 12
 	for id: String in ["wide_lens", "wide_lens", "intense_flame", "intense_flame", "twin_lens", "pulse", "pulse", "sweeper", "walls"]:
 		_apply_upgrade_silently(id)

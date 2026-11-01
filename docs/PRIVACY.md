@@ -24,7 +24,7 @@ Se o jogo for comprado pela Steam ou pela Google Play, essas lojas tratam dados 
 O jogo não coleta dados de ninguém, inclusive de crianças.
 
 ## Contato
-Dúvidas sobre privacidade: [PREENCHER: e-mail de contato público].
+Dúvidas sobre privacidade: [braian_gaspar@hotmail.com: e-mail de contato público].
 
 ---
 
@@ -34,4 +34,4 @@ Dúvidas sobre privacidade: [PREENCHER: e-mail de contato público].
 
 **Summary: Fogkeeper does not collect, send or sell any personal data.**
 
-The game only stores settings, local match history and progress in its own data folder on your device. It has no ads, trackers, analytics or accounts, and does not access the camera, microphone, contacts, location or files outside its folder. When bought through Steam or Google Play, those stores handle purchase data, achievements, cloud saves and online leaderboards under their own policies; Fogkeeper only sends them what those features require. Contact: [PREENCHER: e-mail de contato público].
+The game only stores settings, local match history and progress in its own data folder on your device. It has no ads, trackers, analytics or accounts, and does not access the camera, microphone, contacts, location or files outside its folder. When bought through Steam or Google Play, those stores handle purchase data, achievements, cloud saves and online leaderboards under their own policies; Fogkeeper only sends them what those features require. Contact: [braian_gaspar@hotmail.com: e-mail de contato público].

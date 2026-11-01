@@ -19,8 +19,9 @@ const ASSETS := [
 ## Criaturas em volta do farol: arte, ângulo, distância (fração do tamanho), raio.
 const CREATURES := [
 	["wraith", 0.25, 0.62, 13.0], ["kitsune", 0.75, 0.75, 12.0], ["mapinguari", 1.35, 0.7, 20.0],
-	["draugr", 2.1, 0.68, 13.0], ["mummy", 2.6, 0.78, 13.0], ["siren", 3.2, 0.6, 12.0],
-	["oni", 3.9, 0.74, 18.0], ["curupira", 4.5, 0.66, 10.0], ["crab", 5.1, 0.72, 18.0], ["jackal", 5.7, 0.62, 11.0],
+	["harpy", 1.75, 0.8, 12.0], ["draugr", 2.1, 0.68, 13.0], ["mummy", 2.6, 0.78, 13.0], ["siren", 3.2, 0.6, 12.0],
+	["minotaur", 3.55, 0.8, 18.0], ["oni", 3.9, 0.74, 18.0], ["kelpie", 4.2, 0.62, 12.0], ["curupira", 4.5, 0.66, 10.0],
+	["crab", 5.1, 0.72, 18.0], ["banshee", 5.4, 0.8, 13.0], ["jackal", 5.7, 0.62, 11.0],
 ]
 const BEAMS := [0.25, 3.0] ## Ângulos dos feixes (o primeiro é o principal).
 
