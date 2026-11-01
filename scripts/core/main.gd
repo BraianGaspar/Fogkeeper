@@ -590,6 +590,12 @@ func _closest_enemy() -> Enemy:
 	return best
 
 
+## Celular: o app foi para segundo plano (ligação, outro app): pausa a partida.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and state == State.PLAYING and not autoplay:
+		_set_paused(true)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"pause"):
 		if state == State.PLAYING:

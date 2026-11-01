@@ -47,8 +47,9 @@ Preferências, histórico e progresso (`progress.json`) ficam na pasta de dados 
 GODOT=/caminho/do/godot tools/check.sh        # carrega o projeto, acusa erros e textos sem tradução
 GODOT=/caminho/do/godot tools/autoplay.sh 10 --difficulty=hard --map=fjord  # partidas com bot
 GODOT=/caminho/do/godot tools/export.sh       # gera build/windows/Fogkeeper.exe (um arquivo só)
+GODOT=/caminho/do/godot tools/export_android.sh  # gera build/android/Fogkeeper.apk
+GODOT=/caminho/do/godot tools/trailer.sh          # grava build/trailer_en.avi e trailer_pt.avi
 godot --path . --script tools/store_art.gd     # arte da loja da Steam em docs/store/
-godot --path . --resolution 1920x1080 --fixed-fps 30 --write-movie build/trailer_en.avi -- --trailer=en  # trailer
 godot --path . -- --ui=levelup --screenshot=3 # abre uma tela e salva user://screenshot.png
 ```
 O bot mira no inimigo mais próximo e escolhe melhorias ao acaso; serve como termômetro de balanceamento. Outras opções de linha de comando estão no topo de `scripts/core/main.gd`.

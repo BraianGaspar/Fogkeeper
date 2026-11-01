@@ -81,9 +81,10 @@ func _show_tab(i: int) -> void:
 			_build_controls()
 		2:
 			_row(tr("Qualidade visual"), _selector(QUALITY_NAMES, Settings.quality, _set_quality))
-			_row(tr("Modo de tela"), _selector(WINDOW_NAMES, Settings.window_mode, _set_window_mode))
-			_row(tr("Resolução (janela)"), _selector(Settings.RESOLUTIONS, maxi(0, Settings.RESOLUTIONS.find(Settings.resolution)), _set_resolution, false))
-			_row(tr("Sincronização vertical (VSync)"), _toggle(Settings.vsync, _set_vsync))
+			if not OS.has_feature("mobile"): # No celular a tela é sempre cheia.
+				_row(tr("Modo de tela"), _selector(WINDOW_NAMES, Settings.window_mode, _set_window_mode))
+				_row(tr("Resolução (janela)"), _selector(Settings.RESOLUTIONS, maxi(0, Settings.RESOLUTIONS.find(Settings.resolution)), _set_resolution, false))
+				_row(tr("Sincronização vertical (VSync)"), _toggle(Settings.vsync, _set_vsync))
 			_row(tr("Tremor de tela"), _toggle(Settings.screen_shake, _set_shake))
 			_row(tr("Pausa de impacto nos golpes fortes"), _toggle(Settings.hit_stop, _set_hit_stop))
 			_row(tr("Partículas e faíscas"), _toggle(Settings.particles, _set_particles))

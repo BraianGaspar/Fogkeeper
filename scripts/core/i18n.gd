@@ -409,8 +409,8 @@ const TEXTS := {
 	"%s + %s = %s": ["%s + %s = %s", "%s + %s = %s"],
 	"Evolução liberada: %s": ["Evolution unlocked: %s", "Evolución desbloqueada: %s"],
 	"Evolução: %s!": ["Evolution: %s!", "¡Evolución: %s!"],
-	"Trocar cartas (T) — %d": ["Swap cards (T) — %d", "Cambiar cartas (T) — %d"],
-	"Banir uma carta (B) — %d": ["Banish a card (B) — %d", "Desterrar una carta (B) — %d"],
+	"Trocar cartas — %d": ["Swap cards — %d", "Cambiar cartas — %d"],
+	"Banir uma carta — %d": ["Banish a card — %d", "Desterrar una carta — %d"],
 	"%s banida desta partida.": ["%s banished from this run.", "%s desterrada de esta partida."],
 	"Pavio aceso: %s": ["Lit wick: %s", "Mecha encendida: %s"],
 	# Oficina e desbloqueios

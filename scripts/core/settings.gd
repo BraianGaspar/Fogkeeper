@@ -120,7 +120,7 @@ static func apply() -> void:
 	if output_device in AudioServer.get_output_device_list():
 		AudioServer.output_device = output_device
 	GameInput.apply_controls(controls)
-	if DisplayServer.get_name() == "headless":
+	if DisplayServer.get_name() == "headless" or OS.has_feature("mobile"):
 		return
 	var mode := DisplayServer.WINDOW_MODE_WINDOWED
 	if window_mode == BORDERLESS:

@@ -1,8 +1,8 @@
 class_name LevelUpScreen
 extends MenuScreen
 ## Escolha de melhoria ao subir de nível, em cartas navegáveis. Evoluções
-## aparecem com destaque próprio. Dá para trocar a mão (T) e banir uma carta
-## da partida (B, depois escolher a carta), enquanto houver usos.
+## aparecem com destaque próprio. Dá para trocar a mão (tecla T) e banir uma carta
+## da partida (tecla B, depois escolher a carta), enquanto houver usos.
 
 signal upgrade_chosen(id: String)
 signal reroll_pressed
@@ -83,12 +83,12 @@ func _build() -> void:
 	actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	actions.add_theme_constant_override("separation", 14)
 	root.add_child(actions)
-	var reroll := UiTheme.small_button(tr("Trocar cartas (T) — %d") % rerolls, func() -> void: _reroll())
+	var reroll := UiTheme.small_button(tr("Trocar cartas — %d") % rerolls, func() -> void: _reroll())
 	reroll.focus_mode = Control.FOCUS_NONE
 	reroll.custom_minimum_size.x = 240
 	reroll.disabled = rerolls <= 0
 	actions.add_child(reroll)
-	_banish_button = UiTheme.small_button(tr("Banir uma carta (B) — %d") % banishes, func() -> void: _toggle_banish(), true)
+	_banish_button = UiTheme.small_button(tr("Banir uma carta — %d") % banishes, func() -> void: _toggle_banish(), true)
 	_banish_button.focus_mode = Control.FOCUS_NONE
 	_banish_button.custom_minimum_size.x = 240
 	_banish_button.disabled = banishes <= 0

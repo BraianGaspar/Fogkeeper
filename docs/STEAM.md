@@ -63,9 +63,8 @@ O Godot grava AVI (MJPEG + som). Converta para MP4 H.264 antes de enviar (HandBr
 ## Plataformas
 - **Windows:** pronto (`tools/export.sh`).
 - **Linux / Steam Deck:** o Godot exporta direto; falta baixar os templates de Linux e criar o preset. O renderer GL Compatibility já roda no Deck.
-- **macOS:** exportável pelo Godot, mas assinar e notarizar exige um Mac e conta de desenvolvedor Apple (US$ 99/ano).
 - **Navegador (itch.io, demo):** o Godot exporta para Web; boa vitrine gratuita.
-- **Celular (Android/iOS):** o código já aceita toque (mirar arrastando o dedo, tocar nas habilidades, botão de pausa). Falta: preset Android (Android SDK + JDK + templates), testar o tamanho da interface em telas pequenas e ajustar o desempenho. iOS precisa de Mac e conta Apple. No celular o modelo costuma ser grátis com anúncios/compra única de US$ 2–3; dá para lançar depois da Steam.
+- **Android:** pronto para teste. `tools/export_android.sh` gera `build/android/Fogkeeper.apk` (~28 MB, arm64, assinado com a chave de debug). Requer JDK 17 (Temurin) e o Android SDK (build-tools 34, platform 34), configurados nas Configurações do Editor. Para a Google Play: criar uma chave de release (keytool), exportar em AAB e pagar a taxa única de US$ 25 da conta de desenvolvedor. iOS e macOS ficam de fora (exigem Mac e conta Apple paga).
 
 ## Integração técnica
 - Use **GodotSteam** (addon GDExtension, ou a build pré-compilada do editor). Crie um autoload `SteamService` que inicializa a Steam e falha de forma silenciosa quando o jogo roda fora da Steam (dev, autoplay, CI). Nunca deixe o jogo depender da Steam para iniciar.
