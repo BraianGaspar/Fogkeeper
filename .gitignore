@@ -12,3 +12,4 @@ export_credentials.cfg
 # SO
 .DS_Store
 Thumbs.db
+/roblox/build/

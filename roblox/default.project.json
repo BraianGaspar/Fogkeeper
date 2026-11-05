@@ -1,0 +1,20 @@
+{
+  "name": "Fogkeeper",
+  "tree": {
+    "$className": "DataModel",
+    "Players": {
+      "$properties": { "CharacterAutoLoads": true }
+    },
+    "ReplicatedStorage": {
+      "Fogkeeper": { "$path": "src/shared" }
+    },
+    "ServerScriptService": {
+      "Fogkeeper": { "$path": "src/server" }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Fogkeeper": { "$path": "src/client" }
+      }
+    }
+  }
+}
