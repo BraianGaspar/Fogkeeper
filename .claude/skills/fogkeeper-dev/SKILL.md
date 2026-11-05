@@ -1,6 +1,6 @@
 ---
 name: fogkeeper-dev
-description: "Guia de desenvolvimento do jogo Fogkeeper (Godot 4, GDScript), um survivors-like em que um farol fixo gira um feixe de luz contra criaturas da névoa. Use esta skill sempre que for mexer no projeto Fogkeeper (antes chamado Farol), mesmo em pedidos curtos: mapas e histórias, criaturas, chefes, faróis, habilidades ativas, melhorias (upgrades), dificuldades, balanceamento, HUD, menus, teclas, efeitos visuais, áudio e música, histórico, ranking, salvamento, Steam (GodotSteam, conquistas, builds) ou revisar código e commits do repositório. Também use quando o usuário falar em \"o jogo do farol\", \"a luz\", \"o feixe\", \"as brasas\" ou \"a névoa\" neste contexto."
+description: "Guia de desenvolvimento do jogo Fogkeeper (Godot 4, GDScript), um survivors-like em que um farol fixo gira um feixe de luz contra criaturas da névoa. Use esta skill sempre que for mexer no projeto Fogkeeper (antes chamado Farol), mesmo em pedidos curtos: mapas e histórias, criaturas, chefes, faróis, habilidades ativas, melhorias (upgrades), dificuldades, balanceamento, HUD, menus, teclas, efeitos visuais, áudio e música, histórico, ranking, salvamento, Steam (GodotSteam, conquistas, builds), a versão Roblox (roblox/, que tem skills roblox-* próprias) ou revisar código e commits do repositório. Também use quando o usuário falar em \"o jogo do farol\", \"a luz\", \"o feixe\", \"as brasas\" ou \"a névoa\" neste contexto."
 ---
 
 # Fogkeeper — guia de desenvolvimento
@@ -143,6 +143,29 @@ godot --path . --resolution 1280x720 --fixed-fps 20 -- --autoplay --seed=2 --map
 ```
 
 Com `--ui` ou `--cycle` o jogo fecha sozinho depois da captura, e partidas de `--ui` não entram no histórico. Para ver histórico/ranking com dados, grave um `records.json` de exemplo na pasta de dados do usuário e apague-o depois; nunca deixe dados falsos no histórico do jogador.
+
+## Versão Roblox
+
+A versão cooperativa para o Roblox (até 4 jogadores) fica em `roblox/`: código
+Luau em `roblox/src` (shared/server/client), montado por `roblox/build.ps1` em
+`roblox/build/Fogkeeper.rbxlx`. Os contratos (unidades, atributos, canais,
+Snapshot, formatos JSON) estão em `roblox/ARCHITECTURE.md`; o uso, em
+`roblox/README.md`. Números e textos vêm deste jogo em Godot. Skills:
+
+| Skill | Quando usar |
+|---|---|
+| `roblox-code` | Qualquer mudança em `roblox/src`: onde fica cada coisa, regras, verificação (luau_blocks, i18n_check, build) e teste no Studio com ou sem MCP |
+| `roblox-debug` | Erro no Output, algo que não aparece, dessincronia, travamento |
+| `roblox-data-security` | DataStore (Progress, Scores), recibos, canais do cliente, trapaça |
+| `roblox-economy` | Óleo, oficina, desbloqueios, metas, passes, produtos, reviver |
+| `roblox-ui` | Telas, HUD, celular, controle, tradução, acessibilidade, feedback |
+| `roblox-performance` | FPS, rede, peças, partículas, luzes, cenários |
+| `roblox-assets` | Sons, imagens, malhas, auditoria de modelos do Toolbox |
+| `roblox-playtest` | Roteiro de teste no Studio (solo, cooperativo, modos, compras, celular) |
+| `roblox-policy` | Regras do Roblox: maturidade, monetização, IP, privacidade |
+| `roblox-release` | Publicar, página da experiência, notas de versão, voltar atrás |
+| `roblox-liveops` | Métricas, atualizações, eventos, divulgação, opinião dos jogadores |
+| `roblox-plan` | Pedido grande: perguntas, PRD e fatias testáveis uma a uma |
 
 ## Commits
 
