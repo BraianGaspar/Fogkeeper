@@ -41,6 +41,9 @@ Balance.REVIVE_LATE_OIL = 300 -- óleo entregue se a compra chegar depois que a 
 Balance.LOBBY_COOLDOWN = 0.25 -- intervalo mínimo entre comandos do saguão, por jogador
 Balance.TOP_CACHE = 60 -- segundos que um ranking fica guardado antes de consultar de novo
 Balance.HISTORY_SIZE = 20 -- partidas guardadas no histórico de cada jogador
+-- Grupos de som que o jogador liga e desliga (Sfx.GROUPS do Godot); o servidor
+-- só aceita estes em settings.sounds e o cliente (Sounds) os usa.
+Balance.SOUND_GROUPS = { "ui", "creatures", "embers", "damage", "abilities", "bosses", "weather", "alerts", "ambience" }
 
 -- Partida ----------------------------------------------------------------------
 Balance.RUN_DURATION = 600 -- segundos até o amanhecer (vitória)

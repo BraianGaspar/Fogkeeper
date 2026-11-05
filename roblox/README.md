@@ -92,11 +92,58 @@ tecla trocam sozinhas para os botões do controle quando ele é usado.
   - O jogo não pausa, porque é cooperativo.
   - O menu (Esc ou ≡) só abre as Configurações e o Bestiário.
   - Para sair, use o menu do próprio Roblox; a noite continua para os outros.
-- **Sons e música** (`src/client/Sounds.luau`):
-  - Os ids vêm vazios, então o jogo fica em silêncio até eles serem
-    preenchidos.
-  - Use áudios do Creator Store com licença para a sua experiência, ou áudios
-    enviados por você.
+- **Sons e música:** veja a seção [Sons](#sons). Até os ids serem
+  preenchidos, o jogo fica em silêncio.
+
+## Sons
+
+A trilha e os efeitos são os mesmos do jogo em Godot, exportados para
+`roblox/audio/*.ogg` (40 arquivos, com os mesmos nomes dos ids do `Sfx`). O
+Roblox não sintetiza áudio: cada arquivo precisa ser enviado como asset, e o
+número do asset vai em `src/shared/SoundIds.luau` (0 = ainda não enviado; o
+som fica em silêncio, sem erro). Quem toca é `src/client/Sounds.luau` (canais,
+grupos e trilha dinâmica). O jogador ajusta tudo em Configurações > Áudio.
+
+**Regenerar os .ogg** (depois de mudar um som em `scripts/audio/sfx.gd`), na
+raiz do repositório:
+`GODOT=/caminho/do/godot FFMPEG=/caminho/do/ffmpeg tools/export_audio.sh`.
+Som alterado = enviar de novo e trocar o id.
+
+**Envio automático (Open Cloud):**
+
+1. Em [create.roblox.com](https://create.roblox.com) > **Creator Dashboard >
+   Open Cloud > API Keys**, crie uma chave com a API **Assets** (Read e Write)
+   para o mesmo dono da experiência: a sua conta ou o grupo. Guarde a chave
+   fora do Git.
+2. No PowerShell, na raiz do repositório:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File roblox\tools\upload_audio.ps1 -ApiKey "SUA_CHAVE" -UserId 123456
+   # ou, se a experiência é de um grupo:
+   powershell -ExecutionPolicy Bypass -File roblox\tools\upload_audio.ps1 -ApiKey "SUA_CHAVE" -GroupId 7654321
+   ```
+   O script envia cada `.ogg` que ainda está com 0 em `SoundIds.luau`, espera
+   o Roblox terminar o processamento e grava o id no arquivo. Pode rodar de
+   novo: os que já têm id são pulados (útil se a cota do mês acabar no meio).
+3. Remonte (`build.ps1`) e teste no Studio.
+
+**Limites do Roblox:** enviar áudio é gratuito, mas há uma cota a cada 30 dias.
+Pela regra mais recente que conhecemos, contas com **ID verificado** enviam até
+**100 áudios por mês** e contas sem verificação bem menos (cerca de **10**);
+cada arquivo pode ter até 7 minutos e cerca de 20 MB. Os 40 arquivos cabem na
+cota de uma conta verificada. **Confira a regra atual** na documentação de
+áudio em create.roblox.com antes de enviar, porque ela muda. Todo áudio passa
+pela moderação; se um id ficar mudo, veja o status do asset.
+
+**Envio manual (alternativa):** Creator Hub > **Development Items > Audio** >
+Upload Asset (um por vez), ou no Studio, **View > Asset Manager > Bulk Import**
+com vários `.ogg` de uma vez. Depois copie o número de cada asset
+("Copy Asset ID") e cole na linha certa de `src/shared/SoundIds.luau` (por
+exemplo `music_bay = 1234567890,`).
+
+**Permissão e saída:** o áudio precisa pertencer ao mesmo dono da experiência
+(conta ou grupo) ou ter permissão de uso nela; sem isso o Roblox bloqueia e o
+som fica mudo. O dispositivo de saída (fone ou alto-falante) é escolhido pelo
+jogador no menu do Roblox ou no Windows; o jogo não tem acesso a isso.
 
 ## Como publicar
 

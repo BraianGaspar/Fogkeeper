@@ -221,14 +221,8 @@ RunService.RenderStepped:Connect(function(dt)
 	else
 		Lighting.ClockTime = (18 + math.min(progress, 1) * 12) % 24
 	end
-	-- Música: saguão, mapa ou chefe.
-	if phase == "lobby" then
-		Sounds.music("lobby")
-	elseif (state:GetAttribute("BossName") or "") ~= "" then
-		Sounds.music("boss")
-	else
-		Sounds.music(map)
-	end
+	-- Música: calma do mapa, tensão antes do chefe, batalha, fim (Sounds).
+	Sounds.update(dt, state)
 	Input.update(dt, phase == "playing")
 	Renderer.update(dt, t)
 	Renderer.updateBeams(dt, phase == "playing", Input.angle, state:GetAttribute("Ink") == true)

@@ -360,6 +360,14 @@ local function destroyEntity(ent)
 	end
 end
 
+-- Som pelo módulo Sounds (via app.ctx), se já estiver montado.
+local function sfx(name: string, pitch: number?)
+	local app = Renderer.app
+	if app and app.ctx and app.ctx.sounds then
+		app.ctx.sounds.play(name, pitch)
+	end
+end
+
 function Renderer.snapshot(list: { any }, emberList: { any }, deaths: { any })
 	for _, d in deaths do
 		local pos = toWorld(d.x, d.y, CREATURE_Y)
@@ -368,6 +376,11 @@ function Renderer.snapshot(list: { any }, emberList: { any }, deaths: { any })
 		emit("smoke", pos, if d.big then 12 else 3)
 		if d.big then
 			Renderer.shake = math.max(Renderer.shake, 0.6)
+		end
+		if d.big then
+			sfx("burn_big", 0.9 + math.random() * 0.2)
+		else
+			sfx("burn", 0.85 + math.random() * 0.35)
 		end
 	end
 	local seen = {}
@@ -446,6 +459,7 @@ function Renderer.snapshot(list: { any }, emberList: { any }, deaths: { any })
 		if not seenEmbers[id] then
 			-- Recolhida (ou apagada): umas fagulhas no lugar.
 			emit("sparks", em.pos, 5)
+			sfx("ember", 1 + math.random() * 0.3)
 			if em.lit then
 				emberLights -= 1
 			end
@@ -822,6 +836,9 @@ function Renderer.fx(name: string, data: any)
 		if app and (data.userId == nil or data.userId == me.UserId) then
 			local label = if name == "achievement" then "Conquista: %s" else "Liberado: %s"
 			app.toast(Text.format(label, { data.name or data.id or "" }), Color3.new(0.55, 0.9, 0.6))
+		end
+		if data.userId ~= nil and data.userId ~= me.UserId then
+			return -- conquista de outro jogador: sem som
 		end
 	elseif name == "sfx" then
 		-- Som próprio de um chefe: {id, x, y}.

@@ -22,6 +22,7 @@ App.ctx = nil :: any -- {send, input, renderer, sounds, net}
 App.state = nil :: any -- pasta State replicada
 App.settings = {
 	locale = "", colorblind = 0, text_scale = 0, reduce_flashes = false, music = 80, sfx = 100, shake = true,
+	master = 100, damage = 80, sounds = {}, -- sounds: grupo -> false quando desligado (ver Sounds.GROUPS)
 }
 
 local gui: ScreenGui
@@ -248,7 +249,7 @@ function App.applySettings()
 		colorFilter.Contrast = cb.Contrast
 	end
 	if App.ctx and App.ctx.sounds then
-		App.ctx.sounds.setVolumes((s.music or 80) / 100, (s.sfx or 100) / 100)
+		App.ctx.sounds.applySettings(s)
 	end
 end
 

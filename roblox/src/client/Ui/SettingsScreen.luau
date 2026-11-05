@@ -60,15 +60,48 @@ return function(app, _params)
 	first = lang:FindFirstChildWhichIsA("TextButton")
 
 	section("Áudio")
+	-- Canais (como no Godot): geral, música, efeitos e dano no farol, de 0 a 100.
+	local sounds = app.ctx and app.ctx.sounds
+	local function preview(name: string)
+		if sounds then
+			sounds.play(name)
+		end
+	end
+	Theme.slider(row("Volume geral"), s.master or 100, function(v)
+		app.setSetting("master", v)
+		preview("confirm")
+	end)
 	Theme.slider(row("Trilha sonora"), s.music or 80, function(v)
 		app.setSetting("music", v)
 	end)
 	Theme.slider(row("Efeitos sonoros"), s.sfx or 100, function(v)
 		app.setSetting("sfx", v)
+		preview("confirm")
+	end)
+	Theme.slider(row("Som de dano"), s.damage or 80, function(v)
+		app.setSetting("damage", v)
+		preview("damage")
 	end)
 	-- O Roblox não deixa o jogo escolher a saída de som; fica no menu dele.
 	Theme.label(scroll, Text.t("A saída de áudio (fone ou alto-falante) é escolhida fora do jogo: no menu do Roblox (Esc → Configurações) ou no som do Windows."),
-		14, Theme.TEXT_DIM, Theme.BODY, { LayoutOrder = nextOrder(), Size = UDim2.new(1, -16, 0, 40) })
+		15, Theme.TEXT, Theme.BODY, { LayoutOrder = nextOrder(), Size = UDim2.new(1, -16, 0, 44) })
+
+	-- Grupos de sons (Sfx.GROUPS do Godot), cada um liga e desliga.
+	if sounds then
+		Theme.label(scroll, Text.t("Sons individuais"), 18, Theme.GOLD, Theme.BOLD, { LayoutOrder = nextOrder() })
+		for _, g in sounds.GROUPS do
+			local current = if type(s.sounds) == "table" then s.sounds[g] ~= false else true
+			Theme.toggle(row(sounds.GROUP_NAMES[g]), current, function(on)
+				-- Tabela nova a cada mudança, para não mexer na que veio do progresso.
+				local copy = {}
+				for k, v in (if type(s.sounds) == "table" then s.sounds else {}) do
+					copy[k] = v
+				end
+				copy[g] = on
+				app.setSetting("sounds", copy)
+			end)
+		end
+	end
 
 	section("Acessibilidade")
 	local cbNames = {}

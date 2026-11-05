@@ -23,12 +23,21 @@ local Progress = {}
 local STORE_NAME = "FogkeeperProgress"
 local LOAD_TRIES = 3
 local SETTINGS_KEYS = { locale = "string", colorblind = "number", text_scale = "number", reduce_flashes = "boolean",
-	music = "number", sfx = "number", shake = "boolean" }
+	music = "number", sfx = "number", master = "number", damage = "number", shake = "boolean" }
 
 local store = nil
 pcall(function()
 	store = DataStoreService:GetDataStore(STORE_NAME)
 end)
+
+-- Grupos de som todos ligados (settings.sounds: grupo -> bool).
+local function soundsOn(): { [string]: boolean }
+	local t = {}
+	for _, g in Balance.SOUND_GROUPS do
+		t[g] = true
+	end
+	return t
+end
 
 -- Quem é este servidor na trava de sessão (no Studio o JobId vem vazio).
 local JOB = if game.JobId ~= "" then game.JobId else "studio"
@@ -40,7 +49,8 @@ local function blank()
 	return {
 		oil = 0, oil_total = 0, meta = {}, unlocked = {}, achievements = {}, seen = {},
 		stats = { runs = 0, wins = 0, kills = 0, bosses = 0, dawns = 0, tide_max = 0, tutorial_done = false },
-		settings = { locale = "", colorblind = 0, text_scale = 0, reduce_flashes = false, music = 80, sfx = 100, shake = true },
+		settings = { locale = "", colorblind = 0, text_scale = 0, reduce_flashes = false, music = 80, sfx = 100,
+			master = 100, damage = 80, shake = true, sounds = soundsOn() },
 		history = {},
 		receipts = {}, -- compras de Robux já entregues (PurchaseId -> true); fica fora do ProgressJson
 	}
@@ -67,6 +77,14 @@ local function normalize(d)
 			d.settings[k] = v
 		end
 	end
+	-- Só os grupos conhecidos, sempre booleanos.
+	local sounds = soundsOn()
+	for _, g in Balance.SOUND_GROUPS do
+		if d.settings.sounds[g] == false then
+			sounds[g] = false
+		end
+	end
+	d.settings.sounds = sounds
 	-- Conquistas são `true` (ARCHITECTURE: ProgressJson); versões antigas guardavam a hora.
 	for id, v in d.achievements do
 		d.achievements[id] = if v then true else nil
@@ -464,7 +482,8 @@ end
 
 -- Configurações e histórico ---------------------------------------------------------
 
--- Aceita só as chaves conhecidas, com o tipo certo.
+-- Aceita só as chaves conhecidas, com o tipo certo (sounds: só grupos de
+-- Balance.SOUND_GROUPS, com booleano).
 function Progress.setSettings(player: Player, json: string)
 	local ok, incoming = pcall(function()
 		return HttpService:JSONDecode(json)
@@ -482,6 +501,14 @@ function Progress.setSettings(player: Player, json: string)
 				v = string.sub(v, 1, 8)
 			end
 			settings[k] = v
+		end
+	end
+	if type(incoming.sounds) == "table" then
+		for _, g in Balance.SOUND_GROUPS do
+			local on = incoming.sounds[g]
+			if type(on) == "boolean" then
+				settings.sounds[g] = on
+			end
 		end
 	end
 	Progress.publish(player)

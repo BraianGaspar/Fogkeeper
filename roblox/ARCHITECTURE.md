@@ -91,7 +91,8 @@ faroleiros, cada um com o próprio feixe, defendem o mesmo farol.
 | `client/Renderer.luau` | Criaturas, chefes, brasas, feixes e efeitos |
 | `client/Art/<grupo>.luau` | Modelos das criaturas (um arquivo por mapa) e dos chefes (`Bosses.luau`) |
 | `client/DayCycle.luau` | Luz, cor, água do Terrain e clima por mapa e hora |
-| `client/Sounds.luau` | Sons por id de asset (configuráveis; vazios = silêncio) |
+| `shared/SoundIds.luau` | Id do asset de cada som e música de `roblox/audio` (0 = silêncio); preenchido por `tools/upload_audio.ps1` ou à mão |
+| `client/Sounds.luau` | Canais (SoundGroups Geral > Música, Efeitos > Dano e Ambiente), grupos do Godot, vozes, trilha dinâmica (calma do mapa, tensão nos `BOSS_WARNING` s antes do chefe, batalha, vitória/derrota) e o mar |
 | `client/Ui/*.luau` | Telas: uma por arquivo, mais `Theme.luau` (cores, fontes, peças) e `Hud.luau` |
 | `client/Input.luau` | Mouse, teclado, toque e controle |
 
@@ -236,12 +237,17 @@ buffer. Cada lista vem precedida da quantidade, em u16.
   ```json
   {"oil": 0, "meta": {"granite": 2}, "unlocked": {"fjord": true}, "achievements": {"first_dawn": true},
    "seen": {"wraith": true}, "stats": {"runs": 0, "kills": 0, "bosses": 0, "dawns": 0, "tide_max": 0, "tutorial_done": false},
-   "settings": {"locale": "", "colorblind": 0, "text_scale": 0, "reduce_flashes": false, "music": 80, "sfx": 100, "shake": true},
+   "settings": {"locale": "", "colorblind": 0, "text_scale": 0, "reduce_flashes": false, "music": 80, "sfx": 100,
+                "master": 100, "damage": 80, "shake": true,
+                "sounds": {"ui": true, "creatures": true, "embers": true, "damage": true, "abilities": true,
+                           "bosses": true, "weather": true, "alerts": true, "ambience": true}},
    "history": [{"date": "2026-11-04", "map": "bay", "mode": "normal", "difficulty": "normal", "tide": 0,
                 "score": 0, "victory": false, "seconds": 0, "level": 1}]}
   ```
   O histórico guarda as 20 últimas partidas. `locale` vazio significa usar o
-  idioma da conta.
+  idioma da conta. Volumes (`master`, `music`, `sfx`, `damage`) vão de 0 a 100.
+  `sounds` liga e desliga os grupos de `Balance.SOUND_GROUPS` (o servidor
+  aceita só esses, com booleano; grupo que falta = ligado).
 - **`ResultJson`** (fim da partida):
   ```json
   {"victory": false, "map": "bay", "mode": "normal", "difficulty": "normal", "tide": 0, "seconds": 0,
