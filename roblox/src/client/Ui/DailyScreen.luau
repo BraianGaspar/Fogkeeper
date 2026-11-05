@@ -13,6 +13,8 @@ return function(app, _params)
 			rules.date, Text.t(Data.map(rules.map).name), Text.t(Data.hero(rules.hero).name), math.floor(rules.tide or 0) })
 		else ""
 	Theme.label(box, body, 18, Theme.TEXT, Theme.BODY, { LayoutOrder = 10, Size = UDim2.new(1, 0, 0, 90) })
+	Theme.label(box, Text.t("Os bônus da oficina não valem no desafio diário: todos começam iguais."), 14, Theme.TEXT_DIM, Theme.BODY,
+		{ LayoutOrder = 12 })
 	local best = (Data.progress().stats or {}).daily_best
 	if best and rules.date and best.date == rules.date then
 		Theme.label(box, Text.format("Seu melhor hoje: %s pontos.", { Data.number(best.score) }), 16, Theme.GOLD, Theme.BOLD, { LayoutOrder = 11 })

@@ -150,11 +150,14 @@ local function validateLobby()
 	end
 end
 
+-- No desafio diário todos jogam em pé de igualdade: a oficina (que também
+-- recebe óleo comprado com Robux) não vale, só as regras do dia.
 local function infoFor(player: Player, forcedHero: string?)
+	local fair = run ~= nil and run.mode == "daily"
 	return {
 		hero = forcedHero or player:GetAttribute("Hero"),
 		loadout = loadoutOf(player),
-		meta = Progress.get(player).meta,
+		meta = if fair then {} else Progress.get(player).meta,
 		unlocked = function(id: string): boolean
 			return Progress.isUnlocked(player, id)
 		end,
@@ -212,7 +215,7 @@ Players.PlayerRemoving:Connect(function(player)
 	if sim then
 		sim:removePlayer(player.UserId)
 	end
-	Progress.save(player)
+	Progress.save(player, true) -- grava e solta a trava de sessão
 	Progress.forget(player)
 	lastCommand[player] = nil
 	votes[player] = nil
@@ -895,12 +898,18 @@ Net.event("Lobby").OnServerEvent:Connect(function(player, action, value, extra)
 	end
 end)
 
--- Salva todo mundo se o servidor fechar.
+-- Servidor fechando: grava todo mundo e espera as gravações terminarem.
 game:BindToClose(function()
-	for _, player in Players:GetPlayers() do
-		Progress.save(player)
+	Progress.flush(Players:GetPlayers())
+end)
+
+-- Gravação automática: protege o progresso se o servidor cair e renova a
+-- trava de sessão de quem está jogando.
+task.spawn(function()
+	while true do
+		task.wait(Balance.AUTOSAVE_EVERY)
+		Progress.autosave(Players:GetPlayers())
 	end
-	task.wait(2)
 end)
 
 showRanking(lobbyRankingKey())

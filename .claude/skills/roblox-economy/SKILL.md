@@ -30,10 +30,12 @@ barris) separam um jogador novo do "tudo liberado".
 - **Ranking não se compra.** Partida reacendida sai do ranking mundial; o
   reviver vale uma vez por partida e só no modo Normal.
 - **Ponto de atenção:** óleo comprado vira bônus permanente da oficina (vida,
-  dano, giro, cartas), e esses bônus valem nas partidas ranqueadas e no diário.
-  Os tetos da oficina limitam o efeito, mas qualquer aumento de teto, barril
-  maior ou bônus novo de META deve ser avaliado contra isso. Opções se virar
-  problema: ranking separado/sem oficina no diário, ou tetos menores.
+  dano, giro, cartas). No **desafio diário a oficina não vale** (`infoFor` em
+  Main passa `meta = {}`; a tela do diário avisa), então ali todos jogam iguais.
+  No ranking normal ela vale, porque se ganha jogando e tem teto (≈ 5.400 de
+  óleo para tudo). Qualquer aumento de teto, barril maior ou bônus novo de META
+  deve ser avaliado contra isso; se virar problema, tetos menores ou ranking
+  normal sem oficina.
 - **VIP** dobra o óleo: conveniência, não poder novo; não deixe o VIP abrir
   conteúdo que não se consegue jogando.
 - Preço visível antes da compra, sempre pela janela oficial do Roblox, e o texto

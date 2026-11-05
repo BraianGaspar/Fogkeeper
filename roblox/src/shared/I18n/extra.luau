@@ -611,4 +611,14 @@ return {
 		en = "Back to the game", es = "Volver al juego", fr = "Retour au jeu", de = "Zurück zum Spiel",
 		ru = "Вернуться в игру", zh_CN = "返回游戏", ja = "ゲームに戻る", ko = "게임으로 돌아가기",
 	},
+	["Os bônus da oficina não valem no desafio diário: todos começam iguais."] = {
+		en = "Workshop bonuses don't apply in the daily challenge: everyone starts equal.",
+		es = "Los bonos del taller no valen en el desafío diario: todos empiezan iguales.",
+		fr = "Les bonus de l'atelier ne comptent pas dans le défi du jour : tout le monde part à égalité.",
+		de = "Werkstattboni gelten in der täglichen Herausforderung nicht: Alle starten gleich.",
+		ru = "Бонусы мастерской не действуют в ежедневном испытании: все начинают на равных.",
+		zh_CN = "工坊加成在每日挑战中无效：所有人起点相同。",
+		ja = "デイリーチャレンジでは工房のボーナスは無効。全員が同じ条件で始める。",
+		ko = "일일 도전에서는 작업장 보너스가 적용되지 않습니다. 모두 같은 조건으로 시작합니다.",
+	},
 }

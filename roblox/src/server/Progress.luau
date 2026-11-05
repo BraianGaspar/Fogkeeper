@@ -30,6 +30,9 @@ pcall(function()
 	store = DataStoreService:GetDataStore(STORE_NAME)
 end)
 
+-- Quem é este servidor na trava de sessão (no Studio o JobId vem vazio).
+local JOB = if game.JobId ~= "" then game.JobId else "studio"
+
 local data: { [number]: any } = {} -- userId -> progresso
 local loaded: { [number]: boolean } = {}
 
@@ -84,10 +87,11 @@ end
 function Progress.publish(player: Player)
 	local d = Progress.get(player)
 	player:SetAttribute("Oil", d.oil)
-	local receipts = d.receipts
-	d.receipts = nil
+	-- Recibos e trava de sessão são só do servidor.
+	local receipts, lock = d.receipts, d.lock
+	d.receipts, d.lock = nil, nil
 	player:SetAttribute("ProgressJson", HttpService:JSONEncode(d))
-	d.receipts = receipts
+	d.receipts, d.lock = receipts, lock
 end
 
 -- Compras de Robux: registro de recibos entregues e gravação imediata.
@@ -98,6 +102,56 @@ end
 
 function Progress.hasReceipt(player: Player, purchaseId: string): boolean
 	return Progress.get(player).receipts[purchaseId] == true
+end
+
+-- Trava de sessão ---------------------------------------------------------------
+-- O registro salvo guarda qual servidor está com o jogador (`lock`). Um
+-- servidor só grava se a trava for dele (ou estiver livre ou vencida); ao
+-- entrar, espera o servidor anterior soltar a trava. Assim, trocar de
+-- servidor rápido não deixa o servidor antigo gravar por cima do novo.
+
+local function lockOwner(old): string?
+	if type(old) == "table" and type(old.lock) == "table" and type(old.lock.job) == "string"
+		and type(old.lock.at) == "number" and os.time() - old.lock.at < Balance.SESSION_LOCK_TIMEOUT then
+		return old.lock.job
+	end
+	return nil
+end
+
+-- Grava o progresso de `userId` e espera o resultado. `release` solta a trava
+-- (o jogador saiu). Retorna false se falhou ou se outro servidor tem a trava.
+local function write(userId: number, release: boolean): boolean
+	local d = data[userId]
+	if not store or not d or not loaded[userId] then
+		return store == nil
+	end
+	local blocked = false
+	local ok = pcall(function()
+		store:UpdateAsync(tostring(userId), function(old)
+			local owner = lockOwner(old)
+			if owner and owner ~= JOB then
+				blocked = true
+				return nil -- outro servidor está com o jogador: não grava por cima
+			end
+			d.lock = if release then nil else { job = JOB, at = os.time() }
+			return d
+		end)
+	end)
+	if blocked then
+		warn("[Fogkeeper] progresso de " .. userId .. " está com outro servidor; não foi gravado aqui")
+	end
+	return ok and not blocked
+end
+
+local pendingWrites = 0
+
+-- Grava sem bloquear quem chamou; Progress.flush() espera todas terminarem.
+local function writeLater(userId: number, release: boolean)
+	pendingWrites += 1
+	task.spawn(function()
+		pcall(write, userId, release)
+		pendingWrites -= 1
+	end)
 end
 
 -- Grava agora e espera o resultado (o recibo só é confirmado ao Roblox depois
@@ -111,39 +165,50 @@ function Progress.saveNow(player: Player, purchaseId: string?): boolean
 	if not store then
 		return true
 	end
-	if not loaded[player.UserId] then
-		if purchaseId then
-			d.receipts[purchaseId] = nil
-		end
-		return false
-	end
-	local ok = pcall(function()
-		store:UpdateAsync(tostring(player.UserId), function()
-			return d
-		end)
-	end)
+	local ok = loaded[player.UserId] == true and write(player.UserId, false)
 	if not ok and purchaseId then
 		d.receipts[purchaseId] = nil
 	end
 	return ok
 end
 
+-- Carrega e pega a trava. Se outro servidor ainda está com o jogador (acabou
+-- de sair de lá), espera ele gravar e soltar; depois de SESSION_LOCK_WAIT,
+-- assume (o servidor antigo caiu ou travou, e não gravará mais por cima).
 function Progress.load(player: Player)
 	local key = tostring(player.UserId)
 	local result = nil
 	local success = store == nil
 	if store then
-		for _ = 1, LOAD_TRIES do
-			local ok, value = pcall(function()
-				return store:GetAsync(key)
+		local started = os.clock()
+		local tries = 0
+		while player.Parent and tries < LOAD_TRIES do
+			local busy = false
+			local ok = pcall(function()
+				store:UpdateAsync(key, function(old)
+					local owner = lockOwner(old)
+					if owner and owner ~= JOB and os.clock() - started < Balance.SESSION_LOCK_WAIT then
+						busy = true
+						return nil
+					end
+					result = old
+					local claimed = if type(old) == "table" then old else blank()
+					claimed.lock = { job = JOB, at = os.time() }
+					return claimed
+				end)
 			end)
-			if ok then
-				result = value
+			if ok and not busy then
 				success = true
 				break
 			end
-			task.wait(1)
+			if not ok then
+				tries += 1
+			end
+			task.wait(if busy then 2 else 1)
 		end
+	end
+	if not player.Parent then
+		return -- saiu enquanto esperava a trava: nada a guardar
 	end
 	data[player.UserId] = normalize(result)
 	-- Se a leitura falhou, nunca grava por cima do progresso salvo.
@@ -154,18 +219,31 @@ function Progress.load(player: Player)
 	Progress.publish(player)
 end
 
-function Progress.save(player: Player)
-	local d = data[player.UserId]
-	if not store or not d or not loaded[player.UserId] then
-		return
+-- Grava sem esperar (fim de partida, compra na oficina...). `release` = o
+-- jogador está saindo.
+function Progress.save(player: Player, release: boolean?)
+	writeLater(player.UserId, release == true)
+end
+
+-- Grava periodicamente (renova a trava; protege contra queda do servidor).
+function Progress.autosave(players: { Player })
+	for _, player in players do
+		if loaded[player.UserId] then
+			writeLater(player.UserId, false)
+		end
 	end
-	task.spawn(function()
-		pcall(function()
-			store:UpdateAsync(tostring(player.UserId), function()
-				return d
-			end)
-		end)
-	end)
+end
+
+-- Servidor fechando: grava todos, solta as travas e espera terminar (o
+-- Roblox dá até 30 s ao BindToClose).
+function Progress.flush(players: { Player })
+	for _, player in players do
+		writeLater(player.UserId, true)
+	end
+	local started = os.clock()
+	while pendingWrites > 0 and os.clock() - started < Balance.SHUTDOWN_SAVE_WAIT do
+		task.wait(0.2)
+	end
 end
 
 function Progress.forget(player: Player)

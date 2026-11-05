@@ -24,6 +24,12 @@ Balance.SNAPSHOT_RATE = 12 -- envios de estado por segundo
 Balance.LOBBY_RETURN = 15 -- segundos na tela final antes de voltar ao saguão
 Balance.ENDLESS_VOTE = 15 -- segundos para votar em continuar noite adentro
 Balance.STORY_TIME = 14 -- segundos da história do mapa antes da partida
+
+-- Salvamento (server/Progress.luau)
+Balance.AUTOSAVE_EVERY = 60 -- segundos entre gravações automáticas (renova a trava de sessão)
+Balance.SESSION_LOCK_TIMEOUT = 180 -- trava sem renovar há mais que isto é de um servidor que caiu
+Balance.SESSION_LOCK_WAIT = 15 -- quanto esperar o servidor anterior soltar a trava antes de assumir
+Balance.SHUTDOWN_SAVE_WAIT = 25 -- servidor fechando: espera as gravações (o Roblox dá até 30 s)
 Balance.PAUSE_MAX = 120 -- com mais de um faroleiro, a pausa acaba sozinha depois disto
 
 -- Compras com Robux (shared/Monetization.luau)

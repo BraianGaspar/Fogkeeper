@@ -24,9 +24,18 @@ conquistas, bestiário (`seen`), estatísticas, histórico, **recibos** de compr
   internas que `normalize` percorre) + `ProgressJson` no ARCHITECTURE.md.
   Mudança de significado de um campo existente (não só campo novo) pede
   migração explícita em `normalize` e, se ficar complexo, um `version` no perfil.
-- `Progress.save`: `UpdateAsync` em segundo plano, gravando a tabela da memória.
-  Chamado ao comprar desbloqueio/oficina, mudar configurações, terminar
-  partida/tutorial, sair do jogo e no `BindToClose`.
+- `Progress.save(player, release?)`: `UpdateAsync` em segundo plano, gravando a
+  tabela da memória. Chamado ao comprar desbloqueio/oficina, mudar
+  configurações, terminar partida/tutorial e ao sair do jogo (`release = true`
+  solta a trava). `Progress.autosave` roda a cada `Balance.AUTOSAVE_EVERY`.
+- **Trava de sessão:** o perfil salvo tem `lock = {job, at}` (JobId do servidor
+  dono). `Progress.load` pega a trava dentro de `UpdateAsync`; se outro servidor
+  ainda a tem (jogador acabou de sair de lá), espera até `SESSION_LOCK_WAIT` e
+  depois assume. Toda gravação confere a trava dentro do `UpdateAsync` e não
+  grava se ela for de outro servidor. Trava sem renovar há mais de
+  `SESSION_LOCK_TIMEOUT` é de servidor que caiu. `lock` fica fora do `ProgressJson`.
+- **Fechamento:** `BindToClose` chama `Progress.flush`, que grava todos, solta as
+  travas e espera as gravações terminarem (até `SHUTDOWN_SAVE_WAIT`).
 - `Progress.saveNow(player, purchaseId)`: grava e espera; usado nos recibos.
 - `receipts` fica fora do `ProgressJson` publicado e é limpo acima de 300.
 - Rankings: um OrderedDataStore por chave (`modo|mapa|dificuldade` ou
@@ -35,13 +44,8 @@ conquistas, bestiário (`seen`), estatísticas, histórico, **recibos** de compr
 
 ## Pontos a revisar sempre que mexer nisso
 
-- **Fechamento do servidor:** `BindToClose` chama saves assíncronos e espera 2 s
-  fixos. Com muitos jogadores ou DataStore lento, pode não dar tempo. Preferível:
-  esperar até todos terminarem, com limite (o Roblox dá cerca de 30 s).
-- **Sem trava de sessão:** se o jogador troca de servidor rápido, o servidor novo
-  pode ler antes de o antigo gravar, e o antigo depois sobrescreve. Se isso virar
-  problema real (relato de óleo sumindo), considere um contador de gravação no
-  perfil, conferido dentro do `UpdateAsync`, ou um padrão de trava por sessão.
+- **Nada de gravar fora de `write()`:** qualquer gravação nova do perfil passa
+  pela checagem da trava; um `SetAsync` direto anularia a proteção.
 - **Orçamento de requisições:** DataStores têm limite por minuto que cresce com
   o número de jogadores. Não grave a cada brasa ou abate; agrupe e grave nos
   momentos acima. Rankings já têm cache (`Balance.TOP_CACHE`).
