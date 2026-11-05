@@ -24,7 +24,7 @@ Monetization.PRODUCTS = {
 	{ key = "oil_medium", id = 0, oil = 450, name = "Barril de óleo", desc = "+450 de óleo para a oficina." },
 	{ key = "oil_large", id = 0, oil = 1200, name = "Tonel de óleo", desc = "+1.200 de óleo para a oficina." },
 	{ key = "revive", id = 0, name = "Reacender o farol",
-		desc = "Quando a luz se apaga, o farol volta com metade da vida e a noite continua. Uma vez por partida, só no modo Normal; a partida sai do ranking mundial." },
+		desc = "Quando a luz se apaga, o farol volta com metade da vida e a noite continua. Uma vez por partida, só no modo Normal; a partida sai do ranking mundial. Se a compra chegar depois que a janela fechar, vira o óleo de um Barril pequeno." },
 }
 
 -- Cores do passe "Feixes Arco-íris" (a cor padrão, sem passe, é a do farol/vaga).

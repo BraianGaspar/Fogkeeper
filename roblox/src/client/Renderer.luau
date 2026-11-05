@@ -14,6 +14,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Fogkeeper")
 local Balance = require(Shared:WaitForChild("Balance"))
 local Data = require(script.Parent:WaitForChild("Ui"):WaitForChild("Data"))
+local ArtKit = require(script.Parent:WaitForChild("ArtKit"))
 
 local Renderer = {}
 
@@ -136,23 +137,20 @@ function Renderer.hasArt(art: string): boolean
 	return builders[art] ~= nil
 end
 
-local function scaleModel(model: Model, s: number)
-	if s <= 0 then
-		return
-	end
-	local last = model:GetAttribute("LastScale") or 1
-	if math.abs(last - s) > 0.02 then
-		model:SetAttribute("LastScale", s)
-		model:ScaleTo(s)
-	end
-end
+-- Escala guardada em Lua (ArtKit.state), a mesma que as animações usam.
+local scaleModel = ArtKit.scale
 
--- Partes de um modelo que recebem a cor da queima (as com BaseColor).
-local function burnParts(model: Model): { BasePart }
+-- Partes de um modelo que recebem a cor da queima (as com BaseColor), com a
+-- cor-base já lida: recolorir não chama GetAttribute por peça.
+type BurnPart = { part: BasePart, base: Color3 }
+local function burnParts(model: Model): { BurnPart }
 	local out = {}
 	for _, p in model:GetDescendants() do
-		if p:IsA("BasePart") and p:GetAttribute("BaseColor") then
-			table.insert(out, p)
+		if p:IsA("BasePart") then
+			local base = p:GetAttribute("BaseColor")
+			if typeof(base) == "Color3" then
+				table.insert(out, { part = p, base = base })
+			end
 		end
 	end
 	return out
@@ -273,7 +271,9 @@ do
 end
 
 -- Dispara `count` partículas de `name` em `pos`, dentro do orçamento.
-local function emit(name: string, pos: Vector3, count: number)
+-- `reserve`: efeito de baixa prioridade (fagulhas contínuas) só usa o
+-- orçamento acima dessa sobra, para não faltar partícula para mortes.
+local function emit(name: string, pos: Vector3, count: number, reserve: number?)
 	local e = emitters[name]
 	if not e then
 		return
@@ -290,7 +290,7 @@ local function emit(name: string, pos: Vector3, count: number)
 	if Renderer.reduceFlashes and name == "sparks" then
 		n *= 0.6
 	end
-	n = math.min(math.max(1, math.floor(n + 0.5)), budget)
+	n = math.min(math.max(1, math.floor(n + 0.5)), budget - (reserve or 0))
 	if n <= 0 then
 		return
 	end
@@ -308,7 +308,23 @@ end
 local MAX_EMBER_LIGHTS = 6
 local emberLights = 0
 
-local function burst(pos: Vector3, size: number)
+-- Clarões de morte (uma peça e um Tween cada): limite por segundo, para um
+-- pulso que mata 50 criaturas de uma vez não criar 50 peças no mesmo quadro.
+-- Mortes grandes (chefe, elite) sempre aparecem; as outras ficam só com as
+-- partículas quando o limite acaba.
+local BURST_BUDGET, BURST_BUDGET_LOW = 24, 10
+local burstLeft, burstAt = BURST_BUDGET, 0
+
+local function burst(pos: Vector3, size: number, big: boolean?)
+	local now = os.clock()
+	if now - burstAt >= 1 then
+		burstAt = now
+		burstLeft = if lowQuality() then BURST_BUDGET_LOW else BURST_BUDGET
+	end
+	if burstLeft <= 0 and not big then
+		return
+	end
+	burstLeft -= 1
 	local p = fxPart(Enum.PartType.Ball, Color3.fromRGB(255, 190, 90), Vector3.one * size * 0.5, CFrame.new(pos),
 		if Renderer.reduceFlashes then 0.5 else 0.1)
 	local tween = TweenService:Create(p, TweenInfo.new(0.35), { Size = Vector3.one * size * 1.8, Transparency = 1 })
@@ -322,17 +338,28 @@ end
 
 local entities = {} -- id -> entidade desenhada
 local embers = {} -- id -> {part, pos, target}
+local liveCount = 0 -- criaturas no último Snapshot
+
+-- Animação sob carga: até ANIM_FULL criaturas comuns animam todo quadro;
+-- acima disso cada uma anima um quadro sim, outro não (ou 1 em 3 acima do
+-- dobro). O PivotTo continua todo quadro e leva a última pose junto, então o
+-- movimento segue liso; só o bater de asas/pernas fica a 30 ou 20 Hz.
+-- Chefes sempre animam. Em qualidade baixa o limite cai pela metade.
+local ANIM_FULL = 60
+local frame = 0
+local SPARK_RESERVE = 150 -- fagulhas de queima contínua deixam essa sobra para mortes
+local RING_FLAT = CFrame.Angles(0, 0, math.rad(90))
 
 local function angleLerp(a: number, b: number, k: number): number
 	local d = (b - a + math.pi) % (2 * math.pi) - math.pi
 	return a + d * k
 end
 
-local function newEntity(e, target: Vector3)
+local function newEntity(e, target: Vector3, boss: boolean)
 	local model = Renderer.buildModel(e.art)
 	model.Parent = root
 	local ent = {
-		id = e.id, art = e.art, model = model, parts = burnParts(model), pos = target, target = target, hp = e.hp,
+		id = e.id, art = e.art, model = model, parts = burnParts(model), pos = target, target = target, hp = e.hp, boss = boss,
 		lit = 0, litNow = false, hidden = false, facing = e.facing, facingTarget = e.facing, visual = 0, aux = 0, scale = 1,
 		elite = false, charmed = false, reflecting = false, stunned = false, path = { target }, segments = {}, eliteRing = nil,
 	}
@@ -351,8 +378,10 @@ local function newEntity(e, target: Vector3)
 end
 
 local function destroyEntity(ent)
+	ArtKit.release(ent.model)
 	ent.model:Destroy()
 	for _, seg in ent.segments do
+		ArtKit.release(seg.model)
 		seg.model:Destroy()
 	end
 	if ent.eliteRing then
@@ -371,7 +400,7 @@ end
 function Renderer.snapshot(list: { any }, emberList: { any }, deaths: { any })
 	for _, d in deaths do
 		local pos = toWorld(d.x, d.y, CREATURE_Y)
-		burst(pos, (if d.big then 10 else 2.5) * K)
+		burst(pos, (if d.big then 10 else 2.5) * K, d.big)
 		emit("sparks", pos, if d.big then 40 else 10)
 		emit("smoke", pos, if d.big then 12 else 3)
 		if d.big then
@@ -384,6 +413,7 @@ function Renderer.snapshot(list: { any }, emberList: { any }, deaths: { any })
 		end
 	end
 	local seen = {}
+	liveCount = #list
 	for _, e in list do
 		seen[e.id] = true
 		local ent = entities[e.id]
@@ -394,7 +424,7 @@ function Renderer.snapshot(list: { any }, emberList: { any }, deaths: { any })
 			ent = nil
 		end
 		if not ent then
-			ent = newEntity(e, target)
+			ent = newEntity(e, target, boss)
 			entities[e.id] = ent
 			-- Surge do mar: respingo na superfície. Chefe ganha uma luz própria.
 			if not e.hidden then
@@ -479,6 +509,7 @@ function Renderer.clear()
 		embers[id] = nil
 	end
 	emberLights = 0
+	liveCount = 0
 end
 
 -- Corpo de serpente: segmentos espalhados pelo caminho percorrido.
@@ -515,21 +546,28 @@ local function placeTrail(ent, t: number, y: number)
 	end
 end
 
-local function colorize(parts: { BasePart }, lit: number, charmed: boolean)
-	for _, p in parts do
-		local base = p:GetAttribute("BaseColor") :: Color3?
-		if base then
-			local c = base:Lerp(BURN, lit * 0.85)
-			if charmed then
-				c = c:Lerp(CHARM, 0.4)
-			end
-			p.Color = c
+local function colorize(parts: { BurnPart }, lit: number, charmed: boolean)
+	for _, it in parts do
+		local c = it.base:Lerp(BURN, lit * 0.85)
+		if charmed then
+			c = c:Lerp(CHARM, 0.4)
 		end
+		it.part.Color = c
 	end
 end
 
+-- Brasas e anéis de elite: só peças soltas, movidas juntas num BulkMoveTo
+-- por quadro (bem mais barato que uma escrita de CFrame por peça).
+local bulkParts: { BasePart } = {}
+local bulkCFrames: { CFrame } = {}
+
 local function updateEntities(dt: number, t: number)
 	local k = 1 - math.exp(-SMOOTH * dt)
+	frame += 1
+	local limit = if lowQuality() then ANIM_FULL // 2 else ANIM_FULL
+	local stride = if liveCount <= limit then 1 elseif liveCount <= limit * 2 then 2 else 3
+	table.clear(bulkParts)
+	table.clear(bulkCFrames)
 	for _, ent in entities do
 		ent.pos = ent.pos:Lerp(ent.target, k)
 		ent.facing = angleLerp(ent.facing, ent.facingTarget, math.min(1, dt * 10))
@@ -542,6 +580,12 @@ local function updateEntities(dt: number, t: number)
 		ent.model:PivotTo(cf)
 		scaleModel(ent.model, ent.scale)
 		local anim = animators[ent.art]
+		if anim and ent.hidden and not ent.boss then
+			anim = nil -- embaixo do mar ninguém vê
+		end
+		if anim and not ent.boss and stride > 1 and (ent.id + frame) % stride ~= 0 then
+			anim = nil -- sob carga: anima em quadros alternados (ver ANIM_FULL)
+		end
 		if anim then
 			local ok, err = pcall(anim, ent.model, ent, t)
 			if not ok and not ent.warned then
@@ -563,7 +607,7 @@ local function updateEntities(dt: number, t: number)
 			ent.sparkT = (ent.sparkT or 0) - dt
 			if ent.sparkT <= 0 then
 				ent.sparkT = 0.2
-				emit("sparks", ent.pos, 2)
+				emit("sparks", ent.pos, 2, SPARK_RESERVE)
 			end
 		end
 		if ent.elite and not ent.eliteRing then
@@ -571,7 +615,8 @@ local function updateEntities(dt: number, t: number)
 			ent.eliteRing = fxPart(Enum.PartType.Cylinder, Color3.fromRGB(255, 80, 60), Vector3.new(0.05, r * 2, r * 2), CFrame.new(), 0.55)
 		end
 		if ent.eliteRing then
-			ent.eliteRing.CFrame = CFrame.new(ent.pos.X, if ent.hidden then -60 else 0.6 * K, ent.pos.Z) * CFrame.Angles(0, 0, math.rad(90))
+			table.insert(bulkParts, ent.eliteRing)
+			table.insert(bulkCFrames, CFrame.new(ent.pos.X, if ent.hidden then -60 else 0.6 * K, ent.pos.Z) * RING_FLAT)
 		end
 		if #ent.segments > 0 then
 			local path = ent.path
@@ -593,7 +638,11 @@ local function updateEntities(dt: number, t: number)
 	end
 	for _, em in embers do
 		em.pos = em.pos:Lerp(em.target, k)
-		em.part.CFrame = CFrame.new(em.pos.X, em.pos.Y + math.sin(t * 5 + em.pos.X) * 0.1, em.pos.Z)
+		table.insert(bulkParts, em.part)
+		table.insert(bulkCFrames, CFrame.new(em.pos.X, em.pos.Y + math.sin(t * 5 + em.pos.X) * 0.1, em.pos.Z))
+	end
+	if #bulkParts > 0 then
+		workspace:BulkMoveTo(bulkParts, bulkCFrames, Enum.BulkMoveMode.FireCFrameChanged)
 	end
 end
 
@@ -634,6 +683,20 @@ local function triangle(a: Vector3, b: Vector3, c: Vector3, w1: WedgePart, w2: W
 	w2.CFrame = CFrame.fromMatrix((a + c) / 2, -right, up, -back)
 end
 
+-- Cor e transparência de uma cunha, só escritas quando mudam (guardadas em
+-- Lua: são até 12 cunhas por leque e vários leques por jogador, todo quadro).
+local function paint(b, i: number, color: Color3?, transparency: number)
+	local w = b.wedges[i]
+	if color and b.colors[i] ~= color then
+		b.colors[i] = color
+		w.Color = color
+	end
+	if b.alphas[i] ~= transparency then
+		b.alphas[i] = transparency
+		w.Transparency = transparency
+	end
+end
+
 -- Desenha um leque a partir de wedges[start..]; retorna o próximo índice livre.
 local function drawFan(b, start: number, origin: Vector3, angle: number, half: number, range: number, color: Color3, transparency: number): number
 	local r = range * S
@@ -649,10 +712,8 @@ local function drawFan(b, start: number, origin: Vector3, angle: number, half: n
 		local p1 = origin + Vector3.new(math.cos(a1), 0, math.sin(a1)) * r
 		local p2 = origin + Vector3.new(math.cos(a2), 0, math.sin(a2)) * r
 		triangle(origin, p1, p2, b.wedges[i1], b.wedges[i2])
-		b.wedges[i1].Color = color
-		b.wedges[i2].Color = color
-		b.wedges[i1].Transparency = transparency
-		b.wedges[i2].Transparency = transparency
+		paint(b, i1, color, transparency)
+		paint(b, i2, color, transparency)
 	end
 	return start + FAN * 2
 end
@@ -703,7 +764,7 @@ end
 local function beamFor(player: Player)
 	local b = beams[player]
 	if not b then
-		b = { wedges = {}, main = player:GetAttribute("AimAngle") or 0, extras = {}, raw = "", list = {} }
+		b = { wedges = {}, colors = {}, alphas = {}, main = player:GetAttribute("AimAngle") or 0, extras = {}, raw = "", list = {} }
 		beams[player] = b
 	end
 	return b
@@ -767,7 +828,7 @@ function Renderer.updateBeams(dt: number, playing: boolean, localAngle: number, 
 			aimLight(player, nil, nil, nil)
 		end
 		for i = used, #b.wedges do
-			b.wedges[i].Transparency = 1
+			paint(b, i, nil, 1)
 		end
 	end
 end
@@ -777,6 +838,9 @@ function Renderer.update(dt: number, t: number)
 end
 
 -- Efeitos ------------------------------------------------------------------------
+
+local RING_BUDGET = 16 -- anéis genéricos por segundo
+local ringLeft, ringAt = RING_BUDGET, 0
 
 local function at(data, h: number): Vector3
 	h *= K
@@ -847,8 +911,17 @@ function Renderer.fx(name: string, data: any)
 		end
 		return
 	elseif data.x and data.y then
-		-- Efeito próprio de um chefe sem tratamento especial: um anel no lugar.
-		Renderer.ring(at(data, 1), (data.radius or 60) * S, Color3.fromRGB(255, 200, 160), 0.6, 0.4)
+		-- Efeito sem tratamento especial (chefes, combustão): um anel no lugar,
+		-- com limite por segundo (cada anel é uma peça com Tween).
+		local now = os.clock()
+		if now - ringAt >= 1 then
+			ringAt = now
+			ringLeft = if lowQuality() then RING_BUDGET // 2 else RING_BUDGET
+		end
+		if ringLeft > 0 then
+			ringLeft -= 1
+			Renderer.ring(at(data, 1), (data.radius or 60) * S, Color3.fromRGB(255, 200, 160), 0.6, 0.4)
+		end
 	end
 	if app and app.ctx and app.ctx.sounds then
 		app.ctx.sounds.play(name)

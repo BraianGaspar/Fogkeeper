@@ -97,18 +97,61 @@ function ArtKit.anim(p: BasePart, name: string): BasePart
 	return p
 end
 
+-- Estado por modelo, só em Lua (desempenho): peças agrupadas por nome com o
+-- offset já lido, escala aplicada, abertura da concha etc. Antes cada pose
+-- fazia GetChildren (tabela nova) e GetAttribute por peça a cada quadro, e
+-- escala/abertura eram atributos lidos e escritos por quadro; com 200
+-- criaturas isso era o maior custo das animações. O grupo é montado na
+-- primeira pose (depois do build) e o Renderer chama ArtKit.release ao
+-- destruir o modelo; a tabela tem chaves fracas por garantia.
+type Item = { part: BasePart, offset: CFrame? }
+local states: { [Model]: { [string]: any } } = setmetatable({}, { __mode = "k" }) :: any
+
+function ArtKit.state(model: Model): { [string]: any }
+	local st = states[model]
+	if not st then
+		st = { groups = {} }
+		states[model] = st
+	end
+	return st
+end
+
+function ArtKit.release(model: Model)
+	states[model] = nil
+end
+
+-- Peças filhas com o nome dado (com o offset de ArtKit.anim, se houver).
+function ArtKit.group(model: Model, name: string): { Item }
+	local groups = ArtKit.state(model).groups
+	local list = groups[name]
+	if not list then
+		list = {}
+		for _, p in model:GetChildren() do
+			if p.Name == name and p:IsA("BasePart") then
+				table.insert(list, { part = p, offset = p:GetAttribute("Offset") :: CFrame? })
+			end
+		end
+		groups[name] = list
+	end
+	return list
+end
+
 -- Recoloca todas as peças com o nome dado: pivô * offset * `extra`.
-function ArtKit.pose(model: Model, name: string, extra: CFrame | ((BasePart) -> CFrame))
+-- Se `extra` for função, recebe (peça, offset).
+function ArtKit.pose(model: Model, name: string, extra: CFrame | ((BasePart, CFrame) -> CFrame))
+	local list = ArtKit.group(model, name)
+	if #list == 0 then
+		return
+	end
 	local pivot = model:GetPivot()
 	local sc = model:GetScale() -- offsets foram gravados na escala 1
-	for _, p in model:GetChildren() do
-		if p.Name == name and p:IsA("BasePart") then
-			local offset = p:GetAttribute("Offset") :: CFrame?
-			if offset then
-				local e = if typeof(extra) == "function" then (extra :: any)(p) else extra
-				local scaled = offset - offset.Position + offset.Position * sc
-				p.CFrame = pivot * scaled * e
-			end
+	local fn = typeof(extra) == "function"
+	for _, it in list do
+		local offset = it.offset
+		if offset then
+			local e = if fn then (extra :: any)(it.part, offset) else extra
+			local scaled = if sc == 1 then offset else offset - offset.Position + offset.Position * sc
+			it.part.CFrame = pivot * scaled * e
 		end
 	end
 end
@@ -117,36 +160,44 @@ end
 -- pivô * transform * offset. Serve para girar várias peças juntas em volta
 -- de um eixo comum (asas na linha do corpo, tampa na dobradiça, pedra que rola).
 function ArtKit.poseModel(model: Model, name: string, transform: CFrame)
-	local pivot = model:GetPivot()
+	local list = ArtKit.group(model, name)
+	if #list == 0 then
+		return
+	end
+	local base = model:GetPivot() * transform
 	local sc = model:GetScale()
-	for _, p in model:GetChildren() do
-		if p.Name == name and p:IsA("BasePart") then
-			local offset = p:GetAttribute("Offset") :: CFrame?
-			if offset then
-				p.CFrame = pivot * transform * (offset - offset.Position + offset.Position * sc)
-			end
+	for _, it in list do
+		local offset = it.offset
+		if offset then
+			it.part.CFrame = base * (if sc == 1 then offset else offset - offset.Position + offset.Position * sc)
 		end
 	end
 end
 
--- Escala o modelo inteiro (mariposas que crescem). Só refaz se mudou.
+-- Escala o modelo inteiro (mariposas que crescem, elites). Só refaz se mudou.
+-- O Renderer também escala por aqui, então os dois enxergam a mesma escala.
 function ArtKit.scale(model: Model, s: number)
 	if s <= 0 then
 		return
 	end
-	local last = model:GetAttribute("LastScale") or 1
-	if math.abs(last - s) > 0.02 then
-		model:SetAttribute("LastScale", s)
+	local st = ArtKit.state(model)
+	if math.abs((st.scale or 1) - s) > 0.02 then
+		st.scale = s
 		model:ScaleTo(s)
 	end
 end
 
--- Mostra ou esconde as peças com o nome dado.
+-- Mostra ou esconde as peças com o nome dado (só escreve quando muda).
 function ArtKit.visible(model: Model, name: string, on: boolean, transparency: number?)
-	for _, p in model:GetChildren() do
-		if p.Name == name and p:IsA("BasePart") then
-			p.Transparency = if on then (transparency or 0) else 1
-		end
+	local value = if on then (transparency or 0) else 1
+	local st = ArtKit.state(model)
+	local key = "vis_" .. name
+	if st[key] == value then
+		return
+	end
+	st[key] = value
+	for _, it in ArtKit.group(model, name) do
+		it.part.Transparency = value
 	end
 end
 
@@ -161,6 +212,11 @@ function ArtKit.carry(m: Model, r: number)
 end
 
 function ArtKit.showCarry(model: Model, count: number)
+	local st = ArtKit.state(model)
+	if st.carry == count then
+		return
+	end
+	st.carry = count
 	for i = 1, 4 do
 		local p = model:FindFirstChild("Carry" .. i) :: BasePart?
 		if p then
@@ -211,22 +267,26 @@ function T.shell(m: Model, r: number, outer: Color3, inner: Color3, ridge: Color
 end
 
 function T.shellAnim(model: Model, ent, _t: number)
+	local st = ArtKit.state(model)
 	local open = if ent.reflecting then 0 else 1
-	local cur = model:GetAttribute("Open") or 0
+	local cur = st.open or 0
 	cur += (open - cur) * 0.2
-	model:SetAttribute("Open", cur)
+	st.open = cur
+	local sc = model:GetScale()
+	-- O PivotTo de cada quadro leva a tampa junto: parada, não precisa reposar.
+	if st.posedOpen and math.abs(st.posedOpen - cur) < 0.002 and st.posedScale == sc then
+		return
+	end
+	st.posedOpen, st.posedScale = cur, sc
 	-- Dobradiça na borda de trás das peças "Lid": a tampa e os frisos giram
 	-- juntos e a frente sobe (antes cada peça girava no próprio centro e os
 	-- frisos se soltavam da tampa).
-	local sc = model:GetScale()
 	local hx, hy = 0, 0
-	for _, p in model:GetChildren() do
-		if p.Name == "Lid" and p:IsA("BasePart") then
-			local o = p:GetAttribute("Offset") :: CFrame?
-			if o then
-				hx = math.min(hx, o.Position.X * sc - p.Size.X * 0.5)
-				hy = math.max(hy, o.Position.Y * sc)
-			end
+	for _, it in ArtKit.group(model, "Lid") do
+		local o = it.offset
+		if o then
+			hx = math.min(hx, o.Position.X * sc - it.part.Size.X * 0.5)
+			hy = math.max(hy, o.Position.Y * sc)
 		end
 	end
 	local hinge = CFrame.new(hx, hy, 0)
@@ -270,14 +330,16 @@ function T.fogbank(m: Model, r: number, tint: Color3, eye: Color3)
 end
 
 function T.fogbankAnim(model: Model, ent, t: number)
-	local fade = 0.45 + (1 - (ent.hp or 1)) * 0.45
-	ArtKit.pose(model, "Puff", function(p)
-		local k = (p:GetAttribute("Offset") :: CFrame).Position.X
-		return CFrame.new(0, math.sin(t * 0.8 + k) * 0.2, 0)
+	ArtKit.pose(model, "Puff", function(_p, o)
+		return CFrame.new(0, math.sin(t * 0.8 + o.Position.X) * 0.2, 0)
 	end)
-	for _, p in model:GetChildren() do
-		if p.Name == "Puff" and p:IsA("BasePart") then
-			p.Transparency = fade
+	-- Some conforme a vida cai (só escreve quando muda de verdade).
+	local fade = math.floor((0.45 + (1 - (ent.hp or 1)) * 0.45) * 50 + 0.5) / 50
+	local st = ArtKit.state(model)
+	if st.fade ~= fade then
+		st.fade = fade
+		for _, it in ArtKit.group(model, "Puff") do
+			it.part.Transparency = fade
 		end
 	end
 end
@@ -292,8 +354,8 @@ function T.wisp(m: Model, r: number, color: Color3, core: Color3)
 end
 
 function T.wispAnim(model: Model, ent, t: number)
-	ArtKit.pose(model, "Tail", function(p)
-		local x = (p:GetAttribute("Offset") :: CFrame).Position.X
+	ArtKit.pose(model, "Tail", function(_p, o)
+		local x = o.Position.X
 		return CFrame.new(0, 0, math.sin(t * 10 + (ent.id or 0) + x * 2) * 0.25)
 	end)
 end
@@ -348,8 +410,8 @@ function T.ghost(m: Model, r: number, body: Color3, trail: Color3, eye: Color3, 
 end
 
 function T.ghostAnim(model: Model, ent, t: number)
-	ArtKit.pose(model, "Trail", function(p)
-		local x = (p:GetAttribute("Offset") :: CFrame).Position.X
+	ArtKit.pose(model, "Trail", function(_p, o)
+		local x = o.Position.X
 		return CFrame.new(0, 0, math.sin(t * 5 + (ent.id or 0) + x * 1.5) * 0.3)
 	end)
 end
@@ -366,8 +428,8 @@ function T.serpent(m: Model, r: number, body: Color3, belly: Color3, eye: Color3
 end
 
 function T.serpentAnim(model: Model, ent, t: number)
-	ArtKit.pose(model, "Seg", function(p)
-		local x = (p:GetAttribute("Offset") :: CFrame).Position.X
+	ArtKit.pose(model, "Seg", function(_p, o)
+		local x = o.Position.X
 		return CFrame.new(0, 0, math.sin(t * 7 + (ent.id or 0) + x * 1.8) * 0.35 * math.clamp(-x, 0, 3))
 	end)
 end

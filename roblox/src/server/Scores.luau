@@ -6,6 +6,7 @@
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserService = game:GetService("UserService")
 
 local Shared = ReplicatedStorage:WaitForChild("Fogkeeper")
 local Balance = require(Shared:WaitForChild("Balance"))
@@ -31,7 +32,10 @@ function Scores.validKey(key: string): boolean
 		return true
 	end
 	if string.match(key, "^daily|%d%d%d%d%-%d%d%-%d%d$") then
-		return true
+		-- Só hoje e ontem (UTC): datas livres abririam um DataStore e uma
+		-- entrada de cache por data pedida.
+		local date = string.sub(key, 7)
+		return date == os.date("!%Y-%m-%d") or date == os.date("!%Y-%m-%d", os.time() - 86400)
 	end
 	local mode, map, difficulty = string.match(key, "^(%w+)|([%w_]+)|(%w+)$")
 	return mode == "normal" and Maps.LIST[map] ~= nil and Balance.DIFFICULTIES[difficulty] ~= nil
@@ -51,18 +55,26 @@ end
 
 -- Grava a pontuação se for o recorde do jogador nesta chave.
 function Scores.submit(userId: number, key: string, score: number)
+	-- OrderedDataStore só aceita inteiros; NaN, infinito e zero não entram.
+	if type(score) ~= "number" or score ~= score or score <= 0 or score == math.huge then
+		return
+	end
+	score = math.floor(score)
 	local top = ordered(key)
 	if not top then
 		return
 	end
-	pcall(function()
+	local ok, err = pcall(function()
 		top:UpdateAsync(tostring(userId), function(old)
-			if old and old >= score then
+			if type(old) == "number" and old >= score then
 				return nil -- retornar nil cancela a gravação
 			end
 			return score
 		end)
 	end)
+	if not ok then
+		warn("[Fogkeeper] ranking " .. key .. " não gravou: " .. tostring(err))
+	end
 end
 
 -- Melhor pontuação do jogador nesta chave (0 se não houver).
@@ -90,11 +102,31 @@ function Scores.top(key: string): { { name: string, score: number } }
 	if not ok then
 		return out
 	end
-	for _, entry in pages:GetCurrentPage() do
-		local name = "?"
-		pcall(function()
-			name = Players:GetNameFromUserIdAsync(tonumber(entry.key))
-		end)
+	local page = pages:GetCurrentPage()
+	-- Nome de exibição (DisplayName) de todos numa consulta só; se falhar, o
+	-- nome de usuário, um por um.
+	local ids = {}
+	for _, entry in page do
+		local id = tonumber(entry.key)
+		if id then
+			table.insert(ids, id)
+		end
+	end
+	local display: { [number]: string } = {}
+	pcall(function()
+		for _, info in UserService:GetUserInfosByUserIdsAsync(ids) do
+			display[info.Id] = info.DisplayName
+		end
+	end)
+	for _, entry in page do
+		local id = tonumber(entry.key)
+		local name = if id then display[id] else nil
+		if not name then
+			name = "?"
+			pcall(function()
+				name = Players:GetNameFromUserIdAsync(id)
+			end)
+		end
 		table.insert(out, { name = name, score = entry.value })
 	end
 	return out

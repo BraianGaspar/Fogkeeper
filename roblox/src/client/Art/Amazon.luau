@@ -28,8 +28,8 @@ ArtKit.use(build, animate, "curupira", function(m, r)
 	end
 end, function(model, ent, t)
 	T.bipedAnim(model, ent, t)
-	ArtKit.pose(model, "Hair", function(p)
-		local x = (p:GetAttribute("Offset") :: CFrame).Position.X
+	ArtKit.pose(model, "Hair", function(_p, o)
+		local x = o.Position.X
 		return CFrame.new(0, math.sin(t * 12 + x * 4) * 0.1, 0)
 	end)
 end)
@@ -94,8 +94,8 @@ ArtKit.use(build, animate, "mula", function(m, r)
 	end
 end, function(model, ent, t)
 	T.wolfAnim(model, ent, t)
-	ArtKit.pose(model, "Flame", function(p)
-		local y = (p:GetAttribute("Offset") :: CFrame).Position.Y
+	ArtKit.pose(model, "Flame", function(_p, o)
+		local y = o.Position.Y
 		return CFrame.new(0, math.sin(t * 14 + y * 6) * 0.12, 0)
 	end)
 	ArtKit.scale(model, ent.scale or 1)

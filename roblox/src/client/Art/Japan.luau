@@ -42,8 +42,8 @@ ArtKit.use(build, animate, "kyubi_decoy", function(m, r)
 	end
 	ArtKit.eyes(m, r * 1.2, r * 0.35, r * 0.18, r * 0.13, rgb(1.0, 0.5, 0.2))
 end, function(model, ent, t)
-	ArtKit.pose(model, "Tail", function(p)
-		local z = (p:GetAttribute("Offset") :: CFrame).Position.Z
+	ArtKit.pose(model, "Tail", function(_p, o)
+		local z = o.Position.Z
 		return CFrame.Angles(0, math.sin(t * 0.9 * 6 + z) * 0.12, 0)
 	end)
 end)
@@ -109,8 +109,8 @@ ArtKit.use(build, animate, "wave", function(m, r)
 			if k == 2 then rgb(0.92, 0.97, 1.0) else rgb(0.6, 0.8, 0.95), { Transparency = 0.1 + k * 0.1 }), "Crest")
 	end
 end, function(model, ent, t)
-	ArtKit.pose(model, "Crest", function(p)
-		local x = (p:GetAttribute("Offset") :: CFrame).Position.X
+	ArtKit.pose(model, "Crest", function(_p, o)
+		local x = o.Position.X
 		return CFrame.new(0, math.sin(t * 6 + x * 3 + (ent.id or 0)) * 0.12, 0)
 	end)
 end)

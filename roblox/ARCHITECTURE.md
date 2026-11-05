@@ -67,6 +67,13 @@ faroleiros, cada um com o próprio feixe, defendem o mesmo farol.
   - **Partículas.** Ficam no `Renderer` (`emit`), num ponto só e com limite
     por segundo. Dependem da qualidade gráfica do Roblox e de
     `reduce_flashes`.
+  - **Custo por quadro.** As animações de `client/Art` usam `ArtKit.pose`,
+    `poseModel`, `scale`, `visible` e `ArtKit.state(model)`, que guardam peças,
+    offsets, escala e estado em Lua (nada de `GetChildren`/`GetAttribute` nem
+    atributo escrito por quadro). Com mais de 60 criaturas (30 em qualidade
+    baixa) as comuns animam em quadros alternados; chefes sempre. Brasas e
+    anéis de elite andam num `BulkMoveTo` só. Clarões de morte e anéis
+    genéricos têm limite por segundo.
 
 ## Pastas e donos
 
@@ -139,8 +146,8 @@ return Boss
 
 ## Snapshot (`Net.encode` / `Net.decode`), congelado
 
-O Snapshot vai em um `RemoteEvent` confiável, 12 vezes por segundo, como
-buffer. Cada lista vem precedida da quantidade, em u16.
+O Snapshot vai em um `RemoteEvent` confiável, 12 vezes por segundo
+(`SNAPSHOT_RATE`; 10 quando passa de `SNAPSHOT_BUSY_BYTES`), como buffer. Cada lista vem precedida da quantidade, em u16.
 
 | Lista | Campos e tamanho |
 |---|---|

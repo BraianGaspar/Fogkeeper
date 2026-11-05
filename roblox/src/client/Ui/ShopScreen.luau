@@ -14,11 +14,17 @@ local Text = Data.Text
 
 local prices: { [string]: number } = {} -- "pass:id" / "product:id" -> preço em Robux
 
+-- Preço em Robux. "R$" seria lido como reais no Brasil; o ícone de Robux
+-- (U+E002) não existe nas fontes antigas do Theme (Garamond), então vai por extenso.
+local function robux(n: number): string
+	return Data.number(n) .. " Robux"
+end
+
 -- Busca o preço uma vez (assíncrono) e chama `done` com o texto do botão.
 local function fetchPrice(kind: string, id: number, done: (string) -> ())
 	local key = kind .. ":" .. id
 	if prices[key] then
-		done(string.format("R$ %d", prices[key]))
+		done(robux(prices[key]))
 		return
 	end
 	task.spawn(function()
@@ -27,7 +33,7 @@ local function fetchPrice(kind: string, id: number, done: (string) -> ())
 		end)
 		if ok and type(info) == "table" and type(info.PriceInRobux) == "number" then
 			prices[key] = info.PriceInRobux
-			done(string.format("R$ %d", info.PriceInRobux))
+			done(robux(info.PriceInRobux))
 		end
 	end)
 end

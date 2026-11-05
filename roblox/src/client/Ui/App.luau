@@ -9,6 +9,7 @@ local Lighting = game:GetService("Lighting")
 local LocalizationService = game:GetService("LocalizationService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Theme = require(script.Parent:WaitForChild("Theme"))
 local Data = require(script.Parent:WaitForChild("Data"))
@@ -43,19 +44,67 @@ local settingsDirty = 0
 
 App.root = nil :: any
 App.hudLayer = nil :: any
+-- Pixels reais por unidade da tela de referência (UIScale do root).
+App.uiScale = 1
+-- Escala extra do HUD em celulares (textos e botões da partida maiores).
+App.hudScale = 1
+-- Aparelho só de toque (celular, tablet): layout de toque no HUD.
+App.touch = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+-- Faixa ocupada pelos botões do Roblox, em unidades de referência: altura da
+-- barra de cima (`top`) e o que ela ocupa na direita (`right`).
+App.safe = { top = 0, right = 0 }
+
+local hudScale: UIScale
 
 -- Escala -----------------------------------------------------------------------
 
+-- Faixa dos botões do Roblox (menu, chat) no topo, em pixels da ScreenGui:
+-- altura da barra e quanto ela ocupa no lado direito.
+local function topbarPixels(): (number, number)
+	local top, right = 0, 0
+	local ok, inset = pcall(function()
+		return GuiService.TopbarInset
+	end)
+	if ok and typeof(inset) == "Rect" and inset.Max.Y > 0 then
+		top = inset.Max.Y - gui.AbsolutePosition.Y
+		if inset.Max.X > 0 then
+			right = gui.AbsolutePosition.X + gui.AbsoluteSize.X - inset.Max.X
+		end
+	else
+		local ok2, topLeft = pcall(function()
+			return GuiService:GetGuiInset()
+		end)
+		if ok2 and typeof(topLeft) == "Vector2" then
+			top = topLeft.Y
+		end
+	end
+	return math.max(0, top), math.max(0, right)
+end
+
 local function rescale()
-	local view = workspace.CurrentCamera.ViewportSize
+	-- Tamanho da ScreenGui (já sem o entalhe do celular); a câmera é a reserva.
+	local view = gui.AbsoluteSize
+	if view.X < 2 or view.Y < 2 then
+		view = workspace.CurrentCamera.ViewportSize
+	end
 	if view.X < 2 or view.Y < 2 then
 		return
 	end
 	local s = math.min(view.X / REF.X, view.Y / REF.Y)
 	scale.Scale = s
 	root.Size = UDim2.fromOffset(view.X / s, view.Y / s)
+	App.uiScale = s
+	-- No celular a referência 1280x720 deixa o HUD miúdo: até 20% maior.
+	local k = if App.touch then math.clamp(0.65 / s, 1, 1.2) else 1
+	App.hudScale = k
+	hudScale.Scale = k
+	hudLayer.Size = UDim2.fromScale(1 / k, 1 / k)
+	local top, right = topbarPixels()
+	App.safe = { top = top / s, right = math.min(right, view.X * 0.3) / s }
+	if hud and hud.layout then
+		hud.layout()
+	end
 end
-
 -- Telas ------------------------------------------------------------------------
 
 local function loadScreen(name: string): any
@@ -153,6 +202,18 @@ function App.top(): string?
 	return t and t.name
 end
 
+-- O jogador pegou o controle com uma tela aberta: devolve o foco a ela.
+function App.refocus()
+	local top = stack[#stack]
+	if not top or not top.screen.focus then
+		return
+	end
+	local current = GuiService.SelectedObject
+	if not current or not current:IsDescendantOf(top.screen.frame) then
+		GuiService.SelectedObject = top.screen.focus
+	end
+end
+
 -- Reconstrói a tela do topo (depois de trocar idioma ou tamanho do texto).
 -- `withHud` reconstrói também o HUD (idioma e tamanho do texto); as telas que
 -- só querem se atualizar (compra na loja) chamam sem ele.
@@ -187,9 +248,11 @@ end
 -- Recado pequeno no canto (conquistas, desbloqueios, relíquias).
 function App.toast(text: string, color: Color3?)
 	local l = Theme.label(toastList, text, 16, color or Theme.GOOD, Theme.BOLD, {
-		Size = UDim2.fromOffset(420, 30), BackgroundTransparency = 0.15, BackgroundColor3 = Theme.INK,
-		TextXAlignment = Enum.TextXAlignment.Center,
+		-- Altura automática: relíquias trazem a descrição e quebram em várias linhas.
+		Size = UDim2.fromOffset(460, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 0.15,
+		BackgroundColor3 = Theme.INK, TextXAlignment = Enum.TextXAlignment.Center,
 	})
+	Theme.padding(l, 6)
 	Theme.corner(l, 8)
 	Theme.stroke(l, color or Theme.GOOD, 1.5)
 	task.delay(4, function()
@@ -297,6 +360,11 @@ function App.build(ctx)
 		Name = "Fogkeeper", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		AutoLocalize = false, DisplayOrder = 5,
 	})
+	-- Vai até o topo (a barra do Roblox fica por cima; o HUD desvia dela por
+	-- App.safe), mas fora do entalhe do celular em paisagem.
+	pcall(function()
+		gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+	end)
 	vignette = Theme.make("Frame", gui, {
 		Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.DANGER, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 50,
 	})
@@ -305,6 +373,7 @@ function App.build(ctx)
 	})
 	scale = Theme.make("UIScale", root, {})
 	hudLayer = Theme.make("Frame", root, { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Name = "Hud", ZIndex = 1 })
+	hudScale = Theme.make("UIScale", hudLayer, {})
 	screenLayer = Theme.make("Frame", root, { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Name = "Screens", ZIndex = 2 })
 	overlay = Theme.make("Frame", root, { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Name = "Overlay", ZIndex = 3 })
 	App.root = root
@@ -312,6 +381,10 @@ function App.build(ctx)
 	App.overlay = overlay
 	rescale()
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale)
+	gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(rescale)
+	pcall(function()
+		GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(rescale)
+	end)
 
 	announceLabel = Theme.label(overlay, "", 42, Theme.GOLD, Theme.HEAD, {
 		Position = UDim2.fromScale(0.5, 0.27), AnchorPoint = Vector2.new(0.5, 0.5), Size = UDim2.fromOffset(1000, 60),

@@ -474,7 +474,10 @@ local function publishState()
 			player:SetAttribute("AimAngle", b.angle)
 			player:SetAttribute("TurnSpeed", turn)
 			player:SetAttribute("Overcharge", b.overchargeT > 0)
-			player:SetAttribute("BeamsJson", HttpService:JSONEncode(sim:extraBeams(player.UserId)))
+			local beamsJson = HttpService:JSONEncode(sim:extraBeams(player.UserId))
+			if player:GetAttribute("BeamsJson") ~= beamsJson then
+				player:SetAttribute("BeamsJson", beamsJson)
+			end
 			-- Hora em que fica pronta; só muda de verdade ao usar (evita
 			-- replicar três atributos a cada envio por causa de arredondamento).
 			for i = 1, 3 do
@@ -585,10 +588,14 @@ local function reward(player: Player, result, score)
 	entry.score, entry.victory, entry.seconds, entry.level = score.total, result.victory, math.floor(sim.t), sim.level
 	Progress.publish(player)
 	Progress.save(player)
-	if run.key then
+	local rankKey = run.key -- a partida pode acabar (run = nil) antes de o ranking responder
+	if rankKey then
 		task.spawn(function()
-			Scores.submit(id, run.key, score.total)
-			player:SetAttribute("Best", math.max(score.total, Scores.best(id, run.key)))
+			Scores.submit(id, rankKey, score.total)
+			local best = Scores.best(id, rankKey)
+			if player.Parent then
+				player:SetAttribute("Best", math.max(score.total, best))
+			end
 		end)
 	end
 	return out
@@ -724,7 +731,10 @@ RunService.Heartbeat:Connect(function(dt)
 	flushEvents()
 	snapshotTimer -= dt
 	if snapshotTimer <= 0 or sim.finished then
-		snapshotTimer = 1 / Balance.SNAPSHOT_RATE
+		-- Snapshot grande (muitas criaturas e brasas): menos envios por segundo;
+		-- o cliente suaviza entre envios. O formato não muda.
+		local bytes = #sim.enemies * 14 + #sim.embers * 6
+		snapshotTimer = 1 / (if bytes > Balance.SNAPSHOT_BUSY_BYTES then Balance.SNAPSHOT_RATE_BUSY else Balance.SNAPSHOT_RATE)
 		Net.event("Snapshot"):FireAllClients(Net.encode(sim.enemies, sim.embers, sim.deaths))
 		table.clear(sim.deaths)
 		publishState()
@@ -776,7 +786,7 @@ Net.event("Ability").OnServerEvent:Connect(function(player, index)
 end)
 
 Net.event("Pick").OnServerEvent:Connect(function(player, id)
-	if sim and typeof(id) == "string" and sim:pick(player.UserId, id) then
+	if sim and typeof(id) == "string" and #id <= 64 and sim:pick(player.UserId, id) then
 		flushEvents()
 		publishState()
 	end
@@ -789,7 +799,7 @@ Net.event("Reroll").OnServerEvent:Connect(function(player)
 end)
 
 Net.event("Banish").OnServerEvent:Connect(function(player, id)
-	if sim and typeof(id) == "string" and not throttled(player) and sim:banish(player.UserId, id) then
+	if sim and typeof(id) == "string" and #id <= 64 and not throttled(player) and sim:banish(player.UserId, id) then
 		flushEvents()
 		publishState()
 	end

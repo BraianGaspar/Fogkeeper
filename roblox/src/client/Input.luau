@@ -23,12 +23,16 @@ local Input = {}
 
 Input.angle = 0
 Input.usingPad = false
+-- Último aparelho usado foi a tela de toque (textos e dicas de toque).
+Input.usingTouch = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 Input.onAbility = nil :: ((number) -> ())?
 Input.onPick = nil :: ((number) -> ())?
 Input.onReroll = nil :: (() -> ())?
 Input.onBanish = nil :: (() -> ())?
 Input.onBack = nil :: (() -> ())?
 Input.onMenu = nil :: (() -> ())?
+-- Chamado quando o jogador passa a usar o controle (o App devolve o foco à tela aberta).
+Input.onPad = nil :: (() -> ())?
 Input.playing = false
 -- Origem do feixe (lanterna do avatar), em studs; o Client atualiza a cada quadro.
 Input.origin = Vector3.new(0, 2.4, 0)
@@ -93,9 +97,30 @@ function Input.label(action: string): string
 	return Text.t(KEY_LABELS[action] or "")
 end
 
+-- Aparelho em uso para textos de ajuda: "pad", "touch" ou "mouse" (teclado e mouse).
+function Input.device(): string
+	if Input.usingPad then
+		return "pad"
+	elseif Input.usingTouch then
+		return "touch"
+	end
+	return "mouse"
+end
+
 local function fire(fn: any, ...)
 	if fn then
 		fn(...)
+	end
+end
+
+-- Troca entre controle e teclado/mouse/toque; avisa quando o controle entra.
+local function setPad(on: boolean)
+	if on == Input.usingPad then
+		return
+	end
+	Input.usingPad = on
+	if on then
+		fire(Input.onPad)
 	end
 end
 
@@ -104,10 +129,15 @@ function Input.start(aim: any)
 	UserInputService.InputBegan:Connect(function(input, processed)
 		local kind = input.UserInputType
 		if kind == Enum.UserInputType.Gamepad1 then
-			Input.usingPad = true
+			setPad(true)
 			aimMode = "camera"
 		elseif kind == Enum.UserInputType.Keyboard or kind == Enum.UserInputType.MouseButton1 or kind == Enum.UserInputType.Touch then
-			Input.usingPad = false
+			setPad(false)
+			if kind == Enum.UserInputType.Touch then
+				Input.usingTouch = true
+			elseif kind == Enum.UserInputType.Keyboard then
+				Input.usingTouch = false
+			end
 		end
 		local key = input.KeyCode
 		-- Voltar e menu valem até com um botão de interface selecionado.
@@ -147,7 +177,10 @@ function Input.start(aim: any)
 	UserInputService.InputChanged:Connect(function(input, processed)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then
 			if input.Delta.Magnitude > 2 then
-				Input.usingPad = false
+				setPad(false)
+				if UserInputService.MouseEnabled then
+					Input.usingTouch = false
+				end
 				aimMode = "mouse"
 			end
 		elseif input.UserInputType == Enum.UserInputType.Touch and not processed then
@@ -155,7 +188,7 @@ function Input.start(aim: any)
 			touchPoint = planePoint(workspace.CurrentCamera:ScreenPointToRay(input.Position.X, input.Position.Y))
 		elseif input.KeyCode == Enum.KeyCode.Thumbstick2 or input.KeyCode == Enum.KeyCode.Thumbstick1 then
 			if Vector2.new(input.Position.X, input.Position.Y).Magnitude > 0.3 then
-				Input.usingPad = true
+				setPad(true)
 				aimMode = "camera"
 			end
 		end

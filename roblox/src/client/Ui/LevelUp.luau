@@ -37,7 +37,7 @@ function LevelUp.build(app, parent: Frame)
 			Position = UDim2.fromOffset(64, 30), Size = UDim2.new(1, -72, 0, 44), TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 		})
-		local tag = Theme.label(c, "", 11, Theme.TEXT_DIM, Theme.BOLD, {
+		local tag = Theme.label(c, "", 12, Theme.TEXT_DIM, Theme.BOLD, {
 			Position = UDim2.new(0, 64, 1, -18), Size = UDim2.new(1, -72, 0, 14), TextXAlignment = Enum.TextXAlignment.Left,
 		})
 		local key = Theme.label(c, "", 13, Theme.TEXT_DIM, Theme.BOLD, {
@@ -62,6 +62,27 @@ function LevelUp.build(app, parent: Frame)
 	local pendingConn = me:GetAttributeChangedSignal("Pending"):Connect(function()
 		pickedOffer = "" -- a escolha chegou ao servidor: libera a próxima
 	end)
+
+	-- Posição conforme o aparelho (Hud.layout). No PC as cartas ficam no meio
+	-- da direita; no toque começam logo abaixo do menu, para caberem com o HUD
+	-- maior, e os botões de trocar/banir ficam mais altos (alvo de toque).
+	function self.layout(touch: boolean, right: number, top: number)
+		if touch then
+			panel.AnchorPoint = Vector2.new(1, 0)
+			panel.Position = UDim2.new(1, -(14 + right), 0, math.max(92, top))
+		else
+			panel.AnchorPoint = Vector2.new(1, 0.5)
+			panel.Position = UDim2.new(1, -(14 + right), 0.5, 36)
+		end
+		local h = if touch then 44 else 38
+		actions.Size = UDim2.fromOffset(330, h + 2)
+		rerollButton.Size = UDim2.fromOffset(161, h)
+		banishButton.Size = UDim2.fromOffset(161, h)
+	end
+
+	function self.visible(): boolean
+		return panel.Visible
+	end
 
 	-- O HUD é reconstruído ao trocar idioma ou tamanho do texto.
 	function self.destroy()
@@ -112,7 +133,7 @@ function LevelUp.build(app, parent: Frame)
 		end
 	end
 
-	local function refresh(ids: { string }, usingPad: boolean)
+	local function refresh(ids: { string }, usingPad: boolean, touch: boolean)
 		for i, c in cards do
 			local id = ids[i]
 			c.button.Visible = id ~= nil
@@ -128,7 +149,8 @@ function LevelUp.build(app, parent: Frame)
 				c.desc.Text = Text.t(u.desc or "")
 				local scope = if u.scope == "own" then Text.t("seu feixe") else Text.t("para o time")
 				c.tag.Text = if evo then Text.t("EVOLUÇÃO") .. "  •  " .. scope else scope
-				c.key.Text = if usingPad then (KEYS_PAD[i] or "") else tostring(i)
+				-- Número (teclado) ou direção (controle); no toque, nada.
+				c.key.Text = if usingPad then (KEYS_PAD[i] or "") elseif touch then "" else tostring(i)
 			end
 		end
 	end
@@ -142,11 +164,12 @@ function LevelUp.build(app, parent: Frame)
 			shown = ""
 			return
 		end
-		local usingPad = app.ctx.input and app.ctx.input.usingPad
-		local key = table.concat(ids, ",") .. (if usingPad then "|pad" else "|kb")
+		local device = if app.ctx.input and app.ctx.input.device then app.ctx.input.device() else "mouse"
+		local usingPad = device == "pad"
+		local key = table.concat(ids, ",") .. "|" .. device
 		if key ~= shown then
 			shown = key
-			refresh(ids, usingPad)
+			refresh(ids, usingPad, device == "touch")
 		end
 		title.Text = if banishing then Text.t("Banir uma carta") else Text.t("Escolha uma melhoria")
 		if pending > 1 then
@@ -167,7 +190,7 @@ function LevelUp.build(app, parent: Frame)
 		Theme.setDisabled(banishButton, banishes <= 0)
 		Theme.setSelected(banishButton, banishing)
 		local input = app.ctx.input
-		if app.state:GetAttribute("Mode") == "tutorial" and input then
+		if app.state:GetAttribute("Mode") == "tutorial" and input and device ~= "touch" then
 			hint.Text = if usingPad
 				then Text.format("Direcional: cada direção escolhe uma carta   •   %s troca   •   %s bane",
 					{ input.label("reroll"), input.label("banish") })
@@ -175,6 +198,7 @@ function LevelUp.build(app, parent: Frame)
 		else
 			hint.Text = ""
 		end
+		hint.Visible = hint.Text ~= ""
 	end
 
 	return self

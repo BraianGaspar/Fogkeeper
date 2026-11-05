@@ -69,6 +69,7 @@ return function(app, _params)
 				end },
 				{ Text.t("Continuar"), nil },
 			},
+			focus = 2, -- o controle começa em "Continuar", não em sair
 		})
 	end, { LayoutOrder = 24, TextColor3 = Theme.DANGER })
 	if not host then

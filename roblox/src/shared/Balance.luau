@@ -21,6 +21,11 @@ Balance.FALL_RESET_Y = -20 -- abaixo disto (studs), o avatar volta para a ilha
 -- Servidor ---------------------------------------------------------------------
 Balance.TICK = 1 / 30 -- passo fixo da simulação
 Balance.SNAPSHOT_RATE = 12 -- envios de estado por segundo
+-- Snapshot acima de SNAPSHOT_BUSY_BYTES (14 B por criatura + 6 B por brasa;
+-- ~120 criaturas + 120 brasas) vai a SNAPSHOT_RATE_BUSY por segundo. Pior
+-- caso (200 + 220): 4,1 KB × 10 ≈ 41 KB/s por jogador em vez de 50 KB/s.
+Balance.SNAPSHOT_BUSY_BYTES = 2400
+Balance.SNAPSHOT_RATE_BUSY = 10
 Balance.LOBBY_RETURN = 15 -- segundos na tela final antes de voltar ao saguão
 Balance.ENDLESS_VOTE = 15 -- segundos para votar em continuar noite adentro
 Balance.STORY_TIME = 14 -- segundos da história do mapa antes da partida
@@ -37,7 +42,10 @@ Balance.VIP_OIL = 2 -- multiplicador do óleo ganho com o passe VIP
 Balance.REVIVE_WINDOW = 12 -- segundos para alguém reacender o farol quando a luz se apaga
 Balance.REVIVE_HP = 0.5 -- fração da vida máxima ao reacender
 Balance.REVIVE_STUN = 3 -- segundos de atordoamento nas criaturas ao reacender
-Balance.REVIVE_LATE_OIL = 300 -- óleo entregue se a compra chegar depois que a janela fechou
+-- Óleo entregue se a compra chegar depois que a janela fechou: igual ao Barril
+-- pequeno (mesmo preço sugerido, ver roblox/docs/ECONOMY.md). Mais que isso
+-- faria do reviver "atrasado de propósito" o jeito mais barato de comprar óleo.
+Balance.REVIVE_LATE_OIL = 150
 Balance.LOBBY_COOLDOWN = 0.25 -- intervalo mínimo entre comandos do saguão, por jogador
 Balance.TOP_CACHE = 60 -- segundos que um ranking fica guardado antes de consultar de novo
 Balance.HISTORY_SIZE = 20 -- partidas guardadas no histórico de cada jogador

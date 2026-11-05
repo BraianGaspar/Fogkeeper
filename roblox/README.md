@@ -172,7 +172,7 @@ jogador no menu do Roblox ou no Windows; o jogo não tem acesso a isso.
 **Como as partes se comunicam:**
 - **Servidor:** roda a partida num passo fixo de 30 vezes por segundo. É ele
   quem decide dano, vida e brasas, para ninguém trapacear.
-- **Criaturas e brasas:** vão para os jogadores 12 vezes por segundo, num
+- **Criaturas e brasas:** vão para os jogadores 12 vezes por segundo (10 com a tela cheia), num
   pacote compacto (`Net.encode`). O cliente suaviza o movimento entre um
   envio e outro.
 - **Feixe:** cada jogador gira o próprio feixe na hora, sem esperar a rede. O

@@ -84,8 +84,12 @@ local function updateAvatar(dt: number, phase: string)
 	-- um menu aberto (pausa, configurações) segura o avatar.
 	local menuOpen = phase == "playing" and App.top() ~= nil
 	humanoid.WalkSpeed = if menuOpen then 0 else Balance.AVATAR_WALK_SPEED
-	humanoid.JumpHeight = if menuOpen then 0 else 7.2
-	humanoid.JumpPower = if menuOpen then 0 else 50
+	-- No celular o botão de pular fica no canto de baixo à direita, por cima
+	-- das cartas de melhoria: sem pulo (JumpPower 0) o Roblox o esconde.
+	local cardsOverJump = phase == "playing" and App.touch and App.hud and App.hud.cardsOpen and App.hud.cardsOpen()
+	local noJump = menuOpen or cardsOverJump == true
+	humanoid.JumpHeight = if noJump then 0 else 7.2
+	humanoid.JumpPower = if noJump then 0 else 50
 	local aiming = phase == "playing" and not menuOpen
 	humanoid.AutoRotate = not aiming
 	if aiming then
@@ -153,6 +157,10 @@ Input.onBanish = function()
 end
 Input.onBack = function()
 	App.backPressed()
+end
+-- Pegou o controle com uma tela aberta: o foco volta para ela.
+Input.onPad = function()
+	App.refocus()
 end
 Input.onMenu = function()
 	if playing() and not App.top() then

@@ -22,6 +22,7 @@ local Progress = {}
 
 local STORE_NAME = "FogkeeperProgress"
 local LOAD_TRIES = 3
+local SETTINGS_SAVE_DELAY = 10 -- segundos: junta várias mudanças de configuração numa gravação
 local SETTINGS_KEYS = { locale = "string", colorblind = "number", text_scale = "number", reduce_flashes = "boolean",
 	music = "number", sfx = "number", master = "number", damage = "number", shake = "boolean" }
 
@@ -44,6 +45,10 @@ local JOB = if game.JobId ~= "" then game.JobId else "studio"
 
 local data: { [number]: any } = {} -- userId -> progresso
 local loaded: { [number]: boolean } = {}
+-- Ficha da sessão: muda a cada load e forget (carga que termina depois de o
+-- jogador sair, ou de sair e voltar, é descartada).
+local sessions: { [number]: number } = {}
+local settingsSave: { [number]: boolean } = {} -- gravação de configurações já agendada
 
 local function blank()
 	return {
@@ -88,6 +93,15 @@ local function normalize(d)
 	-- Conquistas são `true` (ARCHITECTURE: ProgressJson); versões antigas guardavam a hora.
 	for id, v in d.achievements do
 		d.achievements[id] = if v then true else nil
+	end
+	-- Óleo corrompido (NaN, infinito, negativo) travaria a oficina para sempre.
+	for _, k in { "oil", "oil_total" } do
+		local v = d[k]
+		if v ~= v or v == math.huge or v < 0 then
+			d[k] = 0
+		else
+			d[k] = math.floor(v)
+		end
 	end
 	return d
 end
@@ -144,8 +158,17 @@ local function write(userId: number, release: boolean): boolean
 		return store == nil
 	end
 	local blocked = false
-	local ok = pcall(function()
+	local stale = false
+	local ok, err = pcall(function()
 		store:UpdateAsync(tostring(userId), function(old)
+			blocked, stale = false, false -- o Roblox pode chamar esta função mais de uma vez
+			-- Gravação sem soltar a trava que termina depois de o jogador sair
+			-- (ou de recarregar): pegaria a trava de novo e faria o próximo
+			-- servidor esperar à toa.
+			if not release and data[userId] ~= d then
+				stale = true
+				return nil
+			end
 			local owner = lockOwner(old)
 			if owner and owner ~= JOB then
 				blocked = true
@@ -155,10 +178,12 @@ local function write(userId: number, release: boolean): boolean
 			return d
 		end)
 	end)
-	if blocked then
+	if not ok then
+		warn("[Fogkeeper] falha ao gravar o progresso de " .. userId .. ": " .. tostring(err))
+	elseif blocked then
 		warn("[Fogkeeper] progresso de " .. userId .. " está com outro servidor; não foi gravado aqui")
 	end
-	return ok and not blocked
+	return ok and not blocked and not stale
 end
 
 local pendingWrites = 0
@@ -167,7 +192,10 @@ local pendingWrites = 0
 local function writeLater(userId: number, release: boolean)
 	pendingWrites += 1
 	task.spawn(function()
-		pcall(write, userId, release)
+		local ok, err = pcall(write, userId, release)
+		if not ok then
+			warn("[Fogkeeper] erro ao gravar o progresso de " .. userId .. ": " .. tostring(err))
+		end
 		pendingWrites -= 1
 	end)
 end
@@ -194,16 +222,20 @@ end
 -- de sair de lá), espera ele gravar e soltar; depois de SESSION_LOCK_WAIT,
 -- assume (o servidor antigo caiu ou travou, e não gravará mais por cima).
 function Progress.load(player: Player)
-	local key = tostring(player.UserId)
+	local userId = player.UserId
+	local key = tostring(userId)
+	local token = (sessions[userId] or 0) + 1
+	sessions[userId] = token
 	local result = nil
 	local success = store == nil
 	if store then
 		local started = os.clock()
 		local tries = 0
-		while player.Parent and tries < LOAD_TRIES do
+		while player.Parent and sessions[userId] == token and tries < LOAD_TRIES do
 			local busy = false
 			local ok = pcall(function()
 				store:UpdateAsync(key, function(old)
+					busy = false -- o Roblox pode chamar esta função mais de uma vez
 					local owner = lockOwner(old)
 					if owner and owner ~= JOB and os.clock() - started < Balance.SESSION_LOCK_WAIT then
 						busy = true
@@ -225,8 +257,25 @@ function Progress.load(player: Player)
 			task.wait(if busy then 2 else 1)
 		end
 	end
-	if not player.Parent then
-		return -- saiu enquanto esperava a trava: nada a guardar
+	if not player.Parent or sessions[userId] ~= token then
+		-- Saiu enquanto carregava: nada a guardar, mas a trava que acabou de
+		-- pegar é solta (senão o próximo servidor esperaria SESSION_LOCK_WAIT).
+		if store and success then
+			local ok, err = pcall(function()
+				store:UpdateAsync(key, function(old)
+					-- Voltou a este mesmo servidor (nova carga = ficha > token + 1): a trava é da sessão nova.
+					if type(old) ~= "table" or lockOwner(old) ~= JOB or (sessions[userId] or 0) > token + 1 then
+						return nil
+					end
+					old.lock = nil
+					return old
+				end)
+			end)
+			if not ok then
+				warn("[Fogkeeper] não soltou a trava de " .. key .. ": " .. tostring(err))
+			end
+		end
+		return
 	end
 	data[player.UserId] = normalize(result)
 	-- Se a leitura falhou, nunca grava por cima do progresso salvo.
@@ -267,6 +316,8 @@ end
 function Progress.forget(player: Player)
 	data[player.UserId] = nil
 	loaded[player.UserId] = nil
+	settingsSave[player.UserId] = nil
+	sessions[player.UserId] = (sessions[player.UserId] or 0) + 1
 end
 
 -- Estatísticas e óleo -----------------------------------------------------------
@@ -289,9 +340,15 @@ function Progress.oilFor(player: Player, score: number): number
 	return math.max(Balance.OIL_MIN, math.round(score * Balance.OIL_PER_SCORE * (1 + fisher)))
 end
 
-function Progress.addOil(player: Player, amount: number)
+-- `purchased` = óleo comprado com Robux (barris ou reviver tardio): vai para o
+-- saldo, mas não para oil_total, que conta só o óleo ganho jogando (a
+-- conquista "Reserva de óleo" não se compra).
+function Progress.addOil(player: Player, amount: number, purchased: boolean?)
 	local d = Progress.get(player)
 	d.oil += amount
+	if purchased then
+		return
+	end
 	d.oil_total += amount
 	if d.oil_total >= 1000 then
 		Progress.unlockAchievement(player, "oil_1000")
@@ -494,7 +551,7 @@ function Progress.setSettings(player: Player, json: string)
 	local settings = Progress.get(player).settings
 	for k, kind in SETTINGS_KEYS do
 		local v = incoming[k]
-		if type(v) == kind then
+		if type(v) == kind and v == v then -- v == v descarta NaN
 			if kind == "number" then
 				v = math.clamp(v, 0, 100)
 			elseif kind == "string" then
@@ -512,7 +569,19 @@ function Progress.setSettings(player: Player, json: string)
 		end
 	end
 	Progress.publish(player)
-	Progress.save(player)
+	-- Uma gravação agendada por janela: um cliente mandando configurações sem
+	-- parar não gasta o orçamento de DataStore do servidor (que também grava
+	-- recibos e o progresso dos outros). Quem sai antes grava ao sair.
+	local userId = player.UserId
+	if not settingsSave[userId] then
+		settingsSave[userId] = true
+		task.delay(SETTINGS_SAVE_DELAY, function()
+			if settingsSave[userId] and player.Parent then
+				settingsSave[userId] = nil
+				Progress.save(player)
+			end
+		end)
+	end
 end
 
 function Progress.addHistory(player: Player, entry)

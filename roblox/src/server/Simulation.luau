@@ -23,6 +23,10 @@ local RELIC = Color3.fromRGB(180, 230, 255)
 local EVOLUTION = Color3.fromRGB(217, 179, 255)
 local DIM = Color3.fromRGB(160, 160, 172)
 local HIT_FX_GAP = 0.15 -- intervalo mínimo entre avisos de dano ao farol (efeito na tela)
+-- Intervalo mínimo entre efeitos de combustão enviados aos clientes: numa
+-- cadeia de explosões eram dezenas de Fx (rede) e anéis (peças) por segundo.
+-- Só o efeito visual é cortado; o dano de cada explosão continua.
+local COMBUSTION_FX_GAP = 0.1
 
 -- Mecânicas dos chefes: todo ModuleScript de server/Bosses, pelo nome (id).
 local BOSS_MODULES: { [string]: any } = {}
@@ -60,10 +64,14 @@ end
 local function covers(src, x: number, y: number, r: number): boolean
 	x -= src.ox or 0
 	y -= src.oy or 0
-	local d = dist(x, y)
-	if d > src.range + r then
+	-- Corte barato primeiro (sem raiz nem atan2): a maioria das criaturas
+	-- fica fora do alcance de cada feixe (feixes × criaturas, 30 vezes por s).
+	local reach = src.range + r
+	local d2 = x * x + y * y
+	if d2 > reach * reach then
 		return false
 	end
+	local d = math.sqrt(d2)
 	if d < 1 then
 		return true
 	end
@@ -1433,7 +1441,10 @@ function Sim:_explosionsStep()
 				self:_light(e, dmg, src)
 			end
 		end
-		self:fx("combustion", { x = x.x, y = x.y, radius = r })
+		if self.t - (self._combustionFxAt or -math.huge) >= COMBUSTION_FX_GAP then
+			self._combustionFxAt = self.t
+			self:fx("combustion", { x = x.x, y = x.y, radius = r })
+		end
 	end
 end
 

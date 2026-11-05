@@ -16,12 +16,12 @@ regras gráficas em `roblox/ARCHITECTURE.md` (seção Gráficos). Edite seguindo
 | Passo da simulação | `Balance.TICK = 1/30` | `shared/Balance.luau` |
 | Criaturas vivas | `Balance.MAX_ENEMIES = 200` | idem |
 | Brasas | `Balance.MAX_EMBERS = 220` | idem |
-| Snapshot | `Balance.SNAPSHOT_RATE = 12` por s; 14 B por criatura, 6 B por brasa, 5 B por morte | `shared/Net.luau` |
+| Snapshot | `Balance.SNAPSHOT_RATE = 12` por s (`SNAPSHOT_RATE_BUSY = 10` acima de `SNAPSHOT_BUSY_BYTES = 2400`); 14 B por criatura, 6 B por brasa, 5 B por morte | `shared/Net.luau` |
 | Partículas | `PARTICLE_BUDGET = 500` por s | `client/Renderer.luau` |
 | Luzes de brasa | `MAX_EMBER_LIGHTS = 6`; chefe ganha uma PointLight | idem |
 | Qualidade baixa | `lowQuality()` (níveis 1–3 do Roblox): menos partículas, sem luz extra | idem |
 
-**Rede no pior caso:** 200 × 14 + 220 × 6 ≈ 4,1 KB por Snapshot × 12 ≈ 50 KB/s
+**Rede no pior caso:** 200 × 14 + 220 × 6 ≈ 4,1 KB por Snapshot × 10 (taxa de carga) ≈ 41 KB/s
 por jogador, só de Snapshot. Isso já encosta numa referência comum de limite
 confortável por jogador. Antes de aumentar `MAX_ENEMIES`, `MAX_EMBERS`,
 `SNAPSHOT_RATE` ou o tamanho de um registro, refaça a conta; prefira cortar

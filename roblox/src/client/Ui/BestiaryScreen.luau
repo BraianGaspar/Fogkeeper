@@ -62,7 +62,7 @@ return function(app, params)
 			first = b
 		end
 	end
-	local scroll = Theme.scroll(box, UDim2.new(1, 0, 0, 440), { LayoutOrder = 20 })
+	local scroll = Theme.scroll(box, UDim2.new(1, 0, 0, 440), { LayoutOrder = 20, Selectable = true }) -- controle: selecionar e rolar com o analógico
 	Theme.grid(scroll, Vector2.new(520, 112), 8)
 	for i, art in entries[mapId] or {} do
 		local isOpen = seen[art] == true

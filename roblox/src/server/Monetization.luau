@@ -109,6 +109,13 @@ local function refresh(player: Player)
 	for _, pass in Catalog.PASSES do
 		set[pass.key] = ownsPassAsync(player, pass)
 	end
+	if player.Parent == nil then
+		return -- saiu durante a consulta: não deixa entrada órfã
+	end
+	-- Compra feita durante a consulta (PromptGamePassPurchaseFinished) vale.
+	for key, v in owned[player.UserId] or {} do
+		set[key] = set[key] or v
+	end
 	owned[player.UserId] = set
 	publish(player)
 	decorate(player, player.Character)
@@ -168,14 +175,12 @@ local function processReceipt(info)
 		end
 	end
 	if oil > 0 then
-		Progress.addOil(player, oil)
+		Progress.addOil(player, oil, true) -- comprado: não conta para oil_total
 	end
 	trimReceipts(player)
 	if not Progress.saveNow(player, purchaseId) then
 		if oil > 0 then
-			local d = Progress.get(player)
-			d.oil -= oil
-			d.oil_total -= oil
+			Progress.get(player).oil -= oil
 		end
 		-- O reviver já aconteceu; numa nova tentativa ele vira óleo (janela fechada).
 		return Enum.ProductPurchaseDecision.NotYetGranted

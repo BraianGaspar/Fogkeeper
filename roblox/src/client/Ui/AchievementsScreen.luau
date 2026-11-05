@@ -15,7 +15,7 @@ return function(app, _params)
 		end
 	end
 	Theme.label(box, Text.format("%d de %d conquistas", { count, #list }), 17, Theme.GOLD, Theme.BOLD, { LayoutOrder = 10 })
-	local scroll = Theme.scroll(box, UDim2.new(1, 0, 0, 460), { LayoutOrder = 20 })
+	local scroll = Theme.scroll(box, UDim2.new(1, 0, 0, 460), { LayoutOrder = 20, Selectable = true }) -- controle: selecionar e rolar com o analógico
 	Theme.grid(scroll, Vector2.new(460, 66), 8)
 	for i, a in list do
 		local on = done[a.id] == true

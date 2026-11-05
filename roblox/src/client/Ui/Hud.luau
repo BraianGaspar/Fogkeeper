@@ -3,6 +3,7 @@
 -- relíquias, XP, as 3 habilidades, o painel do tutorial e as cartas de
 -- melhoria (LevelUp). Lê os atributos de State e do jogador a cada quadro.
 
+local GuiService = game:GetService("GuiService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,6 +28,22 @@ local shownRelics = ""
 local tutRaw: any = nil -- TutorialJson já decodificado (não decodifica a cada quadro)
 local tutValue: any = nil
 
+-- Textos de toque para os passos do tutorial que falam de teclas (o servidor
+-- manda só teclado e controle). Índices de Tutorial.Step.
+local TUTORIAL_TOUCH = {
+	[1] = "Ande com o polegar esquerdo e toque no mar para apontar a lanterna: o seu feixe sai da sua mão e segue o ponto tocado.", -- i18n
+	[4] = "Com brasas suficientes, você escolhe uma melhoria. As cartas aparecem no canto da tela e a partida não pausa: toque na carta que quiser. Os botões embaixo delas trocam as cartas ou banem uma.", -- i18n
+	[5] = "Toque nos três botões embaixo: Clarão (fere e atordoa em volta), Sobrecarga (feixe concentrado) e Sino da Névoa (puxa as brasas e cura). Use as três.", -- i18n
+}
+
+-- Dica da primeira partida (para quem não fez o tutorial), por aparelho.
+local FIRST_RUN_HINT = 25 -- segundos
+local FIRST_RUN_TEXT = {
+	mouse = "Aponte a lanterna com o mouse e queime as criaturas antes que cheguem ao farol. Q, E e R usam as habilidades.", -- i18n
+	touch = "Toque no mar para apontar a lanterna e queime as criaturas antes que cheguem ao farol. Os botões embaixo usam as habilidades.", -- i18n
+	pad = "Gire a câmera com o analógico direito para apontar a lanterna e queime as criaturas. LB, RB e Y usam as habilidades.", -- i18n
+}
+
 local STATUS = {
 	{ attr = "Ink", text = "Tinta: alcance reduzido", color = Color3.new(0.75, 0.62, 1.0) },
 	{ attr = "Petrified", text = "Farol petrificado!", color = Color3.new(0.75, 0.75, 0.7) },
@@ -42,7 +59,33 @@ local function loadout(): { string }
 	return Data.Balance.DEFAULT_LOADOUT or { "flash", "overcharge", "bell" }
 end
 
+-- Medidas do HUD conforme o aparelho, em unidades do HUD (o App já aplicou
+-- a escala extra do celular em App.hudScale).
+local function metrics()
+	local k = app.hudScale or 1
+	local px = math.max(0.1, (app.uiScale or 1) * k) -- pixels reais por unidade do HUD
+	local safe = app.safe or {}
+	local touch = app.touch == true
+	-- Alvo de toque de ~48 px reais (o Roblox recomenda 44 ou mais).
+	local minTouch = if touch then math.ceil(48 / px) else 0
+	return {
+		touch = touch,
+		top = (safe.top or 0) / k,
+		right = (safe.right or 0) / k,
+		slot = math.clamp(math.max(64, minTouch), 64, 104),
+		menu = math.clamp(math.max(52, minTouch), 52, 96),
+	}
+end
+
+-- Texto do HUD sem painel atrás (sobre o céu ou o mar): contorno mais forte.
+local function worldLabel(l: TextLabel): TextLabel
+	l.TextStrokeTransparency = 0.15
+	return l
+end
+
 -- Habilidades ---------------------------------------------------------------------
+
+local builtSlot = 0
 
 local function buildAbilities()
 	for _, s in abilitySlots do
@@ -51,15 +94,18 @@ local function buildAbilities()
 	abilitySlots = {}
 	local ids = loadout()
 	shownLoadout = table.concat(ids, ",")
+	local m = metrics()
+	local size = m.slot
+	builtSlot = size
 	for i, id in ids do
 		local slot = Theme.make("TextButton", frame, {
-			Size = UDim2.fromOffset(64, 64), Position = UDim2.new(0.5, (i - 2) * 80, 1, -66), AnchorPoint = Vector2.new(0.5, 1),
+			Size = UDim2.fromOffset(size, size), Position = UDim2.new(0.5, (i - 2) * (size + 16), 1, -66), AnchorPoint = Vector2.new(0.5, 1),
 			BackgroundColor3 = Color3.new(0.08, 0.08, 0.13), BorderSizePixel = 0, Text = "", AutoButtonColor = false,
 			Selectable = false,
 		})
 		Theme.corner(slot, 10)
 		local stroke = Theme.stroke(slot, Theme.GOLD, 2)
-		local icon = Icons.make(slot, id, 52)
+		local icon = Icons.make(slot, id, math.floor(size * 0.8))
 		icon.AnchorPoint = Vector2.new(0.5, 0.5)
 		icon.Position = UDim2.fromScale(0.5, 0.5)
 		local cover = Theme.make("Frame", slot, {
@@ -105,7 +151,37 @@ local function updateAbilities(t: number)
 			app.ctx.sounds.play("ability_ready")
 		end
 		s.ready = ready
-		s.key.Text = if input then input.label("ability_" .. i) else ""
+		-- No toque a tecla não diz nada: o botão é o próprio alvo.
+		s.key.Text = if input and input.device() ~= "touch" then input.label("ability_" .. i) else ""
+	end
+end
+
+-- Posições que dependem do aparelho, da barra do Roblox e da escala.
+local function layout()
+	if not frame or not refs.topLeft then
+		return
+	end
+	local m = metrics()
+	if m.slot ~= builtSlot then
+		buildAbilities()
+	end
+	refs.topLeft.Position = UDim2.fromOffset(20, math.max(10, m.top + 4))
+	-- Menu no canto de cima à direita; se o Roblox ocupar esse canto, desce.
+	local menuY = if m.right > 0 then m.top + 6 else 12
+	refs.menuButton.Size = UDim2.fromOffset(m.menu, m.menu)
+	refs.menuButton.Position = UDim2.new(1, -(16 + m.right), 0, menuY)
+	local scoreX = -(16 + m.right + m.menu + 14)
+	refs.score.Position = UDim2.new(1, scoreX, 0, menuY - 8)
+	refs.kills.Position = UDim2.new(1, scoreX, 0, menuY + 38)
+	-- XP: no toque a barra é mais curta, para não passar sob as cartas.
+	local xpWidth = if m.touch then 580 else 820
+	refs.xpBack.Size = UDim2.fromOffset(xpWidth, 18)
+	refs.xpBack.Position = UDim2.new(0.5, -xpWidth / 2 + 15, 1, -30)
+	refs.medal.Position = UDim2.new(0.5, -xpWidth / 2 + 31, 1, -21)
+	-- Tutorial logo acima das habilidades (que crescem no toque).
+	refs.tutorial.Position = UDim2.new(0.5, -70, 1, -(88 + m.slot))
+	if levelUp and levelUp.layout then
+		levelUp.layout(m.touch, m.right, menuY + m.menu + 12)
 	end
 end
 
@@ -118,25 +194,28 @@ local function build()
 	refs = {}
 	frame = Theme.make("Frame", layer, { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Name = "Hud" })
 
-	-- Vida do farol e estados.
-	Theme.label(frame, Text.t("Farol"), 20, Theme.GOLD, Theme.HEAD, {
-		Position = UDim2.fromOffset(20, 10), Size = UDim2.fromOffset(330, 24), TextXAlignment = Enum.TextXAlignment.Left,
-	})
-	local _, hpFill = Theme.bar(frame, UDim2.fromOffset(330, 24), UDim2.fromOffset(20, 38), Theme.HP)
+	-- Vida do farol e estados. Ficam num grupo logo abaixo da barra do Roblox
+	-- (menu e chat ocupam o canto de cima à esquerda); ver layout().
+	local topLeft = Theme.make("Frame", frame, { Size = UDim2.fromOffset(440, 132), BackgroundTransparency = 1, Name = "TopLeft" })
+	refs.topLeft = topLeft
+	worldLabel(Theme.label(topLeft, Text.t("Farol"), 20, Theme.GOLD, Theme.HEAD, {
+		Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(330, 24), TextXAlignment = Enum.TextXAlignment.Left,
+	}))
+	local _, hpFill = Theme.bar(topLeft, UDim2.fromOffset(330, 24), UDim2.fromOffset(0, 28), Theme.HP)
 	refs.hpFill = hpFill
-	refs.hpText = Theme.label(frame, "", 15, Theme.TEXT, Theme.BOLD, { Position = UDim2.fromOffset(20, 38), Size = UDim2.fromOffset(330, 24) })
-	refs.status = Theme.label(frame, "", 15, Theme.TEXT, Theme.BOLD, {
-		Position = UDim2.fromOffset(20, 66), Size = UDim2.fromOffset(420, 20), TextXAlignment = Enum.TextXAlignment.Left,
-	})
-	refs.relics = Theme.label(frame, "", 14, Color3.new(0.7, 0.9, 1.0), Theme.BODY, {
-		Position = UDim2.fromOffset(20, 88), Size = UDim2.fromOffset(420, 40), TextXAlignment = Enum.TextXAlignment.Left,
+	refs.hpText = Theme.label(topLeft, "", 15, Theme.TEXT, Theme.BOLD, { Position = UDim2.fromOffset(0, 28), Size = UDim2.fromOffset(330, 24) })
+	refs.status = worldLabel(Theme.label(topLeft, "", 15, Theme.TEXT, Theme.BOLD, {
+		Position = UDim2.fromOffset(0, 56), Size = UDim2.fromOffset(420, 20), TextXAlignment = Enum.TextXAlignment.Left,
+	}))
+	refs.relics = worldLabel(Theme.label(topLeft, "", 14, Color3.new(0.7, 0.9, 1.0), Theme.BODY, {
+		Position = UDim2.fromOffset(0, 78), Size = UDim2.fromOffset(420, 40), TextXAlignment = Enum.TextXAlignment.Left,
 		TextYAlignment = Enum.TextYAlignment.Top,
-	})
+	}))
 
 	-- Relógio do amanhecer.
-	refs.clock = Theme.label(frame, "18:00", 36, Theme.TEXT, Theme.HEAD, {
+	refs.clock = worldLabel(Theme.label(frame, "18:00", 36, Theme.TEXT, Theme.HEAD, {
 		Position = UDim2.new(0.5, 0, 0, 6), AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(240, 40),
-	})
+	}))
 	local dayBack, dayFill = Theme.bar(frame, UDim2.fromOffset(380, 10), UDim2.new(0.5, -190, 0, 50), Theme.GOLD)
 	refs.dayBack = dayBack
 	refs.dayFill = dayFill
@@ -146,26 +225,25 @@ local function build()
 		Size = UDim2.fromOffset(10, 10), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Theme.DANGER, BorderSizePixel = 0,
 		Rotation = 45, Visible = false, ZIndex = 3,
 	})
-	refs.dawn = Theme.label(frame, "", 14, Theme.TEXT_DIM, Theme.BODY, {
-		Position = UDim2.new(0.5, 0, 0, 62), AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(520, 18),
-	})
+	-- Texto claro (não cinza) com contorno: fica sobre o céu, sem painel atrás.
+	refs.dawn = worldLabel(Theme.label(frame, "", 15, Theme.TEXT, Theme.BODY, {
+		Position = UDim2.new(0.5, 0, 0, 62), AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(520, 20),
+	}))
 
-	-- Pontuação e menu.
-	refs.score = Theme.label(frame, "0", 42, Theme.GOLD, Theme.HEAD, {
-		Position = UDim2.new(1, -82, 0, 4), AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(320, 46),
-		TextXAlignment = Enum.TextXAlignment.Right,
-	})
-	refs.kills = Theme.label(frame, "", 15, Theme.TEXT, Theme.BODY, {
-		Position = UDim2.new(1, -82, 0, 50), AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(320, 20),
-		TextXAlignment = Enum.TextXAlignment.Right,
-	})
+	-- Pontuação e menu (posições em layout()).
+	refs.score = worldLabel(Theme.label(frame, "0", 42, Theme.GOLD, Theme.HEAD, {
+		AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(320, 46), TextXAlignment = Enum.TextXAlignment.Right,
+	}))
+	refs.kills = worldLabel(Theme.label(frame, "", 15, Theme.TEXT, Theme.BODY, {
+		AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(320, 20), TextXAlignment = Enum.TextXAlignment.Right,
+	}))
 	-- Ícone de menu (três traços, ☰); também abre com a tecla P e o Menu do
 	-- controle. Pausar é uma das opções do menu.
 	local menuButton = Theme.button(frame, "", UDim2.fromOffset(52, 52), function()
 		app.open("PlayerMenu")
-	end, { Position = UDim2.new(1, -16, 0, 12), AnchorPoint = Vector2.new(1, 0) })
+	end, { AnchorPoint = Vector2.new(1, 0) })
 	for i = 0, 2 do
-		local bar = Theme.make("Frame", menuButton, { Size = UDim2.fromOffset(26, 4), Position = UDim2.new(0.5, 0, 0.5, (i - 1) * 9),
+		local bar = Theme.make("Frame", menuButton, { Size = UDim2.fromScale(0.5, 0.077), Position = UDim2.fromScale(0.5, 0.5 + (i - 1) * 0.173),
 			AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Theme.GOLD, BorderSizePixel = 0 })
 		Theme.make("UICorner", bar, { CornerRadius = UDim.new(0, 2) })
 	end
@@ -177,7 +255,7 @@ local function build()
 	Theme.make("UICorner", pause, { CornerRadius = UDim.new(0, 10) })
 	Theme.make("UIStroke", pause, { Color = Theme.GOLD_DARK, Thickness = 1.5 })
 	refs.pauseText = Theme.label(pause, "", 26, Theme.GOLD, Theme.HEAD, { Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, 34) })
-	Theme.button(pause, Text.t("Continuar"), UDim2.fromOffset(240, 48), function()
+	refs.pauseButton = Theme.button(pause, Text.t("Continuar"), UDim2.fromOffset(240, 48), function()
 		app.ctx.send("pause", false)
 	end, { Position = UDim2.new(0.5, 0, 1, -16), AnchorPoint = Vector2.new(0.5, 1) })
 	refs.pause = pause
@@ -205,21 +283,26 @@ local function build()
 	refs.bossName = Theme.label(bossBack, "", 17, Theme.DANGER, Theme.HEAD, { Position = UDim2.fromOffset(0, -26), Size = UDim2.new(1, 0, 0, 24) })
 
 	-- XP e nível.
-	local _, xpFill = Theme.bar(frame, UDim2.fromOffset(820, 18), UDim2.new(0.5, -390, 1, -30), Theme.XP)
+	-- Largura e posição em layout() (no celular a barra encolhe para não
+	-- passar por baixo das cartas de melhoria).
+	local xpBack, xpFill = Theme.bar(frame, UDim2.fromOffset(820, 18), nil, Theme.XP)
+	refs.xpBack = xpBack
 	refs.xpFill = xpFill
-	refs.xpText = Theme.label(frame, "", 13, Theme.TEXT, Theme.BOLD, { Position = UDim2.new(0.5, -390, 1, -30), Size = UDim2.fromOffset(820, 18) })
+	refs.xpText = Theme.label(xpBack, "", 14, Theme.TEXT, Theme.BOLD, { Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.2, ZIndex = 2 })
 	local medal = Theme.make("Frame", frame, {
-		Size = UDim2.fromOffset(46, 46), Position = UDim2.new(0.5, -420, 1, -44), BackgroundColor3 = Color3.new(0.2, 0.12, 0.35),
+		Size = UDim2.fromOffset(46, 46), AnchorPoint = Vector2.new(1, 0.5), BackgroundColor3 = Color3.new(0.2, 0.12, 0.35),
 		BorderSizePixel = 0,
 	})
+	refs.medal = medal
 	Theme.corner(medal, 46)
 	Theme.stroke(medal, Theme.GOLD, 2)
 	refs.level = Theme.label(medal, "1", 22, Theme.GOLD, Theme.HEAD, { Size = UDim2.fromScale(1, 1) })
 
 	-- Tutorial.
 	local tut = Theme.panel(frame, {
-		-- Um pouco à esquerda do centro: as cartas de melhoria ocupam o canto direito.
-		Size = UDim2.fromOffset(640, 120), Position = UDim2.new(0.5, -70, 1, -150), AnchorPoint = Vector2.new(0.5, 1), Visible = false,
+		-- Um pouco à esquerda do centro: as cartas de melhoria ocupam o canto
+		-- direito. Cresce para cima conforme o texto (altura em layout()).
+		Size = UDim2.fromOffset(640, 0), AutomaticSize = Enum.AutomaticSize.Y, AnchorPoint = Vector2.new(0.5, 1), Visible = false,
 	})
 	Theme.padding(tut, 14)
 	Theme.list(tut, 4, false, Enum.HorizontalAlignment.Left)
@@ -227,7 +310,7 @@ local function build()
 	tutRaw = nil
 	refs.tutTitle = Theme.label(tut, "", 20, Theme.GOLD, Theme.HEAD, { TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = 1 })
 	refs.tutBody = Theme.label(tut, "", 15, Theme.TEXT, Theme.BODY, {
-		TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, 0, 0, 44), LayoutOrder = 2,
+		TextXAlignment = Enum.TextXAlignment.Left, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = 2,
 	})
 	refs.tutProgress = Theme.label(tut, "", 14, Theme.GOOD, Theme.BOLD, { TextXAlignment = Enum.TextXAlignment.Right, LayoutOrder = 3 })
 
@@ -238,6 +321,7 @@ local function build()
 	abilitySlots = {}
 	buildAbilities()
 	shownRelics = ""
+	layout()
 end
 
 function Hud.build(appRef, parent: Frame)
@@ -251,6 +335,17 @@ function Hud.rebuild()
 	local visible = frame and frame.Visible
 	build()
 	frame.Visible = visible == true
+end
+
+-- O App chama quando muda a escala, a barra do Roblox ou o tamanho da tela.
+function Hud.layout()
+	layout()
+end
+
+-- Cartas de melhoria na tela (o Client esconde o botão de pular do celular,
+-- que ficaria por cima delas).
+function Hud.cardsOpen(): boolean
+	return levelUp ~= nil and levelUp.visible ~= nil and levelUp.visible()
 end
 
 function Hud.setVisible(on: boolean)
@@ -355,6 +450,7 @@ function Hud.update(dt: number)
 		refs.bossMark.Position = UDim2.fromScale(frac, 0.5)
 	end
 
+	local device = if app.ctx.input and app.ctx.input.device then app.ctx.input.device() else "mouse"
 	local reviving = state:GetAttribute("Reviving") == true
 	refs.revive.Visible = reviving
 	if reviving then
@@ -367,6 +463,15 @@ function Hud.update(dt: number)
 	if paused then
 		local by = state:GetAttribute("PausedBy") or ""
 		refs.pauseText.Text = if by ~= "" then Text.format("Pausado por %s", { by }) else Text.t("Pausado")
+	end
+	-- Controle: o botão do aviso (reacender ou continuar) recebe o foco
+	-- sozinho; sem isso o A não teria o que apertar.
+	local wanted = if reviving then refs.reviveButton elseif refs.pause.Visible then refs.pauseButton else nil
+	local selected = GuiService.SelectedObject
+	if wanted and device == "pad" and app.top() == nil and selected == nil then
+		GuiService.SelectedObject = wanted
+	elseif selected and (selected == refs.reviveButton or selected == refs.pauseButton) and selected ~= wanted then
+		GuiService.SelectedObject = nil
 	end
 
 	refs.score.Visible = mode ~= "tutorial" -- o tutorial não vale pontos
@@ -397,16 +502,28 @@ function Hud.update(dt: number)
 		tutValue = Data.decode(rawTut)
 	end
 	local tut = tutValue
-	refs.tutorial.Visible = mode == "tutorial" and type(tut) == "table" and phase == "playing"
-	if refs.tutorial.Visible then
+	local inTutorial = mode == "tutorial" and type(tut) == "table" and phase == "playing"
+	-- Primeira partida de quem pulou o tutorial: uma dica curta de como mirar
+	-- nos primeiros segundos, no mesmo quadro (some sozinha).
+	local firstRun = not inTutorial and phase == "playing" and mode ~= "tutorial" and elapsed < FIRST_RUN_HINT
+		and type(Players.LocalPlayer:GetAttribute("ProgressJson")) == "string"
+		and (tonumber(Data.progress().stats.runs) or 0) == 0
+	refs.tutorial.Visible = inTutorial or firstRun
+	if inTutorial then
 		refs.tutTitle.Text = Text.t(tut.title or "")
-		local pad = app.ctx.input and app.ctx.input.usingPad and tut.padBody
-		if pad then
+		local touchBody = TUTORIAL_TOUCH[tonumber(tut.step) or 0]
+		if device == "pad" and tut.padBody then
 			refs.tutBody.Text = Text.format(tut.padBody, tut.padArgs or {})
+		elseif device == "touch" and touchBody then
+			refs.tutBody.Text = Text.t(touchBody)
 		else
 			refs.tutBody.Text = Text.format(tut.body or "", tut.args or {})
 		end
 		refs.tutProgress.Text = tut.progress or ""
+	elseif firstRun then
+		refs.tutTitle.Text = Text.t("Mantenha a luz sobre as criaturas")
+		refs.tutBody.Text = Text.t(FIRST_RUN_TEXT[device] or FIRST_RUN_TEXT.mouse)
+		refs.tutProgress.Text = ""
 	end
 
 	local ids = table.concat(loadout(), ",")

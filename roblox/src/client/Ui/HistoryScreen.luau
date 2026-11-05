@@ -8,7 +8,7 @@ return function(app, _params)
 	local frame, box = Theme.screen(1000, 640, Text.t("Histórico de partidas"))
 	local history = Data.progress().history or {}
 	Theme.label(box, Text.format("%d partidas registradas", { #history }), 16, Theme.GOLD, Theme.BOLD, { LayoutOrder = 10 })
-	local scroll = Theme.scroll(box, UDim2.new(1, 0, 0, 450), { LayoutOrder = 20 })
+	local scroll = Theme.scroll(box, UDim2.new(1, 0, 0, 450), { LayoutOrder = 20, Selectable = true }) -- controle: selecionar e rolar com o analógico
 	Theme.list(scroll, 6)
 	if #history == 0 then
 		Theme.label(scroll, Text.t("Nenhuma partida ainda. Acenda o farol!"), 18, Theme.TEXT_DIM, Theme.BODY, { LayoutOrder = 1 })

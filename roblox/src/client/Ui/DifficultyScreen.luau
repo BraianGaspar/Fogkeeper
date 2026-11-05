@@ -79,7 +79,7 @@ return function(app, _params)
 
 	return {
 		frame = frame,
-		focus = if host then first else start,
+		focus = if host then (buttons[state:GetAttribute("Difficulty") or "normal"] or first) else start,
 		update = function()
 			host = Data.isHost()
 			local current = state:GetAttribute("Difficulty") or "normal"

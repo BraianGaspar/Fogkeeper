@@ -67,8 +67,8 @@ ArtKit.use(build, animate, "jellyfish", function(m, r)
 			math.sin(a) * r * 0.5), rgb(0.7, 0.5, 0.95), { Transparency = 0.25 }), "Strand")
 	end
 end, function(model, ent, t)
-	ArtKit.pose(model, "Strand", function(p)
-		local z = (p:GetAttribute("Offset") :: CFrame).Position.Z
+	ArtKit.pose(model, "Strand", function(_p, o)
+		local z = o.Position.Z
 		return CFrame.Angles(0, math.sin(t * 4 + z * 3 + (ent.id or 0)) * 0.4, 0)
 	end)
 	ArtKit.scale(model, ent.scale or 1)

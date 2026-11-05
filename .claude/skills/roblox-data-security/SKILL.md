@@ -25,9 +25,15 @@ conquistas, bestiário (`seen`), estatísticas, histórico, **recibos** de compr
   Mudança de significado de um campo existente (não só campo novo) pede
   migração explícita em `normalize` e, se ficar complexo, um `version` no perfil.
 - `Progress.save(player, release?)`: `UpdateAsync` em segundo plano, gravando a
-  tabela da memória. Chamado ao comprar desbloqueio/oficina, mudar
-  configurações, terminar partida/tutorial e ao sair do jogo (`release = true`
-  solta a trava). `Progress.autosave` roda a cada `Balance.AUTOSAVE_EVERY`.
+  tabela da memória. Chamado ao comprar desbloqueio/oficina, terminar
+  partida/tutorial e ao sair do jogo (`release = true` solta a trava).
+  Configurações gravam uma vez por janela (`SETTINGS_SAVE_DELAY`), para um
+  cliente não esgotar o orçamento de DataStore do servidor.
+  `Progress.autosave` roda a cada `Balance.AUTOSAVE_EVERY`. Gravação que
+  termina depois de o jogador sair (sem `release`) é descartada, e carga que
+  termina depois da saída solta a trava que pegou.
+- Óleo comprado (`addOil(..., true)`) entra no saldo, não em `oil_total`
+  (conquista "Reserva de óleo" só com óleo ganho jogando).
 - **Trava de sessão:** o perfil salvo tem `lock = {job, at}` (JobId do servidor
   dono). `Progress.load` pega a trava dentro de `UpdateAsync`; se outro servidor
   ainda a tem (jogador acabou de sair de lá), espera até `SESSION_LOCK_WAIT` e

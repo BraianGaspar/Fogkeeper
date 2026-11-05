@@ -167,6 +167,7 @@ return function(app, _params)
 	end
 
 	local shownTotal = 0
+	local counted = false
 	local target = score.total or 0
 	return {
 		frame = frame,
@@ -176,6 +177,13 @@ return function(app, _params)
 		end,
 		update = function(dt: number)
 			shownTotal = math.min(target, shownTotal + math.max(1, target * dt / 1.2))
+			-- Fim da contagem: um toque de recompensa (só se houve pontos ou óleo).
+			if not counted and shownTotal >= target then
+				counted = true
+				if (target > 0 or (mine.oil or 0) > 0) and app.ctx and app.ctx.sounds then
+					app.ctx.sounds.play("meta")
+				end
+			end
 			total.Text = Data.number(shownTotal)
 			local left = (state:GetAttribute("ReturnAt") or 0) - workspace:GetServerTimeNow()
 			local votes = math.floor(state:GetAttribute("EndlessVotes") or 0)
@@ -185,6 +193,8 @@ return function(app, _params)
 			end
 			footer.Text = text
 			Theme.setSelected(continueButton, voted)
+			-- Voto marcado também por símbolo (não só pela cor da borda).
+			continueButton.Text = (if voted then "✓ " else "") .. Text.t("Continuar noite adentro")
 		end,
 	}
 end

@@ -53,9 +53,10 @@ ArtKit.use(build, animate, "bronze_shield", function(m, r)
 end, function(model, ent, _t)
 	-- Escudo erguido (fechado) reflete; baixado (aberto) deixa o soldado exposto.
 	local up = if ent.reflecting then 1 else 0
-	local cur = model:GetAttribute("Open") or 1
+	local st = ArtKit.state(model)
+	local cur = st.open or 1
 	cur += (up - cur) * 0.2
-	model:SetAttribute("Open", cur)
+	st.open = cur
 	ArtKit.pose(model, "Shield", CFrame.new(0, 0, (1 - cur) * 1.2) * CFrame.Angles(0, (1 - cur) * 0.9, 0))
 	ArtKit.visible(model, "Shine", cur > 0.5, 0.2)
 end)
