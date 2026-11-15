@@ -14,6 +14,7 @@ const ASSETS := [
 	{"file": "library_hero.png", "size": Vector2i(3840, 1240), "layout": "hero", "logo": false},
 	{"file": "library_logo.png", "size": Vector2i(1280, 720), "layout": "logo", "logo": true},
 	{"file": "community_icon.png", "size": Vector2i(184, 184), "layout": "icon", "logo": false},
+	{"file": "roblox_icon.png", "size": Vector2i(512, 512), "layout": "side", "logo": false}, ## Ícone da experiência no Roblox.
 ]
 
 ## Criaturas em volta do farol: arte, ângulo, distância (fração do tamanho), raio.
@@ -86,6 +87,9 @@ func _draw_asset(ci: Node2D) -> void:
 	if layout == "logo":
 		_logo(ci, size * 0.5, size.x * 0.9, size.y * 0.3, true)
 		return
+	if layout == "side":
+		_side_icon(ci, size)
+		return
 	_sky(ci, size)
 	_scene(ci, _center(size, layout), _scale(size, layout), size)
 
@@ -133,6 +137,62 @@ func _sky(ci: Node2D, size: Vector2) -> void:
 		var r := rng.randf_range(0.1, 0.3) * size.y
 		for j in 5:
 			ci.draw_circle(p, r * (1.0 - j * 0.15), Color(0.55, 0.55, 0.75, 0.025))
+
+
+## Ícone quadrado (Roblox): o farol de lado sobre um rochedo, o feixe cortando a
+## névoa na diagonal e olhos de criaturas no escuro. Um assunto só, legível pequeno.
+func _side_icon(ci: Node2D, size: Vector2) -> void:
+	var u := size.x / 512.0
+	var k := Transform2D.IDENTITY.scaled(Vector2.ONE * u) # escala listas de pontos
+	_sky(ci, size)
+	# Lua atrás do farol.
+	for j in 6:
+		ci.draw_circle(Vector2(395, 105) * u, (46.0 + j * 14.0) * u, Color(0.9, 0.92, 1.0, 0.035))
+	ci.draw_circle(Vector2(395, 105) * u, 38.0 * u, Color(0.93, 0.94, 0.98))
+	var lamp := Vector2(178, 178) * u
+	# Feixe: cone largo e quente, do topo do farol até a borda direita.
+	var dir := Vector2(1.0, 0.42).normalized()
+	var far := lamp + dir * 520.0 * u
+	var side := dir.orthogonal() * 150.0 * u
+	ci.draw_polygon(PackedVector2Array([lamp, far + side, far - side]),
+		PackedColorArray([Color(1.0, 0.95, 0.75, 0.95), Color(1.0, 0.85, 0.5, 0.0), Color(1.0, 0.85, 0.5, 0.0)]))
+	ci.draw_polygon(PackedVector2Array([lamp, far + side * 0.4, far - side * 0.4]),
+		PackedColorArray([Color(1.0, 1.0, 0.92, 1.0), Color(1.0, 0.95, 0.75, 0.0), Color(1.0, 0.95, 0.75, 0.0)]))
+	# Névoa baixa sobre o mar.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	for i in 26:
+		var p := Vector2(rng.randf() * 512.0, 330.0 + rng.randf() * 120.0) * u
+		ci.draw_circle(p, rng.randf_range(40.0, 90.0) * u, Color(0.6, 0.65, 0.82, 0.06))
+	# Olhos de criaturas na névoa: os do feixe ardem em laranja.
+	for e: Array in [[Vector2(400, 300), true], [Vector2(450, 360), true], [Vector2(330, 390), false], [Vector2(470, 250), false], [Vector2(60, 330), false]]:
+		var p: Vector2 = e[0] * u
+		var col := Color(1.0, 0.55, 0.15) if e[1] else Color(0.55, 0.95, 1.0)
+		for s: float in [-1.0, 1.0]:
+			var q := p + Vector2(s * 9.0, 0) * u
+			ci.draw_circle(q, 9.0 * u, Color(col, 0.25))
+			ci.draw_circle(q, 4.5 * u, col)
+	# Rochedo e mar.
+	ci.draw_rect(Rect2(Vector2(0, 430) * u, Vector2(512, 82) * u), Color(0.04, 0.07, 0.14))
+	ci.draw_colored_polygon(k * PackedVector2Array([Vector2(40, 512), Vector2(70, 440), Vector2(120, 412), Vector2(240, 405),
+		Vector2(300, 440), Vector2(330, 512)]), Color(0.13, 0.13, 0.17))
+	# Torre listrada (afinando para cima), galeria, lanterna e cúpula.
+	var base_y := 415.0
+	var top_y := 205.0
+	var stripes := 5
+	for i in stripes:
+		var y0 := base_y - (base_y - top_y) * i / stripes
+		var y1 := base_y - (base_y - top_y) * (i + 1) / stripes
+		var w0 := lerpf(46.0, 30.0, float(i) / stripes)
+		var w1 := lerpf(46.0, 30.0, float(i + 1) / stripes)
+		var col := Color(0.93, 0.92, 0.88) if i % 2 == 0 else Color(0.82, 0.22, 0.2)
+		ci.draw_colored_polygon(k * PackedVector2Array([Vector2(178 - w0, y0), Vector2(178 + w0, y0), Vector2(178 + w1, y1), Vector2(178 - w1, y1)]), col)
+	ci.draw_rect(Rect2(Vector2(140, 196) * u, Vector2(76, 10) * u), Color(0.15, 0.15, 0.18))
+	ci.draw_rect(Rect2(Vector2(156, 160) * u, Vector2(44, 36) * u), Color(1.0, 0.92, 0.6))
+	for j in 5:
+		ci.draw_circle(lamp, (26.0 + j * 16.0) * u, Color(1.0, 0.85, 0.5, 0.07))
+	ci.draw_colored_polygon(k * PackedVector2Array([Vector2(150, 160), Vector2(178, 128), Vector2(206, 160)]), Color(0.15, 0.15, 0.18))
+	ci.draw_rect(Rect2(Vector2(174, 116) * u, Vector2(8, 14) * u), Color(0.15, 0.15, 0.18))
 
 
 ## O farol na ilha, com os feixes e criaturas da névoa queimando na luz.
