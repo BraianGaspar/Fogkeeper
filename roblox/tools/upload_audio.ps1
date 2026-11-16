@@ -97,7 +97,7 @@ function Send-Audio([string]$path, [string]$name) {
 		$file = New-Object System.Net.Http.ByteArrayContent(, $bytes)
 		$file.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::Parse("audio/ogg")
 		$form.Add($file, "fileContent", [System.IO.Path]::GetFileName($path))
-		$req = New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::Post, $base + "assets")
+		$req = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Post, ($base + "assets"))
 		$req.Content = $form
 		$req
 	}
@@ -115,7 +115,7 @@ function Send-Audio([string]$path, [string]$name) {
 		Start-Sleep -Seconds $PollSeconds
 		$opPath = $op.path
 		$op = Send-Json {
-			New-Object System.Net.Http.HttpRequestMessage([System.Net.Http.HttpMethod]::Get, $base + $opPath)
+			[System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Get, ($base + $opPath))
 		}
 	}
 	throw "Operation $($op.path) did not finish in time; run the script again later."
