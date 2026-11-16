@@ -166,6 +166,8 @@ end
 -- Água do Terrain por mapa (só visual): transparência (1 = límpida), reflexo,
 -- tamanho e velocidade das ondas, e quanto da cor da onda entra na água. A
 -- tempestade aumenta as ondas. O fiorde não tem água (o mar é gelo).
+local WATER_MIN_BRIGHTNESS = 0.42 -- abaixo deste brilho (V do HSV), a água puxa para WATER_NIGHT
+local WATER_NIGHT = Color3.fromRGB(34, 74, 112) -- azul-marinho de mar à noite
 local WATER = {
 	bay = { clear = 0.35, reflect = 0.55, wave = 0.18, speed = 10, tint = 0.22 },
 	fjord = { clear = 0.4, reflect = 0.6, wave = 0.05, speed = 4, tint = 0.2 },
@@ -218,7 +220,14 @@ local function tintScenery(mapId: string, p: { [string]: any }, storm: number)
 		return
 	end
 	local w = WATER[mapId] or WATER.bay
-	setWater(t, "WaterColor", (p.sea :: Color3):Lerp(p.wave, w.tint))
+	-- A paleta da noite veio do jogo 2D e deixa a água do Terrain quase preta:
+	-- quanto mais escura, mais ela é puxada para um azul-marinho de mar à noite.
+	local color = (p.sea :: Color3):Lerp(p.wave, w.tint)
+	local _, _, v = color:ToHSV()
+	if v < WATER_MIN_BRIGHTNESS then
+		color = color:Lerp(WATER_NIGHT, (WATER_MIN_BRIGHTNESS - v) / WATER_MIN_BRIGHTNESS)
+	end
+	setWater(t, "WaterColor", color)
 	setWater(t, "WaterTransparency", w.clear)
 	setWater(t, "WaterReflectance", w.reflect)
 	setWater(t, "WaterWaveSize", math.clamp(w.wave + storm * 0.25, 0, 1))
